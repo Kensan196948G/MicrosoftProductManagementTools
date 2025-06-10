@@ -4,9 +4,9 @@
 # ITSM/ISO27001/27002準拠
 # ================================================================================
 
-. $PSScriptRoot\Authentication.psm1
-. $PSScriptRoot\Logging.psm1
-. $PSScriptRoot\ErrorHandling.psm1
+Import-Module "$PSScriptRoot\Authentication.psm1" -Force
+Import-Module "$PSScriptRoot\Logging.psm1" -Force
+Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
 
 function Initialize-ManagementTools {
     param(
