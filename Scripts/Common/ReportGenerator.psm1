@@ -1,27 +1,43 @@
 # ================================================================================
 # ReportGenerator.psm1
-# Microsoft製品運用管理ツール - レポート生成モジュール
+# HTML/CSVレポート生成モジュール
 # ITSM/ISO27001/27002準拠
 # ================================================================================
+
+Import-Module "$PSScriptRoot\Logging.psm1" -Force
+
+function New-ReportDirectory {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Daily", "Weekly", "Monthly", "Yearly")]
+        [string]$ReportType
+    )
+    
+    $reportsRoot = Join-Path $PSScriptRoot "..\..\Reports"
+    $reportDir = Join-Path $reportsRoot $ReportType
+    
+    if (-not (Test-Path $reportDir)) {
+        New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
+        Write-Log "レポートディレクトリを作成しました: $reportDir" -Level "Info"
+    }
+    
+    return $reportDir
+}
 
 function New-HTMLReport {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Title,
         
-        [Parameter(Mandatory = $true)]
-        [hashtable[]]$DataSections,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$OutputPath,
-        
         [Parameter(Mandatory = $false)]
-        [string]$TemplatePath = "Templates\ReportTemplate.html"
+        [array]$DataSections = @(),
+        
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath
     )
     
     try {
-        $reportDate = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
-        $systemInfo = Get-SystemInfo
+        $timestamp = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
         
         $htmlContent = @"
 <!DOCTYPE html>
@@ -32,250 +48,232 @@ function New-HTMLReport {
     <title>$Title</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .header { background-color: #0078d4; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-        .header h1 { margin: 0; }
-        .header .subtitle { margin-top: 10px; opacity: 0.9; }
-        .section { background-color: white; margin-bottom: 20px; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .section h2 { color: #0078d4; border-bottom: 2px solid #0078d4; padding-bottom: 10px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .summary-card { background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #0078d4; }
-        .summary-card h3 { margin: 0 0 10px 0; color: #333; font-size: 14px; }
-        .summary-card .value { font-size: 24px; font-weight: bold; color: #0078d4; }
-        .risk-high { border-left-color: #d32f2f; }
-        .risk-high .value { color: #d32f2f; }
-        .risk-medium { border-left-color: #f57c00; }
-        .risk-medium .value { color: #f57c00; }
-        .risk-low { border-left-color: #388e3c; }
-        .risk-low .value { color: #388e3c; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #0078d4; color: white; }
-        tr:nth-child(even) { background-color: #f8f9fa; }
-        .alert { padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .alert-danger { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .alert-warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-        .alert-info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
-        .footer { text-align: center; margin-top: 30px; padding: 20px; background-color: #333; color: white; border-radius: 5px; }
-        .no-data { text-align: center; color: #666; font-style: italic; padding: 40px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #0078d4; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { color: #0078d4; font-size: 28px; margin-bottom: 10px; }
+        .timestamp { color: #666; font-size: 14px; }
+        .section { margin-bottom: 30px; }
+        .section-title { color: #0078d4; font-size: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px; }
+        .summary { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+        .alert { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .alert-danger { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .alert-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .alert-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #0078d4; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>$Title</h1>
-        <div class="subtitle">
-            レポート生成日時: $reportDate<br>
-            実行システム: $($systemInfo.MachineName) ($($systemInfo.OSVersion))<br>
-            PowerShell バージョン: $($systemInfo.PowerShellVersion)
+    <div class="container">
+        <div class="header">
+            <div class="title">$Title</div>
+            <div class="timestamp">生成日時: $timestamp</div>
         </div>
-    </div>
 "@
-        
-        foreach ($section in $DataSections) {
-            $htmlContent += "<div class='section'>"
-            $htmlContent += "<h2>$($section.Title)</h2>"
-            
-            if ($section.Summary) {
-                $htmlContent += "<div class='summary-grid'>"
-                foreach ($summaryItem in $section.Summary) {
-                    $riskClass = switch ($summaryItem.Risk) {
-                        "高" { "risk-high" }
-                        "中" { "risk-medium" }
-                        "低" { "risk-low" }
-                        default { "" }
+
+        if ($DataSections.Count -gt 0) {
+            foreach ($section in $DataSections) {
+                $htmlContent += "<div class='section'>"
+                $htmlContent += "<div class='section-title'>$($section.Title)</div>"
+                
+                # サマリー表示
+                if ($section.Summary) {
+                    $htmlContent += "<div class='summary'>"
+                    if ($section.Summary -is [array]) {
+                        foreach ($item in $section.Summary) {
+                            $htmlContent += "<p><strong>$($item.Label):</strong> $($item.Value)</p>"
+                        }
                     }
-                    
-                    $htmlContent += @"
-                    <div class='summary-card $riskClass'>
-                        <h3>$($summaryItem.Label)</h3>
-                        <div class='value'>$($summaryItem.Value)</div>
-                    </div>
-"@
+                    $htmlContent += "</div>"
                 }
+                
+                # アラート表示
+                if ($section.Alerts) {
+                    foreach ($alert in $section.Alerts) {
+                        $alertClass = switch ($alert.Type) {
+                            "Danger" { "alert-danger" }
+                            "Warning" { "alert-warning" }
+                            default { "alert-info" }
+                        }
+                        $htmlContent += "<div class='alert $alertClass'>$($alert.Message)</div>"
+                    }
+                }
+                
+                # データテーブル表示
+                if ($section.Data -and $section.Data.Count -gt 0) {
+                    $htmlContent += "<table><thead><tr>"
+                    
+                    # ヘッダー生成
+                    $properties = $section.Data[0].PSObject.Properties.Name
+                    foreach ($prop in $properties) {
+                        $htmlContent += "<th>$prop</th>"
+                    }
+                    $htmlContent += "</tr></thead><tbody>"
+                    
+                    # データ行生成
+                    foreach ($row in $section.Data) {
+                        $htmlContent += "<tr>"
+                        foreach ($prop in $properties) {
+                            $value = $row.$prop
+                            if ($null -eq $value) { $value = "" }
+                            $htmlContent += "<td>$value</td>"
+                        }
+                        $htmlContent += "</tr>"
+                    }
+                    $htmlContent += "</tbody></table>"
+                }
+                
                 $htmlContent += "</div>"
             }
-            
-            if ($section.Alerts) {
-                foreach ($alert in $section.Alerts) {
-                    $alertClass = switch ($alert.Type) {
-                        "Danger" { "alert-danger" }
-                        "Warning" { "alert-warning" }
-                        "Info" { "alert-info" }
-                        default { "alert-info" }
-                    }
-                    
-                    $htmlContent += "<div class='alert $alertClass'>$($alert.Message)</div>"
-                }
-            }
-            
-            if ($section.Data -and $section.Data.Count -gt 0) {
-                $htmlContent += "<table>"
-                
-                $properties = $section.Data[0].PSObject.Properties.Name
-                $htmlContent += "<tr>"
-                foreach ($prop in $properties) {
-                    $htmlContent += "<th>$prop</th>"
-                }
-                $htmlContent += "</tr>"
-                
-                foreach ($row in $section.Data) {
-                    $htmlContent += "<tr>"
-                    foreach ($prop in $properties) {
-                        $value = $row.$prop
-                        if ($null -eq $value) { $value = "" }
-                        $htmlContent += "<td>$value</td>"
-                    }
-                    $htmlContent += "</tr>"
-                }
-                
-                $htmlContent += "</table>"
-            }
-            elseif ($section.Data) {
-                $htmlContent += "<div class='no-data'>データがありません</div>"
-            }
-            
+        }
+        else {
+            $htmlContent += "<div class='section'>"
+            $htmlContent += "<p>レポートデータを生成中です...</p>"
+            $htmlContent += "<p>このレポートは Microsoft 365 運用管理ツールによって自動生成されました。</p>"
             $htmlContent += "</div>"
         }
-        
+
         $htmlContent += @"
-    <div class="footer">
-        Microsoft製品運用管理ツール - ITSM/ISO27001/27002準拠<br>
-        このレポートは自動生成されました。機密情報として適切に管理してください。
+        <div class="footer">
+            <p>Microsoft製品運用管理ツール - ITSM/ISO27001/27002準拠</p>
+            <p>© 2025 All Rights Reserved</p>
+        </div>
     </div>
 </body>
 </html>
 "@
+
+        # ファイル出力
+        $outputDir = Split-Path $OutputPath -Parent
+        if (-not (Test-Path $outputDir)) {
+            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
+        }
         
-        $htmlContent | Out-File -FilePath $OutputPath -Encoding UTF8
+        $htmlContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+        
         Write-Log "HTMLレポートを生成しました: $OutputPath" -Level "Info"
-        
-        return $true
+        return $OutputPath
     }
     catch {
         Write-Log "HTMLレポート生成エラー: $($_.Exception.Message)" -Level "Error"
-        return $false
+        throw $_
     }
 }
 
-function ConvertTo-HTMLTable {
+function New-CSVReport {
     param(
         [Parameter(Mandatory = $true)]
-        [object[]]$Data,
+        [array]$Data,
         
-        [Parameter(Mandatory = $false)]
-        [string]$TableClass = "data-table"
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath
     )
     
-    if (-not $Data -or $Data.Count -eq 0) {
-        return "<p class='no-data'>データがありません</p>"
-    }
-    
-    $html = "<table class='$TableClass'>"
-    
-    $properties = $Data[0].PSObject.Properties.Name
-    $html += "<tr>"
-    foreach ($prop in $properties) {
-        $html += "<th>$prop</th>"
-    }
-    $html += "</tr>"
-    
-    foreach ($row in $Data) {
-        $html += "<tr>"
-        foreach ($prop in $properties) {
-            $value = $row.$prop
-            if ($null -eq $value) { $value = "" }
-            $html += "<td>$value</td>"
+    try {
+        if ($Data -and $Data.Count -gt 0) {
+            $Data | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+            Write-Log "CSVレポートを生成しました: $OutputPath" -Level "Info"
         }
-        $html += "</tr>"
+        else {
+            "No Data Available" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+            Write-Log "データなしのCSVレポートを生成しました: $OutputPath" -Level "Info"
+        }
+        
+        return $OutputPath
     }
-    
-    $html += "</table>"
-    
-    return $html
+    catch {
+        Write-Log "CSVレポート生成エラー: $($_.Exception.Message)" -Level "Error"
+        throw $_
+    }
 }
 
 function New-SummaryStatistics {
     param(
         [Parameter(Mandatory = $true)]
-        [object[]]$Data,
+        [array]$Data,
         
-        [Parameter(Mandatory = $true)]
-        [hashtable]$CountFields
+        [Parameter(Mandatory = $false)]
+        [hashtable]$CountFields = @{}
     )
     
     $summary = @()
     
-    foreach ($field in $CountFields.GetEnumerator()) {
-        $count = switch ($field.Value.Type) {
-            "Count" {
-                if ($field.Value.Filter) {
-                    ($Data | Where-Object $field.Value.Filter).Count
-                } else {
-                    $Data.Count
+    try {
+        if ($Data -and $Data.Count -gt 0) {
+            foreach ($field in $CountFields.Keys) {
+                $config = $CountFields[$field]
+                $count = 0
+                
+                if ($config.Filter) {
+                    $count = ($Data | Where-Object $config.Filter).Count
+                }
+                else {
+                    $count = $Data.Count
+                }
+                
+                $summary += @{
+                    Label = $field
+                    Value = $count
+                    Risk = $config.Risk
                 }
             }
-            "Sum" {
-                ($Data | Measure-Object -Property $field.Value.Property -Sum).Sum
+        }
+        else {
+            $summary += @{
+                Label = "データ"
+                Value = "なし"
+                Risk = "低"
             }
-            "Average" {
-                [math]::Round(($Data | Measure-Object -Property $field.Value.Property -Average).Average, 2)
-            }
-            default { 0 }
         }
         
-        $summary += @{
-            Label = $field.Key
-            Value = $count
-            Risk = $field.Value.Risk
-        }
+        return $summary
     }
-    
-    return $summary
+    catch {
+        Write-Log "統計サマリー生成エラー: $($_.Exception.Message)" -Level "Error"
+        return @()
+    }
 }
 
 function Export-ReportsToArchive {
     param(
         [Parameter(Mandatory = $true)]
+        [ValidateSet("Daily", "Weekly", "Monthly", "Yearly")]
         [string]$ReportType,
         
         [Parameter(Mandatory = $false)]
-        [int]$RetentionDays = 90,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$ArchiveBasePath = "Archives"
+        [int]$RetentionDays = 365
     )
     
     try {
-        $reportPath = "Reports\$ReportType"
-        if (-not (Test-Path $reportPath)) {
-            Write-Log "レポートパスが存在しません: $reportPath" -Level "Warning"
-            return $false
-        }
+        $reportsRoot = Join-Path $PSScriptRoot "..\..\Reports"
+        $reportDir = Join-Path $reportsRoot $ReportType
         
-        $cutoffDate = (Get-Date).AddDays(-$RetentionDays)
-        $oldReports = Get-ChildItem -Path $reportPath -Recurse -File | 
-                     Where-Object { $_.LastWriteTime -lt $cutoffDate }
-        
-        if ($oldReports.Count -gt 0) {
-            $archivePath = Join-Path $ArchiveBasePath "$ReportType"
-            if (-not (Test-Path $archivePath)) {
-                New-Item -Path $archivePath -ItemType Directory -Force | Out-Null
+        if (Test-Path $reportDir) {
+            $cutoffDate = (Get-Date).AddDays(-$RetentionDays)
+            $oldReports = Get-ChildItem -Path $reportDir -Filter "*.html" | Where-Object { $_.LastWriteTime -lt $cutoffDate }
+            
+            if ($oldReports.Count -gt 0) {
+                $archiveDir = Join-Path $reportsRoot "Archives"
+                if (-not (Test-Path $archiveDir)) {
+                    New-Item -Path $archiveDir -ItemType Directory -Force | Out-Null
+                }
+                
+                $archivePath = Join-Path $archiveDir "${ReportType}_Reports_$(Get-Date -Format 'yyyyMMdd').zip"
+                Compress-Archive -Path $oldReports.FullName -DestinationPath $archivePath -CompressionLevel Optimal -Force
+                
+                $oldReports | Remove-Item -Force
+                
+                Write-Log "$($oldReports.Count)個の${ReportType}レポートをアーカイブしました: $archivePath" -Level "Info"
             }
-            
-            $archiveFile = Join-Path $archivePath "$ReportType`_Archive_$(Get-Date -Format 'yyyyMMdd').zip"
-            
-            Compress-Archive -Path $oldReports.FullName -DestinationPath $archiveFile -Force
-            Write-Log "レポートをアーカイブしました: $archiveFile ($($oldReports.Count)ファイル)" -Level "Info"
-            
-            $oldReports | Remove-Item -Force
-            Write-Log "古いレポートファイルを削除しました" -Level "Info"
         }
-        
-        return $true
     }
     catch {
         Write-Log "レポートアーカイブエラー: $($_.Exception.Message)" -Level "Error"
-        return $false
     }
 }
 
-Export-ModuleMember -Function New-HTMLReport, ConvertTo-HTMLTable, New-SummaryStatistics, Export-ReportsToArchive
+# エクスポート関数
+Export-ModuleMember -Function New-ReportDirectory, New-HTMLReport, New-CSVReport, New-SummaryStatistics, Export-ReportsToArchive

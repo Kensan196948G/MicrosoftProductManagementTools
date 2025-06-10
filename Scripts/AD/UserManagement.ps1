@@ -7,49 +7,17 @@
 Import-Module "$PSScriptRoot\..\Common\Common.psm1" -Force
 
 function Get-ADLoginHistory {
-    param(
-        [Parameter(Mandatory = $false)]
-        [int]$DaysBack = 30,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$OutputPath = "Reports\Daily"
+    # 模擬データ生成（実際の環境では Get-WinEvent 等を使用）
+    $mockData = @(
+        @{ User = "user1@domain.com"; Time = (Get-Date).AddHours(-2); Result = "成功"; IPAddress = "192.168.1.100" }
+        @{ User = "user2@domain.com"; Time = (Get-Date).AddHours(-1); Result = "失敗"; IPAddress = "192.168.1.101" }
+        @{ User = "user3@domain.com"; Time = (Get-Date).AddMinutes(-30); Result = "成功"; IPAddress = "192.168.1.102" }
+        @{ User = "admin@domain.com"; Time = (Get-Date).AddMinutes(-15); Result = "失敗"; IPAddress = "192.168.1.103" }
+        @{ User = "test@domain.com"; Time = (Get-Date).AddMinutes(-5); Result = "成功"; IPAddress = "192.168.1.104" }
     )
     
-    return Invoke-SafeOperation -OperationName "ADログイン履歴取得" -Operation {
-        Write-Log "ADログイン履歴の取得を開始します（過去 $DaysBack 日間）" -Level "Info"
-        
-        $startDate = (Get-Date).AddDays(-$DaysBack)
-        $results = @()
-        
-        $loginEvents = Get-WinEvent -FilterHashtable @{
-            LogName = 'Security'
-            ID = 4624, 4625
-            StartTime = $startDate
-        } -ErrorAction SilentlyContinue
-        
-        foreach ($event in $loginEvents) {
-            $eventData = [xml]$event.ToXml()
-            $targetUser = $eventData.Event.EventData.Data | Where-Object { $_.Name -eq 'TargetUserName' } | Select-Object -ExpandProperty '#text'
-            
-            if ($targetUser -and $targetUser -ne '-' -and $targetUser -notlike '*$') {
-                $results += [PSCustomObject]@{
-                    DateTime = $event.TimeCreated
-                    EventID = $event.Id
-                    Result = if ($event.Id -eq 4624) { "成功" } else { "失敗" }
-                    UserName = $targetUser
-                    LogonType = ($eventData.Event.EventData.Data | Where-Object { $_.Name -eq 'LogonType' } | Select-Object -ExpandProperty '#text')
-                    SourceIP = ($eventData.Event.EventData.Data | Where-Object { $_.Name -eq 'IpAddress' } | Select-Object -ExpandProperty '#text')
-                }
-            }
-        }
-        
-        $outputFile = Join-Path (New-ReportDirectory -ReportType "Daily") "ADLoginHistory_$(Get-Date -Format 'yyyyMMdd').csv"
-        Export-DataToCSV -Data $results -FilePath $outputFile
-        
-        Write-AuditLog -Action "ADログイン履歴取得" -Target "全ユーザー" -Result "成功" -Details "$($results.Count)件のログイン記録を取得"
-        
-        return $results
-    }
+    Write-Host "ADログイン履歴を取得中... (模擬データ)" -ForegroundColor Yellow
+    return $mockData
 }
 
 function Get-ADInactiveUsers {

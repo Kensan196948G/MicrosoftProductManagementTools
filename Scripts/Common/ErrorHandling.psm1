@@ -1,124 +1,10 @@
 # ================================================================================
 # ErrorHandling.psm1
-# Microsoft製品運用管理ツール - エラーハンドリング共通モジュール
-# ITSM/ISO27001/27002準拠 - 最大7回の自律修復ループ
+# エラーハンドリング・通知・再試行モジュール
+# ITSM/ISO27001/27002準拠
 # ================================================================================
 
-function Invoke-WithRetry {
-    param(
-        [Parameter(Mandatory = $true)]
-        [scriptblock]$ScriptBlock,
-        
-        [Parameter(Mandatory = $false)]
-        [int]$MaxRetries = 7,
-        
-        [Parameter(Mandatory = $false)]
-        [int]$DelaySeconds = 5,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$OperationName = "Operation"
-    )
-    
-    $attempt = 1
-    
-    while ($attempt -le $MaxRetries) {
-        try {
-            Write-Log "実行開始: $OperationName (試行 $attempt/$MaxRetries)" -Level "Info"
-            
-            $result = & $ScriptBlock
-            
-            Write-Log "実行成功: $OperationName (試行 $attempt/$MaxRetries)" -Level "Info"
-            return $result
-        }
-        catch {
-            $errorMessage = $_.Exception.Message
-            Write-Log "実行エラー: $OperationName (試行 $attempt/$MaxRetries) - $errorMessage" -Level "Warning"
-            
-            if ($attempt -eq $MaxRetries) {
-                Write-Log "最大試行回数に達しました: $OperationName" -Level "Error"
-                throw $_
-            }
-            
-            Write-Log "リトライまで $DelaySeconds 秒待機します" -Level "Info"
-            Start-Sleep -Seconds $DelaySeconds
-            $attempt++
-        }
-    }
-}
-
-function Test-Prerequisites {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$RequiredModules,
-        
-        [Parameter(Mandatory = $false)]
-        [string[]]$RequiredCommands = @()
-    )
-    
-    $issues = @()
-    
-    foreach ($module in $RequiredModules) {
-        try {
-            Import-Module $module -ErrorAction Stop -Force
-            Write-Log "モジュール確認OK: $module" -Level "Debug"
-        }
-        catch {
-            $issues += "必要なモジュールが見つかりません: $module"
-            Write-Log "モジュール確認NG: $module" -Level "Error"
-        }
-    }
-    
-    foreach ($command in $RequiredCommands) {
-        if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
-            $issues += "必要なコマンドが見つかりません: $command"
-            Write-Log "コマンド確認NG: $command" -Level "Error"
-        }
-        else {
-            Write-Log "コマンド確認OK: $command" -Level "Debug"
-        }
-    }
-    
-    if ($issues.Count -gt 0) {
-        $issueList = $issues -join "`n"
-        throw "前提条件チェックに失敗しました:`n$issueList"
-    }
-    
-    Write-Log "前提条件チェック完了" -Level "Info"
-    return $true
-}
-
-function Invoke-SafeOperation {
-    param(
-        [Parameter(Mandatory = $true)]
-        [scriptblock]$Operation,
-        
-        [Parameter(Mandatory = $false)]
-        [scriptblock]$CleanupOperation = {},
-        
-        [Parameter(Mandatory = $false)]
-        [string]$OperationName = "SafeOperation",
-        
-        [Parameter(Mandatory = $false)]
-        [int]$MaxRetries = 7
-    )
-    
-    try {
-        return Invoke-WithRetry -ScriptBlock $Operation -MaxRetries $MaxRetries -OperationName $OperationName
-    }
-    catch {
-        Write-Log "安全実行でエラーが発生しました: $OperationName - $($_.Exception.Message)" -Level "Error"
-        
-        try {
-            Write-Log "クリーンアップ操作を実行します: $OperationName" -Level "Info"
-            & $CleanupOperation
-        }
-        catch {
-            Write-Log "クリーンアップ操作でエラーが発生しました: $($_.Exception.Message)" -Level "Warning"
-        }
-        
-        throw $_
-    }
-}
+Import-Module "$PSScriptRoot\Logging.psm1" -Force
 
 function Get-ErrorDetails {
     param(
@@ -126,53 +12,281 @@ function Get-ErrorDetails {
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
     
-    $details = @{
+    return @{
         Message = $ErrorRecord.Exception.Message
+        StackTrace = $ErrorRecord.ScriptStackTrace
+        ScriptName = $ErrorRecord.InvocationInfo.ScriptName
+        LineNumber = $ErrorRecord.InvocationInfo.ScriptLineNumber
+        CommandName = $ErrorRecord.InvocationInfo.MyCommand.Name
+        Timestamp = Get-Date
+        Category = $ErrorRecord.CategoryInfo.Category
         FullyQualifiedErrorId = $ErrorRecord.FullyQualifiedErrorId
-        ScriptStackTrace = $ErrorRecord.ScriptStackTrace
-        PositionMessage = $ErrorRecord.InvocationInfo.PositionMessage
-        CategoryInfo = $ErrorRecord.CategoryInfo.ToString()
-        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     }
-    
-    return $details
 }
 
 function Send-ErrorNotification {
     param(
         [Parameter(Mandatory = $true)]
-        [hashtable]$ErrorDetails,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$NotificationMethod = "Log"
+        [hashtable]$ErrorDetails
     )
     
-    $errorSummary = @"
-エラー詳細:
+    $errorMessage = @"
+Microsoft製品運用管理ツール - エラー通知
+
 時刻: $($ErrorDetails.Timestamp)
-メッセージ: $($ErrorDetails.Message)
-エラーID: $($ErrorDetails.FullyQualifiedErrorId)
-カテゴリ: $($ErrorDetails.CategoryInfo)
-位置: $($ErrorDetails.PositionMessage)
-スタックトレース: $($ErrorDetails.ScriptStackTrace)
+スクリプト: $($ErrorDetails.ScriptName)
+行番号: $($ErrorDetails.LineNumber)
+コマンド: $($ErrorDetails.CommandName)
+エラーメッセージ: $($ErrorDetails.Message)
+カテゴリ: $($ErrorDetails.Category)
+
+スタックトレース:
+$($ErrorDetails.StackTrace)
 "@
+
+    # ログに記録
+    Write-Log "エラー通知送信: $($ErrorDetails.Message)" -Level "Error"
     
-    switch ($NotificationMethod) {
-        "Log" {
-            Write-Log $errorSummary -Level "Error"
+    # コンソール出力
+    Write-Host $errorMessage -ForegroundColor Red
+    
+    # 監査ログに記録
+    Write-AuditLog -Action "エラー発生" -Target $ErrorDetails.ScriptName -Result "失敗" -Details $ErrorDetails.Message
+}
+
+function Invoke-RetryLogic {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$DelaySeconds = 5,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Operation = "処理"
+    )
+    
+    $attempt = 0
+    $lastError = $null
+    
+    do {
+        $attempt++
+        
+        try {
+            Write-Log "$Operation を実行中 (試行回数: $attempt)" -Level "Info"
+            $result = & $ScriptBlock
+            Write-Log "$Operation が成功しました (試行回数: $attempt)" -Level "Info"
+            return $result
         }
-        "Email" {
-            Write-Log "メール通知機能は未実装です" -Level "Warning"
-        }
-        "EventLog" {
-            try {
-                Write-EventLog -LogName Application -Source "Microsoft管理ツール" -EventId 1001 -EntryType Error -Message $errorSummary
+        catch {
+            $lastError = $_
+            $errorDetails = Get-ErrorDetails -ErrorRecord $_
+            
+            Write-Log "$Operation でエラーが発生しました (試行回数: $attempt): $($_.Exception.Message)" -Level "Warning"
+            
+            if ($attempt -lt $MaxRetries) {
+                Write-Log "$DelaySeconds 秒後に再試行します..." -Level "Info"
+                Start-Sleep -Seconds $DelaySeconds
             }
-            catch {
-                Write-Log "イベントログへの書き込みに失敗しました" -Level "Warning"
+            else {
+                Write-Log "$Operation の最大再試行回数 ($MaxRetries) に達しました" -Level "Error"
+                Send-ErrorNotification -ErrorDetails $errorDetails
+                throw $lastError
             }
         }
+    } while ($attempt -le $MaxRetries)
+}
+
+function Test-Prerequisites {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable[]]$Prerequisites
+    )
+    
+    $allPassed = $true
+    $results = @()
+    
+    foreach ($prereq in $Prerequisites) {
+        $result = @{
+            Name = $prereq.Name
+            Type = $prereq.Type
+            Passed = $false
+            Message = ""
+        }
+        
+        try {
+            switch ($prereq.Type) {
+                "File" {
+                    if (Test-Path $prereq.Path) {
+                        $result.Passed = $true
+                        $result.Message = "ファイルが存在します: $($prereq.Path)"
+                    }
+                    else {
+                        $result.Message = "ファイルが見つかりません: $($prereq.Path)"
+                        $allPassed = $false
+                    }
+                }
+                "Directory" {
+                    if (Test-Path $prereq.Path -PathType Container) {
+                        $result.Passed = $true
+                        $result.Message = "ディレクトリが存在します: $($prereq.Path)"
+                    }
+                    else {
+                        $result.Message = "ディレクトリが見つかりません: $($prereq.Path)"
+                        $allPassed = $false
+                    }
+                }
+                "Module" {
+                    if (Get-Module -Name $prereq.Name -ListAvailable) {
+                        $result.Passed = $true
+                        $result.Message = "モジュールが利用可能です: $($prereq.Name)"
+                    }
+                    else {
+                        $result.Message = "モジュールが見つかりません: $($prereq.Name)"
+                        $allPassed = $false
+                    }
+                }
+                "Command" {
+                    if (Get-Command $prereq.Name -ErrorAction SilentlyContinue) {
+                        $result.Passed = $true
+                        $result.Message = "コマンドが利用可能です: $($prereq.Name)"
+                    }
+                    else {
+                        $result.Message = "コマンドが見つかりません: $($prereq.Name)"
+                        $allPassed = $false
+                    }
+                }
+                "Service" {
+                    $service = Get-Service -Name $prereq.Name -ErrorAction SilentlyContinue
+                    if ($service -and $service.Status -eq "Running") {
+                        $result.Passed = $true
+                        $result.Message = "サービスが実行中です: $($prereq.Name)"
+                    }
+                    else {
+                        $result.Message = "サービスが実行されていません: $($prereq.Name)"
+                        $allPassed = $false
+                    }
+                }
+                "Script" {
+                    $scriptResult = & $prereq.ScriptBlock
+                    if ($scriptResult) {
+                        $result.Passed = $true
+                        $result.Message = "カスタムチェックが成功しました: $($prereq.Name)"
+                    }
+                    else {
+                        $result.Message = "カスタムチェックが失敗しました: $($prereq.Name)"
+                        $allPassed = $false
+                    }
+                }
+            }
+        }
+        catch {
+            $result.Message = "チェック実行エラー: $($_.Exception.Message)"
+            $allPassed = $false
+        }
+        
+        $results += $result
+        
+        if ($result.Passed) {
+            Write-Log "前提条件チェック成功: $($result.Message)" -Level "Info"
+        }
+        else {
+            Write-Log "前提条件チェック失敗: $($result.Message)" -Level "Warning"
+        }
+    }
+    
+    return @{
+        AllPassed = $allPassed
+        Results = $results
     }
 }
 
-Export-ModuleMember -Function Invoke-WithRetry, Test-Prerequisites, Invoke-SafeOperation, Get-ErrorDetails, Send-ErrorNotification
+function Disconnect-AllServices {
+    try {
+        Write-Log "全サービス接続を切断中..." -Level "Info"
+        
+        # Exchange Online切断
+        if (Get-Command Disconnect-ExchangeOnline -ErrorAction SilentlyContinue) {
+            Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
+            Write-Log "Exchange Online接続を切断しました" -Level "Info"
+        }
+        
+        # Microsoft Graph切断
+        if (Get-Command Disconnect-MgGraph -ErrorAction SilentlyContinue) {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+            Write-Log "Microsoft Graph接続を切断しました" -Level "Info"
+        }
+        
+        # Azure AD切断
+        if (Get-Command Disconnect-AzureAD -ErrorAction SilentlyContinue) {
+            Disconnect-AzureAD -ErrorAction SilentlyContinue
+            Write-Log "Azure AD接続を切断しました" -Level "Info"
+        }
+        
+        Write-Log "全サービス接続切断完了" -Level "Info"
+    }
+    catch {
+        Write-Log "サービス切断エラー: $($_.Exception.Message)" -Level "Warning"
+    }
+}
+
+function Invoke-SafeOperation {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$OperationName = "操作",
+        
+        [Parameter(Mandatory = $false)]
+        [int]$TimeoutSeconds = 300,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable[]]$Prerequisites = @()
+    )
+    
+    try {
+        # 前提条件チェック
+        if ($Prerequisites.Count -gt 0) {
+            Write-Log "$OperationName の前提条件をチェック中..." -Level "Info"
+            $prereqResult = Test-Prerequisites -Prerequisites $Prerequisites
+            
+            if (-not $prereqResult.AllPassed) {
+                $failedChecks = $prereqResult.Results | Where-Object { -not $_.Passed }
+                $errorMessage = "前提条件チェックが失敗しました: $($failedChecks.Message -join ', ')"
+                throw $errorMessage
+            }
+        }
+        
+        # タイムアウト付き実行
+        Write-Log "$OperationName を開始します（タイムアウト: ${TimeoutSeconds}秒）" -Level "Info"
+        
+        $job = Start-Job -ScriptBlock $ScriptBlock
+        $result = Wait-Job -Job $job -Timeout $TimeoutSeconds
+        
+        if ($result) {
+            $output = Receive-Job -Job $job
+            Remove-Job -Job $job -Force
+            
+            Write-Log "$OperationName が正常に完了しました" -Level "Info"
+            return $output
+        }
+        else {
+            Stop-Job -Job $job -Force
+            Remove-Job -Job $job -Force
+            throw "操作がタイムアウトしました（${TimeoutSeconds}秒）"
+        }
+    }
+    catch {
+        $errorDetails = Get-ErrorDetails -ErrorRecord $_
+        Send-ErrorNotification -ErrorDetails $errorDetails
+        Write-Log "$OperationName でエラーが発生しました: $($_.Exception.Message)" -Level "Error"
+        throw $_
+    }
+}
+
+# エクスポート関数
+Export-ModuleMember -Function Get-ErrorDetails, Send-ErrorNotification, Invoke-RetryLogic, Test-Prerequisites, Disconnect-AllServices, Invoke-SafeOperation

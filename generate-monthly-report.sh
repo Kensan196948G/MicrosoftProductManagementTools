@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Microsoft製品運用管理ツール - 月次レポート生成スクリプト
+# ITSM/ISO27001/27002準拠
+
+set -e
+
+PROJECT_ROOT="/mnt/e/MicrosoftProductManagementTools"
+TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
+
+echo "=== 月次レポート生成開始 ==="
+echo "実行時刻: $(date '+%Y年%m月%d日 %H:%M:%S')"
+
+cd "$PROJECT_ROOT"
+
+# 月次レポート実行（簡易版）
+echo "月次レポートを生成中..."
+pwsh -File test-daily-report.ps1 -ReportType Monthly
+
+echo "=== 月次レポート生成完了 ==="

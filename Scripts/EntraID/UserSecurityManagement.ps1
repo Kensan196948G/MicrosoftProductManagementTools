@@ -292,15 +292,31 @@ if ($MyInvocation.InvocationName -ne '.') {
     
     try {
         if ($config) {
-            Connect-EntraID -TenantId $config.EntraID.TenantId -ClientId $config.EntraID.ClientId -CertificateThumbprint $config.EntraID.CertificateThumbprint
+            # 新しい認証システムを使用
+            $connectionResult = Connect-ToMicrosoft365 -Config $config -Services @("MicrosoftGraph")
+            
+            if (-not $connectionResult.Success) {
+                throw "Microsoft Graph への接続に失敗しました: $($connectionResult.Errors -join ', ')"
+            }
+            
+            Write-Log "Microsoft Graph 接続成功" -Level "Info"
         }
         else {
             Write-Log "設定ファイルが見つからないため、手動接続が必要です" -Level "Warning"
+            throw "設定ファイルが見つかりません"
         }
         
+        # 各レポート実行
+        Write-Log "MFA状況レポートを実行中..." -Level "Info"
         Get-EntraIDMFAStatus
+        
+        Write-Log "サインイン分析レポートを実行中..." -Level "Info"
         Get-EntraIDSignInAnalysis
+        
+        Write-Log "ライセンスレポートを実行中..." -Level "Info"
         Get-EntraIDLicenseReport
+        
+        Write-Log "アプリケーションレポートを実行中..." -Level "Info"
         Get-EntraIDApplicationReport
         
         Write-Log "Entra IDユーザーセキュリティ管理スクリプトが正常に完了しました" -Level "Info"
@@ -308,6 +324,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     catch {
         $errorDetails = Get-ErrorDetails -ErrorRecord $_
         Send-ErrorNotification -ErrorDetails $errorDetails
+        Write-Log "Entra IDユーザーセキュリティ管理エラー: $($_.Exception.Message)" -Level "Error"
         throw $_
     }
     finally {

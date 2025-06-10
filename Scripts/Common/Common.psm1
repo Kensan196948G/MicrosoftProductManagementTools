@@ -15,7 +15,6 @@ function Initialize-ManagementTools {
     )
     
     try {
-        Initialize-Logging
         Write-Log "Microsoft製品運用管理ツールを初期化しています" -Level "Info"
         
         if (Test-Path $ConfigPath) {

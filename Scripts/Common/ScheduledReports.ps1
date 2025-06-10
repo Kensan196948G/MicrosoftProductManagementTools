@@ -10,6 +10,8 @@ param(
     [string]$ReportType
 )
 
+Import-Module "$PSScriptRoot\Logging.psm1" -Force
+Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
 Import-Module "$PSScriptRoot\Common.psm1" -Force
 Import-Module "$PSScriptRoot\ReportGenerator.psm1" -Force
 

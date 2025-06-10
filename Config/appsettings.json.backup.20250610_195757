@@ -1,15 +1,15 @@
 {
   "General": {
-    "OrganizationName": "未来建設株式会社",
-    "Domain": "miraiconst.onmicrosoft.com",
+    "OrganizationName": "Your Organization Name",
+    "Domain": "yourdomain.com",
     "TimeZone": "Tokyo Standard Time",
     "LanguageCode": "ja-JP",
     "Environment": "Production"
   },
   "EntraID": {
-    "TenantId": "a7232f7a-a9e5-4f71-9372-dc8b1c6645ea",
-    "ClientId": "22e5d6e4-805f-4516-af09-ff09c7c224c4",
-    "CertificateThumbprint": "94B6BAF7E9E459F2280F665CA5B6F17AC554A7E6",
+    "TenantId": "YOUR-TENANT-ID-HERE",
+    "ClientId": "YOUR-CLIENT-ID-HERE",
+    "CertificateThumbprint": "YOUR-CERTIFICATE-THUMBPRINT-HERE",
     "ClientSecret": "",
     "Scopes": [
       "https://graph.microsoft.com/User.Read.All",
@@ -21,13 +21,13 @@
     ]
   },
   "ExchangeOnline": {
-    "Organization": "miraiconst.onmicrosoft.com",
-    "AppId": "22e5d6e4-805f-4516-af09-ff09c7c224c4",
-    "CertificateThumbprint": "94B6BAF7E9E459F2280F665CA5B6F17AC554A7E6"
+    "Organization": "yourdomain.onmicrosoft.com",
+    "AppId": "YOUR-EXO-APP-ID-HERE",
+    "CertificateThumbprint": "YOUR-EXO-CERTIFICATE-THUMBPRINT-HERE"
   },
   "ActiveDirectory": {
-    "DomainController": "miraiconst-dc.miraiconst.local",
-    "SearchBase": "DC=miraiconst,DC=local",
+    "DomainController": "YOUR-DC-FQDN-HERE",
+    "SearchBase": "DC=yourdomain,DC=com",
     "UseAlternateCredentials": false,
     "CredentialUsername": "",
     "CredentialPasswordSecure": ""
@@ -46,13 +46,13 @@
     "TemplateDirectory": "Templates",
     "EnableEmailReports": false,
     "EmailSettings": {
-      "SmtpServer": "smtp.office365.com",
+      "SmtpServer": "smtp.yourdomain.com",
       "SmtpPort": 587,
       "UseSSL": true,
-      "FromAddress": "reports@miraiconst.onmicrosoft.com",
+      "FromAddress": "reports@yourdomain.com",
       "ToAddresses": [
-        "admin@miraiconst.onmicrosoft.com",
-        "security@miraiconst.onmicrosoft.com"
+        "admin@yourdomain.com",
+        "security@yourdomain.com"
       ]
     }
   },
@@ -110,16 +110,16 @@
     "RequireDigitalSignature": false,
     "DataRetentionYears": 7,
     "ArchiveAfterDays": 90,
-    "ComplianceOfficerEmail": "compliance@miraiconst.onmicrosoft.com"
+    "ComplianceOfficerEmail": "compliance@yourdomain.com"
   },
   "Notifications": {
     "EnableEmailNotifications": false,
     "EnableEventLogNotifications": true,
     "CriticalErrorRecipients": [
-      "admin@miraiconst.onmicrosoft.com"
+      "admin@yourdomain.com"
     ],
     "WarningRecipients": [
-      "it-team@miraiconst.onmicrosoft.com"
+      "it-team@yourdomain.com"
     ],
     "NotificationThresholds": {
       "FailedLoginAttempts": 5,
@@ -142,8 +142,8 @@
     "EnableVerboseLogging": false,
     "CustomScriptPaths": [],
     "ExcludedUsers": [
-      "service-account@miraiconst.onmicrosoft.com",
-      "admin@miraiconst.onmicrosoft.com"
+      "service-account@yourdomain.com",
+      "admin@yourdomain.com"
     ],
     "ExcludedGroups": [
       "Service Accounts",

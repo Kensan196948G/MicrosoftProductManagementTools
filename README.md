@@ -6,6 +6,31 @@ ITSM/ISO27001/27002準拠 Microsoft 365 統合管理システム
 
 このツール群は、Microsoft 365製品群（Active Directory、Entra ID、Exchange Online、OneDrive、Microsoft Teams）の運用業務を自動化し、ITSM（ISO/IEC 20000）および情報セキュリティ管理（ISO/IEC 27001・27002）に完全準拠した監視・レポート・証跡管理システムです。
 
+## 🚀 **クイックスタート - メニューコマンド**
+
+### 📊 統合運用メニュー表示
+```bash
+./menu.sh
+```
+
+### 🔧 主要コマンド
+```bash
+# システム開始
+./start-all.sh
+
+# システム停止  
+./stop-all.sh
+
+# 自動修復ループ開始（24/7監視）
+./auto-repair.sh --daemon &
+
+# 構成チェック・自動修復
+./config-check.sh --auto --force
+
+# 包括的テスト・修復
+./auto-test.sh --comprehensive --fix-errors --force
+```
+
 ## 🎯 主要機能
 
 ### ユーザー管理（UM系）
@@ -39,7 +64,7 @@ ITSM/ISO27001/27002準拠 Microsoft 365 統合管理システム
 
 | 項目 | 要件内容 |
 |------|----------|
-| OS | Windows 10/11 Pro or Server 2016以降 |
+| OS | Windows 10/11 Pro or Server 2016以降 / Linux (WSL2対応) |
 | PowerShell | v5.1 または PowerShell 7（Core対応） |
 | .NET Framework | v4.8（PS5.1用） |
 | モジュール | ExchangeOnlineManagement, Microsoft.Graph |
@@ -50,20 +75,34 @@ ITSM/ISO27001/27002準拠 Microsoft 365 統合管理システム
 
 ```
 MicrosoftProductManagementTools/
+├── menu.sh                    # 🎯 統合運用メニュー（メインコマンド）
+├── start-all.sh              # システム自動開始
+├── stop-all.sh               # システム緊急停止  
+├── auto-repair.sh            # 24/7自動修復ループ
+├── config-check.sh           # 構成整合性チェック
+├── auto-test.sh              # 包括的自動テスト
+├── quick-test.sh             # 高速基本チェック
+├── simple-test.ps1           # PowerShell統合テスト
 ├── Scripts/
-│   ├── AD/                 # Active Directory 管理
-│   ├── EXO/                # Exchange Online 管理
-│   ├── EntraID/            # Entra ID / Microsoft Graph 管理
-│   └── Common/             # 共通関数・認証・ロギング処理
-├── Reports/                # 自動生成レポート出力先
+│   ├── AD/                   # Active Directory 管理
+│   ├── EXO/                  # Exchange Online 管理
+│   ├── EntraID/              # Entra ID / Microsoft Graph 管理
+│   └── Common/               # 共通関数・認証・ロギング処理
+│       ├── Common.psm1       # 統合初期化モジュール
+│       ├── Logging.psm1      # 監査証跡ログシステム
+│       ├── ErrorHandling.psm1 # 自動再試行・エラー処理
+│       ├── Authentication.psm1 # 統一認証システム
+│       ├── ReportGenerator.psm1 # レポート生成
+│       └── ScheduledReports.ps1 # 定期レポート
+├── Reports/                  # 自動生成レポート出力先
 │   ├── Daily/
 │   ├── Weekly/
 │   ├── Monthly/
 │   └── Yearly/
-├── Logs/                   # 実行ログ／エラーログ／証跡ログ
-├── Config/                 # 認証設定
+├── Logs/                     # 実行ログ／エラーログ／証跡ログ
+├── Config/                   # 認証設定
 │   └── appsettings.json
-└── Templates/              # HTMLテンプレート群
+└── Templates/                # HTMLテンプレート群
 ```
 
 ## ⚙️ セットアップ
@@ -113,14 +152,29 @@ Microsoft Entra IDでアプリケーションを登録し、以下の権限を�
 
 ## 🚀 使用方法
 
-### 管理ツールの初期化
+### 🎯 **統合運用メニュー（推奨）**
+
+```bash
+./menu.sh
+```
+
+**対話式メニューから以下を選択可能:**
+- システム制御（開始/停止/再起動/自動修復）
+- 診断・テスト（構成チェック/包括テスト/クイックテスト）
+- レポート生成（日次/週次/月次/年次）
+- ログ・監査（ログ表示/プロセス確認）
+- 設定・管理（設定編集/システム情報）
+
+### 個別コマンド実行
+
+#### 管理ツールの初期化
 
 ```powershell
 Import-Module Scripts\Common\Common.psm1
 $config = Initialize-ManagementTools
 ```
 
-### レポートの実行
+#### レポートの実行
 
 ```powershell
 # 日次レポート
@@ -136,7 +190,7 @@ Scripts\Common\ScheduledReports.ps1 -ReportType "Monthly"
 Scripts\Common\ScheduledReports.ps1 -ReportType "Yearly"
 ```
 
-### 個別スクリプトの実行例
+#### 個別スクリプトの実行例
 
 ```powershell
 # Active Directory ユーザー管理
@@ -177,6 +231,29 @@ schtasks /create /tn "MS365DailyReport" /tr "powershell.exe -File 'C:\Path\To\Sc
 schtasks /create /tn "MS365WeeklyReport" /tr "powershell.exe -File 'C:\Path\To\Scripts\Common\ScheduledReports.ps1' -ReportType 'Weekly'" /sc weekly /d mon /st 07:00 /ru "SYSTEM"
 ```
 
+## 🔄 **完全自動修復ループシステム**
+
+### 自動修復機能
+
+```bash
+# 24/7自動監視・修復ループ開始
+./auto-repair.sh --daemon &
+```
+
+**動作フロー:**
+1. 60秒間隔でシステム状態監視
+2. エラー検出時:
+   - `./stop-all.sh` 自動実行
+   - 原因解析・修復実行  
+   - `./start-all.sh` 自動再開
+3. 修復完了後、継続監視再開
+
+### 修復レベル
+
+- **Quick**: 設定ファイル修復
+- **Standard**: システム再起動 + テスト実行
+- **Deep**: 完全再構築 + モジュール再生成
+
 ## 📋 コンプライアンス
 
 ### ISO 27001/27002 準拠
@@ -216,7 +293,7 @@ schtasks /create /tn "MS365WeeklyReport" /tr "powershell.exe -File 'C:\Path\To\S
 
 ## 🔄 更新履歴
 
-- **Ver. 2.0** (2025年6月): ITSM/ISO27001/27002完全準拠版
+- **Ver. 2.0** (2025年6月): ITSM/ISO27001/27002完全準拠版 + 完全自動修復ループシステム
 - **Ver. 1.0** (2024年): 初期リリース
 
 ## 📞 サポート
