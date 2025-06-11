@@ -114,9 +114,38 @@ function Connect-MicrosoftGraphService {
         $graphConfig = $Config.EntraID
         
         # 認証方式の決定
-        if ($graphConfig.CertificateThumbprint -and $graphConfig.CertificateThumbprint -ne "YOUR-CERTIFICATE-THUMBPRINT-HERE") {
-            # 証明書認証
-            Write-Log "証明書認証でMicrosoft Graph に接続中..." -Level "Info"
+        if ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
+            # ファイルベース証明書認証（ポータブル）
+            Write-Log "ファイルベース証明書認証でMicrosoft Graph に接続中..." -Level "Info"
+            
+            $certPath = $graphConfig.CertificatePath
+            if (-not [System.IO.Path]::IsPathRooted($certPath)) {
+                $certPath = Join-Path $PSScriptRoot "..\..\$certPath"
+            }
+            
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+            if ($graphConfig.CertificatePassword -and $graphConfig.CertificatePassword -ne "") {
+                $securePassword = ConvertTo-SecureString $graphConfig.CertificatePassword -AsPlainText -Force
+                $cert.Import($certPath, $securePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
+            }
+            else {
+                $cert.Import($certPath)
+            }
+            
+            $connectParams = @{
+                TenantId = $graphConfig.TenantId
+                ClientId = $graphConfig.ClientId
+                Certificate = $cert
+                NoWelcome = $true
+            }
+            
+            Connect-MgGraph @connectParams
+            
+            Write-Log "Microsoft Graph ファイルベース証明書認証接続成功" -Level "Info"
+        }
+        elseif ($graphConfig.CertificateThumbprint -and $graphConfig.CertificateThumbprint -ne "YOUR-CERTIFICATE-THUMBPRINT-HERE") {
+            # Thumbprint証明書認証（ストア依存）
+            Write-Log "Thumbprint証明書認証でMicrosoft Graph に接続中..." -Level "Info"
             
             $connectParams = @{
                 TenantId = $graphConfig.TenantId
@@ -198,9 +227,39 @@ function Connect-ExchangeOnlineService {
         
         $exoConfig = $Config.ExchangeOnline
         
-        # 証明書認証（推奨）
-        if ($exoConfig.CertificateThumbprint -and $exoConfig.CertificateThumbprint -ne "YOUR-EXO-CERTIFICATE-THUMBPRINT-HERE") {
-            Write-Log "証明書認証でExchange Online に接続中..." -Level "Info"
+        # ファイルベース証明書認証（ポータブル）
+        if ($exoConfig.CertificatePath -and (Test-Path $exoConfig.CertificatePath)) {
+            Write-Log "ファイルベース証明書認証でExchange Online に接続中..." -Level "Info"
+            
+            $certPath = $exoConfig.CertificatePath
+            if (-not [System.IO.Path]::IsPathRooted($certPath)) {
+                $certPath = Join-Path $PSScriptRoot "..\..\$certPath"
+            }
+            
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+            if ($exoConfig.CertificatePassword -and $exoConfig.CertificatePassword -ne "") {
+                $securePassword = ConvertTo-SecureString $exoConfig.CertificatePassword -AsPlainText -Force
+                $cert.Import($certPath, $securePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
+            }
+            else {
+                $cert.Import($certPath)
+            }
+            
+            $connectParams = @{
+                Organization = $exoConfig.Organization
+                AppId = $exoConfig.AppId
+                Certificate = $cert
+                ShowBanner = $false
+                ShowProgress = $false
+            }
+            
+            Connect-ExchangeOnline @connectParams
+            
+            Write-Log "Exchange Online ファイルベース証明書認証接続成功" -Level "Info"
+        }
+        # Thumbprint証明書認証（ストア依存）
+        elseif ($exoConfig.CertificateThumbprint -and $exoConfig.CertificateThumbprint -ne "YOUR-EXO-CERTIFICATE-THUMBPRINT-HERE") {
+            Write-Log "Thumbprint証明書認証でExchange Online に接続中..." -Level "Info"
             
             $connectParams = @{
                 Organization = $exoConfig.Organization

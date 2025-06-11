@@ -1,16 +1,21 @@
-証明書情報 - 2025年06月10日 20:47:39
-組織名: みらい建設工業株式会社
+証明書情報 - 2025年06月11日 更新完了
+組織名: 未来建設株式会社
 証明書名: MiraiConstEXO
 拇印（SHA1）: 3C5C3A9C4F97CD1C95DFDB389AB1F371AAB87975
 シリアル番号: 77CDED3F1F57FE49EFC9EACCB2ABDB39FF6B19F8
 有効期限: Jun  9 11:47:38 2028 GMT
 作成日時: Tue Jun 10 20:47:39 JST 2025
+更新完了日時: Wed Jun 11 10:30:00 JST 2025
 
-ファイル:
+現在のファイル構成:
 - /mnt/e/MicrosoftProductManagementTools/Certificates/MiraiConstEXO.key (秘密キー)
 - /mnt/e/MicrosoftProductManagementTools/Certificates/MiraiConstEXO.crt (証明書)
 - /mnt/e/MicrosoftProductManagementTools/Certificates/MiraiConstEXO.cer (Azure AD用)
 - /mnt/e/MicrosoftProductManagementTools/Certificates/MiraiConstEXO.pfx (PowerShell用)
 
-設定:
+appsettings.json設定値:
 "CertificateThumbprint": "3C5C3A9C4F97CD1C95DFDB389AB1F371AAB87975"
+
+旧証明書情報（削除対象）:
+- 旧拇印: 94B6BAF7E9E459F2280F665CA5B6F17AC554A7E6
+- 旧有効期限: 2026/6/4

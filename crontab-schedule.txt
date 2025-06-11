@@ -1,0 +1,15 @@
+# Microsoft製品運用管理ツール - 自動スケジュール
+# 日次レポート (06:00)
+00 06 * * * /mnt/e/MicrosoftProductManagementTools/run-daily-report.sh
+
+# 週次レポート (月曜日 07:00)
+00 07 * * 1 /mnt/e/MicrosoftProductManagementTools/run-weekly-report.sh
+
+# 月次レポート (毎月1日 08:00)
+00 08 1 * * /mnt/e/MicrosoftProductManagementTools/run-monthly-report.sh
+
+# システムヘルスチェック (毎時)
+0 * * * * /mnt/e/MicrosoftProductManagementTools/run-health-check.sh
+
+# ログローテーション (毎日深夜)
+0 0 * * * /mnt/e/MicrosoftProductManagementTools/log-management-config.sh > /dev/null 2>&1

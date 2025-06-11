@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(./config-check.sh:*)",
+      "Bash(./auto-test.sh:*)",
+      "Bash(timeout:*)",
+      "Bash(./quick-test.sh:*)",
+      "Bash(bash:*)",
+      "Bash(pwsh:*)",
+      "Bash(./start-all.sh:*)",
+      "Bash(./generate-daily-report.sh:*)",
+      "Bash(pkill:*)",
+      "Bash(command -v:*)",
+      "Bash(ls:*)",
+      "Bash(./Scripts/Common/Create-Certificate-Linux.sh:*)",
+      "Bash(openssl x509:*)",
+      "Bash(rm:*)",
+      "Bash(crontab:*)"
+    ],
+    "deny": []
+  }
+}
