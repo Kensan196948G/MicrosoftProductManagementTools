@@ -135,10 +135,58 @@ function Get-EntraIDSignInAnalysis {
             Export-DataToCSV -Data $riskySignIns -FilePath $riskyOutputFile
         }
         catch {
-            Write-Log "サインインログ取得エラー: $($_.Exception.Message)" -Level "Error"
-            $signInReport = @()
-            $failedSignIns = @()
-            $riskySignIns = @()
+            # E3ライセンスではサインインログ取得に制限があります
+            if ($_.Exception.Message -like "*Authentication_RequestFromNonPremiumTenantOrB2CTenant*" -or $_.Exception.Message -like "*Forbidden*") {
+                Write-Log "E3ライセンス制限: サインインログ取得はプレミアムライセンスが必要です。ユーザーベースの代替分析を実行します" -Level "Warning"
+                
+                # 代替案：ユーザーのサインインアクティビティを使用した分析
+                try {
+                    $users = Get-MgUser -All -Property UserPrincipalName,DisplayName,AccountEnabled,SignInActivity
+                    $signInReport = foreach ($user in $users) {
+                        if ($user.SignInActivity) {
+                            [PSCustomObject]@{
+                                CreatedDateTime = $user.SignInActivity.LastSignInDateTime
+                                UserPrincipalName = $user.UserPrincipalName
+                                AppDisplayName = "E3制限により不明"
+                                ClientAppUsed = "E3制限により不明"
+                                DeviceDetail = "E3制限により不明"
+                                LocationCity = "E3制限により不明"
+                                LocationCountryOrRegion = "E3制限により不明"
+                                IpAddress = "E3制限により不明"
+                                Status = "E3制限により不明"
+                                FailureReason = "E3制限により不明"
+                                RiskLevel = "E3制限により不明"
+                                RiskState = "E3制限により不明"
+                                ConditionalAccessStatus = "E3制限により不明"
+                                IsInteractive = "E3制限により不明"
+                            }
+                        }
+                    }
+                    
+                    $failedSignIns = @()  # E3では失敗ログ取得不可
+                    $riskySignIns = @()   # E3ではリスクレベル取得不可
+                    
+                    # E3制限についての注意情報を含むCSV出力
+                    $outputFile = Join-Path (New-ReportDirectory -ReportType "Daily") "EntraIDSignInAnalysis_E3Limited_$(Get-Date -Format 'yyyyMMdd').csv"
+                    if ($signInReport) {
+                        Export-DataToCSV -Data $signInReport -FilePath $outputFile
+                    }
+                    
+                    Write-Log "E3制限環境でのサインイン分析が完了しました。詳細情報は制限されています" -Level "Info"
+                }
+                catch {
+                    Write-Log "代替サインイン分析もエラー: $($_.Exception.Message)" -Level "Warning"
+                    $signInReport = @()
+                    $failedSignIns = @()
+                    $riskySignIns = @()
+                }
+            }
+            else {
+                Write-Log "サインインログ取得エラー: $($_.Exception.Message)" -Level "Error"
+                $signInReport = @()
+                $failedSignIns = @()
+                $riskySignIns = @()
+            }
         }
         
         Write-AuditLog -Action "サインイン分析" -Target "Entra IDサインインログ" -Result "成功" -Details "総数:$($signInReport.Count)件、失敗:$($failedSignIns.Count)件、リスク:$($riskySignIns.Count)件"

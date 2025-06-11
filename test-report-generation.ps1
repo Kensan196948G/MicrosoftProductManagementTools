@@ -266,10 +266,21 @@ try {
     Write-Host "  ファイル: $reportPath" -ForegroundColor Cyan
     Write-Host "  サイズ: $((Get-Item $reportPath).Length) bytes" -ForegroundColor Cyan
     
-    # CSVレポートも生成
+    # CSVレポートも生成（Windows文字化け対策）
     $csvPath = $reportPath -replace "\.html$", ".csv"
-    $testData.CapacityReport | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
-    Write-Host "✓ CSVレポート生成完了: $csvPath" -ForegroundColor Green
+    
+    if ($IsWindows -or $env:OS -eq "Windows_NT") {
+        # Windows環境：BOM付きUTF-8で出力
+        $csvContent = $testData.CapacityReport | ConvertTo-Csv -NoTypeInformation
+        $utf8WithBom = New-Object System.Text.UTF8Encoding $true
+        [System.IO.File]::WriteAllLines($csvPath, $csvContent, $utf8WithBom)
+        Write-Host "✓ CSVレポート生成完了 (BOM付きUTF-8): $csvPath" -ForegroundColor Green
+    }
+    else {
+        # Linux環境：通常のUTF-8で出力
+        $testData.CapacityReport | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+        Write-Host "✓ CSVレポート生成完了: $csvPath" -ForegroundColor Green
+    }
     
     return @{
         Success = $true

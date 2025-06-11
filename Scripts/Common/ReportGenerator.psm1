@@ -174,12 +174,17 @@ function New-CSVReport {
     
     try {
         if ($Data -and $Data.Count -gt 0) {
-            $Data | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-            Write-Log "CSVレポートを生成しました: $OutputPath" -Level "Info"
+            # Windows環境でのCSV文字化け対策：BOM付きUTF-8で出力
+            $csvContent = $Data | ConvertTo-Csv -NoTypeInformation
+            $utf8WithBom = New-Object System.Text.UTF8Encoding $true
+            [System.IO.File]::WriteAllLines($OutputPath, $csvContent, $utf8WithBom)
+            Write-Log "CSVレポートを生成しました (BOM付きUTF-8): $OutputPath" -Level "Info"
         }
         else {
-            "No Data Available" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-            Write-Log "データなしのCSVレポートを生成しました: $OutputPath" -Level "Info"
+            $noDataContent = @('"Status"', '"No Data Available"')
+            $utf8WithBom = New-Object System.Text.UTF8Encoding $true
+            [System.IO.File]::WriteAllLines($OutputPath, $noDataContent, $utf8WithBom)
+            Write-Log "データなしのCSVレポートを生成しました (BOM付きUTF-8): $OutputPath" -Level "Info"
         }
         
         return $OutputPath

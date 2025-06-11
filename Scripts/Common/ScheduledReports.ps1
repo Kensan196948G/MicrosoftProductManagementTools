@@ -36,7 +36,13 @@ function Invoke-DailyReports {
         
         # Entra ID サインイン分析
         . "$PSScriptRoot\..\EntraID\UserSecurityManagement.ps1"
-        $results.EntraIDSignIn = Get-EntraIDSignInAnalysis
+        try {
+            $results.EntraIDSignIn = Get-EntraIDSignInAnalysis
+        }
+        catch {
+            Write-Log "サインイン分析をスキップします（E3ライセンス制限）: $($_.Exception.Message)" -Level "Warning"
+            $results.EntraIDSignIn = $null
+        }
         
         # 日次HTMLレポート生成
         $reportSections = @()

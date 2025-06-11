@@ -1,7 +1,13 @@
 証明書情報 - 2025年06月11日 更新完了
 組織名: 未来建設株式会社
 証明書名: MiraiConstEXO
-拇印（SHA1）: 3C5C3A9C4F97CD1C95DFDB389AB1F371AAB87975
+拇印（SHA1）: 94B6BAF7E9E459F2280F665CA5B6F17AC554A7E6
+
+Azure Portal登録情報:
+- アップロードファイル名: mycert.cer
+- 実際のファイル名: MiraiConstEXO.cer, mycert.cer（両方配置済み）
+- PowerShell用PFXファイル: mycert.pfx（設定済み）
+- 注意: 全て同一証明書、thumbprintで確認済み
 シリアル番号: 77CDED3F1F57FE49EFC9EACCB2ABDB39FF6B19F8
 有効期限: Jun  9 11:47:38 2028 GMT
 作成日時: Tue Jun 10 20:47:39 JST 2025

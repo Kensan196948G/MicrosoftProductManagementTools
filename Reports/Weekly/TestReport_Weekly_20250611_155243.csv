@@ -1,0 +1,4 @@
+"MailboxName","Status","TotalSize","UsagePercent","ItemCount","EmailAddress"
+"山田太郎","Warning","8.2 GB","82","12547","t-yamada@mirai-const.co.jp"
+"田中花子","Critical","9.8 GB","98","18234","h-tanaka@mirai-const.co.jp"
+"佐藤次郎","Normal","2.1 GB","21","3421","j-sato@mirai-const.co.jp"

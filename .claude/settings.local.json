@@ -16,7 +16,12 @@
       "Bash(./Scripts/Common/Create-Certificate-Linux.sh:*)",
       "Bash(openssl x509:*)",
       "Bash(rm:*)",
-      "Bash(crontab:*)"
+      "Bash(crontab:*)",
+      "Bash(find:*)",
+      "Bash(./START.bat)",
+      "Bash(grep:*)",
+      "Bash(powershell:*)",
+      "Bash(./menu.sh:*)"
     ],
     "deny": []
   }

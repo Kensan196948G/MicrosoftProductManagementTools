@@ -106,8 +106,18 @@ function Export-DataToCSV {
     )
     
     try {
-        $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding $Encoding
-        Write-Log "CSVエクスポート完了: $FilePath" -Level "Info"
+        if ($Encoding -eq "UTF8" -and ($IsWindows -or $env:OS -eq "Windows_NT")) {
+            # Windows環境でのCSV文字化け対策：BOM付きUTF-8で出力
+            $csvContent = $Data | ConvertTo-Csv -NoTypeInformation
+            $utf8WithBom = New-Object System.Text.UTF8Encoding $true
+            [System.IO.File]::WriteAllLines($FilePath, $csvContent, $utf8WithBom)
+            Write-Log "CSVエクスポート完了 (BOM付きUTF-8): $FilePath" -Level "Info"
+        }
+        else {
+            # Linux環境または他のエンコーディング
+            $Data | Export-Csv -Path $FilePath -NoTypeInformation -Encoding $Encoding
+            Write-Log "CSVエクスポート完了: $FilePath" -Level "Info"
+        }
         return $true
     }
     catch {
