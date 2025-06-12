@@ -881,7 +881,79 @@ function Show-MainMenu {
                             }
                         }
                         "5" {
-                            Write-Status "配布グループ整合性チェック機能は実装中です" "Warning"
+                            Write-Status "🔍 配布グループ整合性チェックを実行中..." "Info"
+                            Write-Host "このレポートは以下を確認します:" -ForegroundColor Cyan
+                            Write-Host "  • 配布グループのメンバー整合性（存在しないユーザー検出）" -ForegroundColor Gray
+                            Write-Host "  • オーナー設定の有効性確認" -ForegroundColor Gray
+                            Write-Host "  • セキュリティ設定（外部送信許可・送信制限）" -ForegroundColor Gray
+                            Write-Host "  • 無効化されたユーザーの検出" -ForegroundColor Gray
+                            Write-Host "  • ネストグループの存在確認" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            $result = Get-DistributionGroupIntegrityCheck -ExportCSV -ExportHTML -ShowDetails
+                            if ($result.Success) {
+                                Write-Status "✅ 配布グループ整合性チェック完了" "Success"
+                                Write-Host "総配布グループ数: $($result.TotalGroups)" -ForegroundColor Cyan
+                                Write-Host "問題のあるグループ: $($result.GroupsWithIssues)" -ForegroundColor Red
+                                Write-Host "孤立メンバー: $($result.OrphanedMembers)" -ForegroundColor Red
+                                Write-Host "オーナー不在グループ: $($result.NoOwnerGroups)" -ForegroundColor Yellow
+                                Write-Host "外部送信許可グループ: $($result.ExternalSendersEnabled)" -ForegroundColor Yellow
+                                Write-Host "送信制限グループ: $($result.RestrictedGroups)" -ForegroundColor Blue
+                                
+                                Write-Host ""
+                                Write-Host "🛡️ セキュリティ評価:" -ForegroundColor Yellow
+                                if ($result.GroupsWithIssues -eq 0) {
+                                    Write-Host "優秀: 整合性の問題は検出されませんでした" -ForegroundColor Green
+                                } elseif ($result.GroupsWithIssues -le 2) {
+                                    Write-Host "良好: 軽微な問題のみです" -ForegroundColor Yellow
+                                } else {
+                                    Write-Host "要改善: 複数の問題が検出されました" -ForegroundColor Red
+                                }
+                                
+                                if ($result.OrphanedMembers -gt 0) {
+                                    Write-Host ""
+                                    Write-Host "⚠️ 緊急対応推奨:" -ForegroundColor Red
+                                    Write-Host "  • $($result.OrphanedMembers)件の孤立メンバーが検出されました" -ForegroundColor Red
+                                    Write-Host "  • 存在しないユーザー/グループがメンバーに含まれています" -ForegroundColor Red
+                                    Write-Host "  • セキュリティリスクとなる可能性があります" -ForegroundColor Red
+                                }
+                                
+                                if ($result.NoOwnerGroups -gt 0) {
+                                    Write-Host ""
+                                    Write-Host "📋 管理改善推奨:" -ForegroundColor Yellow
+                                    Write-Host "  • $($result.NoOwnerGroups)個のグループにオーナーが設定されていません" -ForegroundColor Yellow
+                                    Write-Host "  • 適切な管理者を設定することを推奨します" -ForegroundColor Yellow
+                                }
+                                
+                                if ($result.OutputPath) {
+                                    Write-Status "📄 CSVレポート: $($result.OutputPath)" "Info"
+                                }
+                                if ($result.HTMLOutputPath) {
+                                    Write-Status "🌐 HTMLレポート: $($result.HTMLOutputPath)" "Info"
+                                    
+                                    # オプション: HTMLレポートをブラウザで開く
+                                    $openReport = Read-Host "HTMLレポートをブラウザで開きますか？ (y/N)"
+                                    if ($openReport -eq "y" -or $openReport -eq "Y") {
+                                        Start-Process $result.HTMLOutputPath
+                                    }
+                                }
+                                
+                                Write-Host ""
+                                Write-Host "💡 改善提案:" -ForegroundColor Yellow
+                                Write-Host "  • 高リスクグループは緊急見直しが必要です"
+                                Write-Host "  • 孤立メンバーは削除または再設定してください"
+                                Write-Host "  • オーナー不在グループには管理者を設定してください"
+                                Write-Host "  • 外部送信許可設定は必要性を確認してください"
+                                Write-Host "  • 定期的なチェックにより継続的な整合性を維持できます"
+                            }
+                            else {
+                                Write-Status "❌ エラーが発生しました: $($result.Error)" "Error"
+                                Write-Host ""
+                                Write-Host "💡 トラブルシューティング:" -ForegroundColor Yellow
+                                Write-Host "  • Exchange Onlineへの接続状況を確認してください"
+                                Write-Host "  • 配布グループの管理権限を確認してください"
+                                Write-Host "  • ネットワーク接続を確認してください"
+                            }
                         }
                         "6" {
                             Write-Status "会議室リソース利用状況監査機能は実装中です" "Warning"

@@ -1725,4 +1725,684 @@ function Generate-DeliveryMonitoringHTML {
     return $htmlContent
 }
 
-Export-ModuleMember -Function Get-AttachmentAnalysisNEW, Get-ForwardingAndAutoReplySettings, Get-MailDeliveryMonitoring
+# EX-05: 配布グループ整合性チェック機能
+function Get-DistributionGroupIntegrityCheck {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$OutputPath = "",
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ExportCSV = $false,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ExportHTML = $false,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowDetails = $false,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxGroups = 0  # 0 = 全配布グループ
+    )
+    
+    Write-Log "=== 配布グループ整合性チェック機能を開始します ===" -Level "Info"
+    Write-Log "DEBUG: ExchangeManagement-NEW.psm1 - 配布グループ整合性チェック Ver. 1.0" -Level "Info"
+    
+    try {
+        # Exchange Online接続確認
+        try {
+            Get-Mailbox -ResultSize 1 -ErrorAction Stop | Out-Null
+            Write-Log "Exchange Online 接続確認完了" -Level "Info"
+        }
+        catch {
+            Write-Log "Exchange Online に接続されていません。自動接続を試行します..." -Level "Warning"
+            
+            try {
+                if (-not (Get-Command Initialize-ManagementTools -ErrorAction SilentlyContinue)) {
+                    Import-Module "$PSScriptRoot\..\Common\Common.psm1" -Force
+                }
+                
+                $config = Initialize-ManagementTools
+                if (-not $config) {
+                    throw "設定ファイルの読み込みに失敗しました"
+                }
+                
+                Write-Log "Exchange Online への自動接続を開始します" -Level "Info"
+                $connectResult = Connect-ExchangeOnlineService -Config $config
+                
+                if ($connectResult) {
+                    Write-Log "Exchange Online 自動接続成功" -Level "Info"
+                }
+                else {
+                    throw "Exchange Online への自動接続に失敗しました"
+                }
+            }
+            catch {
+                throw "Exchange Online 接続エラー: $($_.Exception.Message)"
+            }
+        }
+        
+        # 配布グループ一覧取得
+        Write-Log "配布グループ一覧を取得中..." -Level "Info"
+        
+        if ($MaxGroups -eq 0) {
+            Write-Log "全配布グループを対象として分析を実行します" -Level "Info"
+            $distributionGroups = Get-DistributionGroup -ResultSize Unlimited -ErrorAction SilentlyContinue
+        } else {
+            Write-Log "最大$MaxGroups個の配布グループを対象として分析を実行します" -Level "Info"
+            $distributionGroups = Get-DistributionGroup -ResultSize $MaxGroups -ErrorAction SilentlyContinue
+        }
+        
+        $integrityAnalysis = @()
+        $totalGroups = $distributionGroups.Count
+        $groupsWithIssues = 0
+        $orphanedMembersCount = 0
+        $circularReferencesCount = 0
+        $noOwnerGroupsCount = 0
+        $externalSendersEnabledCount = 0
+        $restrictedGroupsCount = 0
+        
+        Write-Log "対象配布グループ数: $totalGroups個" -Level "Info"
+        
+        # 全ユーザーとグループの基本情報を事前取得（パフォーマンス最適化）
+        Write-Log "参照データを事前取得中（ユーザー・グループ・メールボックス）..." -Level "Info"
+        $allUsers = @{}
+        $allMailboxes = @{}
+        $allGroups = @{}
+        
+        try {
+            # ユーザー情報をハッシュテーブルで高速参照用に格納
+            Get-User -ResultSize Unlimited -ErrorAction SilentlyContinue | ForEach-Object {
+                $allUsers[$_.PrimarySmtpAddress] = $_
+                $allUsers[$_.Identity] = $_
+            }
+            Write-Log "ユーザー情報取得完了: $($allUsers.Count / 2)名" -Level "Info"
+            
+            # メールボックス情報
+            Get-Mailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | ForEach-Object {
+                $allMailboxes[$_.PrimarySmtpAddress] = $_
+                $allMailboxes[$_.Identity] = $_
+            }
+            Write-Log "メールボックス情報取得完了: $($allMailboxes.Count / 2)個" -Level "Info"
+            
+            # 全グループ情報（配布グループ以外も含む）
+            Get-Group -ResultSize Unlimited -ErrorAction SilentlyContinue | ForEach-Object {
+                $allGroups[$_.PrimarySmtpAddress] = $_
+                $allGroups[$_.Identity] = $_
+            }
+            Write-Log "グループ情報取得完了: $($allGroups.Count / 2)個" -Level "Info"
+        }
+        catch {
+            Write-Log "参照データ取得時にエラーが発生しました: $($_.Exception.Message)" -Level "Warning"
+        }
+        
+        $groupProgress = 0
+        $progressInterval = if ($totalGroups -gt 100) { 10 } elseif ($totalGroups -gt 50) { 5 } else { 1 }
+        
+        foreach ($group in $distributionGroups) {
+            $groupProgress++
+            try {
+                # プログレス表示
+                if ($groupProgress % $progressInterval -eq 0 -or $groupProgress -eq $totalGroups) {
+                    $progressPercent = [math]::Round(($groupProgress / $totalGroups) * 100, 1)
+                    Write-Log "分析進捗: $groupProgress/$totalGroups ($progressPercent%) - $($group.Name)" -Level "Info"
+                } else {
+                    Write-Log "配布グループ分析中: $($group.Name)" -Level "Debug"
+                }
+                
+                # 基本情報取得
+                $groupIdentity = $group.Identity
+                $groupName = $group.Name
+                $primarySmtpAddress = $group.PrimarySmtpAddress
+                $displayName = $group.DisplayName
+                
+                # 詳細設定の取得
+                $groupDetails = $null
+                try {
+                    $groupDetails = Get-DistributionGroup -Identity $groupIdentity -ErrorAction SilentlyContinue
+                } catch {
+                    Write-Log "配布グループ詳細取得エラー ($groupName): $($_.Exception.Message)" -Level "Debug"
+                }
+                
+                # メンバー情報の取得と整合性チェック
+                $members = @()
+                $invalidMembers = @()
+                $disabledMembers = @()
+                $externalMembers = @()
+                $nestedGroups = @()
+                
+                try {
+                    $groupMembers = Get-DistributionGroupMember -Identity $groupIdentity -ErrorAction SilentlyContinue
+                    
+                    foreach ($member in $groupMembers) {
+                        $memberInfo = [PSCustomObject]@{
+                            Identity = $member.Identity
+                            Name = $member.Name
+                            PrimarySmtpAddress = $member.PrimarySmtpAddress
+                            RecipientType = $member.RecipientType
+                            IsValid = $true
+                            IsEnabled = $true
+                            IsExternal = $false
+                            IsGroup = $false
+                            Issues = @()
+                        }
+                        
+                        # メンバーの有効性確認
+                        if ($member.RecipientType -like "*Group*") {
+                            $memberInfo.IsGroup = $true
+                            $nestedGroups += $member
+                            
+                            # グループの存在確認
+                            if (-not $allGroups.ContainsKey($member.Identity) -and -not $allGroups.ContainsKey($member.PrimarySmtpAddress)) {
+                                $memberInfo.IsValid = $false
+                                $memberInfo.Issues += "ネストグループが存在しません"
+                                $invalidMembers += $member
+                            }
+                        } else {
+                            # ユーザー/メールボックスの存在確認
+                            $userExists = $allUsers.ContainsKey($member.Identity) -or $allUsers.ContainsKey($member.PrimarySmtpAddress)
+                            $mailboxExists = $allMailboxes.ContainsKey($member.Identity) -or $allMailboxes.ContainsKey($member.PrimarySmtpAddress)
+                            
+                            if (-not $userExists -and -not $mailboxExists) {
+                                $memberInfo.IsValid = $false
+                                $memberInfo.Issues += "ユーザーまたはメールボックスが存在しません"
+                                $invalidMembers += $member
+                            }
+                            
+                            # 外部メンバー判定
+                            try {
+                                $acceptedDomains = Get-AcceptedDomain -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+                                $memberDomain = ($member.PrimarySmtpAddress -split '@')[1]
+                                if ($memberDomain -and $acceptedDomains -notcontains $memberDomain) {
+                                    $memberInfo.IsExternal = $true
+                                    $externalMembers += $member
+                                }
+                            } catch {
+                                Write-Log "ドメイン確認エラー: $($_.Exception.Message)" -Level "Debug"
+                            }
+                            
+                            # ユーザーの有効性確認
+                            if ($userExists) {
+                                $userInfo = $allUsers[$member.Identity]
+                                if (-not $userInfo) {
+                                    $userInfo = $allUsers[$member.PrimarySmtpAddress]
+                                }
+                                
+                                if ($userInfo -and $userInfo.RecipientTypeDetails -eq "DisabledUser") {
+                                    $memberInfo.IsEnabled = $false
+                                    $memberInfo.Issues += "無効化されたユーザーです"
+                                    $disabledMembers += $member
+                                }
+                            }
+                        }
+                        
+                        $members += $memberInfo
+                    }
+                } catch {
+                    Write-Log "配布グループメンバー取得エラー ($groupName): $($_.Exception.Message)" -Level "Debug"
+                }
+                
+                # オーナー情報の確認
+                $owners = @()
+                $hasValidOwner = $false
+                try {
+                    if ($groupDetails -and $groupDetails.ManagedBy) {
+                        foreach ($owner in $groupDetails.ManagedBy) {
+                            $ownerExists = $allUsers.ContainsKey($owner) -or $allMailboxes.ContainsKey($owner)
+                            $owners += [PSCustomObject]@{
+                                Identity = $owner
+                                IsValid = $ownerExists
+                            }
+                            if ($ownerExists) {
+                                $hasValidOwner = $true
+                            }
+                        }
+                    }
+                } catch {
+                    Write-Log "オーナー情報取得エラー ($groupName): $($_.Exception.Message)" -Level "Debug"
+                }
+                
+                if (-not $hasValidOwner) {
+                    $noOwnerGroupsCount++
+                }
+                
+                # 送信制限とセキュリティ設定の確認
+                $requireSenderAuthenticationEnabled = $true
+                $acceptMessagesOnlyFromSendersOrMembers = @()
+                $rejectMessagesFromSendersOrMembers = @()
+                $bypassModerationFromSendersOrMembers = @()
+                
+                if ($groupDetails) {
+                    $requireSenderAuthenticationEnabled = $groupDetails.RequireSenderAuthenticationEnabled
+                    
+                    if ($groupDetails.AcceptMessagesOnlyFromSendersOrMembers) {
+                        $acceptMessagesOnlyFromSendersOrMembers = $groupDetails.AcceptMessagesOnlyFromSendersOrMembers
+                        $restrictedGroupsCount++
+                    }
+                    
+                    if ($groupDetails.RejectMessagesFromSendersOrMembers) {
+                        $rejectMessagesFromSendersOrMembers = $groupDetails.RejectMessagesFromSendersOrMembers
+                    }
+                    
+                    if (-not $requireSenderAuthenticationEnabled) {
+                        $externalSendersEnabledCount++
+                    }
+                }
+                
+                # 問題レベルの判定
+                $issueLevel = "正常"
+                $issues = @()
+                $hasIssues = $false
+                
+                if ($invalidMembers.Count -gt 0) {
+                    $issues += "無効なメンバー: $($invalidMembers.Count)件"
+                    $hasIssues = $true
+                    $orphanedMembersCount += $invalidMembers.Count
+                }
+                
+                if ($disabledMembers.Count -gt 0) {
+                    $issues += "無効化ユーザー: $($disabledMembers.Count)件"
+                    $hasIssues = $true
+                }
+                
+                if (-not $hasValidOwner) {
+                    $issues += "有効なオーナーが存在しません"
+                    $hasIssues = $true
+                }
+                
+                if ($externalMembers.Count -gt 0) {
+                    $issues += "外部メンバー: $($externalMembers.Count)件"
+                }
+                
+                if (-not $requireSenderAuthenticationEnabled) {
+                    $issues += "外部送信者からのメール受信が許可されています"
+                }
+                
+                if ($nestedGroups.Count -gt 5) {
+                    $issues += "ネストグループが多数: $($nestedGroups.Count)件"
+                }
+                
+                # リスクレベル判定
+                if ($issues.Count -eq 0) {
+                    $issueLevel = "正常"
+                } elseif ($invalidMembers.Count -gt 0 -or -not $hasValidOwner) {
+                    $issueLevel = "高リスク"
+                    $groupsWithIssues++
+                } elseif ($disabledMembers.Count -gt 0 -or (-not $requireSenderAuthenticationEnabled)) {
+                    $issueLevel = "中リスク"
+                    $groupsWithIssues++
+                } else {
+                    $issueLevel = "低リスク"
+                }
+                
+                # 分析結果の格納
+                $integrityAnalysis += [PSCustomObject]@{
+                    GroupName = $groupName
+                    DisplayName = $displayName
+                    PrimarySmtpAddress = $primarySmtpAddress
+                    Identity = $groupIdentity
+                    
+                    # メンバー情報
+                    TotalMembers = $members.Count
+                    ValidMembers = ($members | Where-Object { $_.IsValid }).Count
+                    InvalidMembers = $invalidMembers.Count
+                    DisabledMembers = $disabledMembers.Count
+                    ExternalMembers = $externalMembers.Count
+                    NestedGroups = $nestedGroups.Count
+                    
+                    # オーナー情報
+                    TotalOwners = $owners.Count
+                    ValidOwners = ($owners | Where-Object { $_.IsValid }).Count
+                    HasValidOwner = $hasValidOwner
+                    
+                    # セキュリティ設定
+                    RequireSenderAuthentication = $requireSenderAuthenticationEnabled
+                    HasSendingRestrictions = $acceptMessagesOnlyFromSendersOrMembers.Count -gt 0
+                    HasRejectionList = $rejectMessagesFromSendersOrMembers.Count -gt 0
+                    IsRestrictedGroup = $acceptMessagesOnlyFromSendersOrMembers.Count -gt 0
+                    
+                    # 問題とリスク評価
+                    IssueLevel = $issueLevel
+                    Issues = ($issues -join "; ")
+                    HasIssues = $hasIssues
+                    
+                    # メタデータ
+                    WhenCreated = if ($groupDetails) { $groupDetails.WhenCreated } else { $null }
+                    WhenChanged = if ($groupDetails) { $groupDetails.WhenChanged } else { $null }
+                    AnalysisTimestamp = Get-Date
+                }
+            }
+            catch {
+                Write-Log "配布グループ分析エラー ($($group.Name)): $($_.Exception.Message)" -Level "Warning"
+                
+                # エラー時のダミーデータ
+                $integrityAnalysis += [PSCustomObject]@{
+                    GroupName = $group.Name
+                    DisplayName = $group.DisplayName
+                    PrimarySmtpAddress = $group.PrimarySmtpAddress
+                    Identity = $group.Identity
+                    TotalMembers = "取得エラー"
+                    ValidMembers = "取得エラー"
+                    InvalidMembers = "取得エラー"
+                    DisabledMembers = "取得エラー"
+                    ExternalMembers = "取得エラー"
+                    NestedGroups = "取得エラー"
+                    TotalOwners = "取得エラー"
+                    ValidOwners = "取得エラー"
+                    HasValidOwner = "取得エラー"
+                    RequireSenderAuthentication = "取得エラー"
+                    HasSendingRestrictions = "取得エラー"
+                    HasRejectionList = "取得エラー"
+                    IsRestrictedGroup = "取得エラー"
+                    IssueLevel = "不明"
+                    Issues = "取得エラー"
+                    HasIssues = "取得エラー"
+                    WhenCreated = $null
+                    WhenChanged = $null
+                    AnalysisTimestamp = Get-Date
+                }
+            }
+        }
+        
+        Write-Log "配布グループ整合性チェック完了" -Level "Info"
+        Write-Log "総配布グループ数: $totalGroups" -Level "Info"
+        Write-Log "問題のあるグループ: $groupsWithIssues" -Level "Info"
+        Write-Log "孤立メンバー: $orphanedMembersCount" -Level "Info"
+        Write-Log "オーナー不在グループ: $noOwnerGroupsCount" -Level "Info"
+        Write-Log "外部送信許可グループ: $externalSendersEnabledCount" -Level "Info"
+        Write-Log "送信制限グループ: $restrictedGroupsCount" -Level "Info"
+        
+        # レポート出力
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $reportData = @{
+            AnalysisData = $integrityAnalysis
+            Summary = @{
+                TotalGroups = $totalGroups
+                GroupsWithIssues = $groupsWithIssues
+                OrphanedMembers = $orphanedMembersCount
+                CircularReferences = $circularReferencesCount
+                NoOwnerGroups = $noOwnerGroupsCount
+                ExternalSendersEnabled = $externalSendersEnabledCount
+                RestrictedGroups = $restrictedGroupsCount
+                AnalysisTimestamp = $timestamp
+                AnalysisMethod = "Exchange Online PowerShell + 整合性チェック"
+            }
+        }
+        
+        # CSV出力
+        if ($ExportCSV -or -not $OutputPath) {
+            $csvPath = if ($OutputPath) { 
+                Join-Path $OutputPath "Distribution_Group_Integrity_$timestamp.csv" 
+            } else { 
+                "Reports\Daily\Distribution_Group_Integrity_$timestamp.csv" 
+            }
+            
+            $integrityAnalysis | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+            Write-Log "CSVレポート出力完了: $csvPath" -Level "Info"
+            $reportData.CSVPath = $csvPath
+        }
+        
+        # HTML出力
+        if ($ExportHTML -or -not $OutputPath) {
+            $htmlPath = if ($OutputPath) { 
+                Join-Path $OutputPath "Distribution_Group_Integrity_$timestamp.html" 
+            } else { 
+                "Reports\Daily\Distribution_Group_Integrity_$timestamp.html" 
+            }
+            
+            $htmlContent = Generate-DistributionGroupIntegrityHTML -Data $integrityAnalysis -Summary $reportData.Summary
+            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+            Write-Log "HTMLレポート出力完了: $htmlPath" -Level "Info"
+            $reportData.HTMLPath = $htmlPath
+        }
+        
+        return @{
+            Success = $true
+            TotalGroups = $totalGroups
+            GroupsWithIssues = $groupsWithIssues
+            OrphanedMembers = $orphanedMembersCount
+            CircularReferences = $circularReferencesCount
+            NoOwnerGroups = $noOwnerGroupsCount
+            ExternalSendersEnabled = $externalSendersEnabledCount
+            RestrictedGroups = $restrictedGroupsCount
+            OutputPath = $reportData.CSVPath
+            HTMLOutputPath = $reportData.HTMLPath
+            Data = $integrityAnalysis
+            Summary = $reportData.Summary
+        }
+    }
+    catch {
+        Write-Log "配布グループ整合性チェックエラー: $($_.Exception.Message)" -Level "Error"
+        return @{
+            Success = $false
+            Error = $_.Exception.Message
+            TotalGroups = 0
+            GroupsWithIssues = 0
+            OrphanedMembers = 0
+            CircularReferences = 0
+            NoOwnerGroups = 0
+            ExternalSendersEnabled = 0
+            RestrictedGroups = 0
+        }
+    }
+}
+
+# HTMLレポート生成ヘルパー関数
+function Generate-DistributionGroupIntegrityHTML {
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Data,
+        
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Summary
+    )
+    
+    $htmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>配布グループ整合性チェックレポート</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .header { background-color: #0078D4; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; }
+        .summary { background-color: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .summary h2 { color: #0078D4; margin-top: 0; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .summary-item { background-color: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; }
+        .summary-item .number { font-size: 24px; font-weight: bold; color: #0078D4; }
+        .summary-item .label { font-size: 14px; color: #666; margin-top: 5px; }
+        .success { background-color: #d4edda; color: #155724; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; border-radius: 0 6px 6px 0; }
+        .warning { background-color: #fff3cd; color: #856404; padding: 15px; margin: 15px 0; border-left: 4px solid #ffc107; border-radius: 0 6px 6px 0; }
+        .danger { background-color: #f8d7da; color: #721c24; padding: 15px; margin: 15px 0; border-left: 4px solid #dc3545; border-radius: 0 6px 6px 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #0078D4; color: white; font-weight: 600; }
+        tr:hover { background-color: #f8f9fa; }
+        .risk-high { background-color: #ffebee; }
+        .risk-medium { background-color: #fff8e1; }
+        .risk-low { background-color: #e8f5e8; }
+        .risk-normal { background-color: #e3f2fd; }
+        .status-yes { color: #28a745; font-weight: bold; }
+        .status-no { color: #dc3545; font-weight: bold; }
+        .status-partial { color: #ffc107; font-weight: bold; }
+        .text-truncate { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .issues { color: #dc3545; font-size: 12px; }
+        .chart-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .chart-item { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 配布グループ整合性チェックレポート</h1>
+        <p>生成日時: $(Get-Date -Format "yyyy年MM月dd日 HH:mm:ss") | 分析方法: $($Summary.AnalysisMethod)</p>
+    </div>
+    
+    <div class="success">
+        <strong>✅ 分析完了:</strong> 配布グループの整合性チェックが正常に完了しました
+    </div>
+"@
+
+    # 重大な問題がある場合のアラート表示
+    if ($Summary.GroupsWithIssues -gt 0) {
+        $htmlContent += @"
+    <div class="danger">
+        <strong>⚠️ 整合性問題検出:</strong> $($Summary.GroupsWithIssues)個の配布グループで問題が検出されました。至急確認が必要です。
+    </div>
+"@
+    }
+
+    if ($Summary.OrphanedMembers -gt 0) {
+        $htmlContent += @"
+    <div class="warning">
+        <strong>👥 孤立メンバー検出:</strong> $($Summary.OrphanedMembers)件の無効なメンバーが見つかりました。
+    </div>
+"@
+    }
+
+    $htmlContent += @"
+    <div class="summary">
+        <h2>📊 整合性チェックサマリー</h2>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="number">$($Summary.TotalGroups)</div>
+                <div class="label">総配布グループ数</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">$($Summary.GroupsWithIssues)</div>
+                <div class="label">問題のあるグループ</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">$($Summary.OrphanedMembers)</div>
+                <div class="label">孤立メンバー</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">$($Summary.NoOwnerGroups)</div>
+                <div class="label">オーナー不在</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">$($Summary.ExternalSendersEnabled)</div>
+                <div class="label">外部送信許可</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">$($Summary.RestrictedGroups)</div>
+                <div class="label">送信制限設定</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-item">
+            <h3>🎯 主要な問題項目</h3>
+            <ul>
+                <li><strong>孤立メンバー:</strong> 存在しないユーザーがメンバーに含まれている</li>
+                <li><strong>オーナー不在:</strong> 有効なオーナーが設定されていない</li>
+                <li><strong>外部送信許可:</strong> セキュリティリスクのある設定</li>
+                <li><strong>無効化ユーザー:</strong> 無効化されたユーザーがメンバーに残っている</li>
+            </ul>
+        </div>
+        <div class="chart-item">
+            <h3>🔧 推奨対応アクション</h3>
+            <ul>
+                <li>高リスクグループの緊急見直し</li>
+                <li>孤立メンバーの削除または再設定</li>
+                <li>オーナー不在グループへのオーナー設定</li>
+                <li>外部送信許可設定の必要性確認</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>📋 詳細整合性チェック結果</h2>
+    <table>
+        <tr>
+            <th>グループ名</th>
+            <th>表示名</th>
+            <th>メールアドレス</th>
+            <th>総メンバー数</th>
+            <th>有効メンバー</th>
+            <th>無効メンバー</th>
+            <th>オーナー有無</th>
+            <th>外部送信</th>
+            <th>リスクレベル</th>
+            <th>検出された問題</th>
+        </tr>
+"@
+    
+    foreach ($item in $Data) {
+        $riskClass = switch ($item.IssueLevel) {
+            "高リスク" { "risk-high" }
+            "中リスク" { "risk-medium" }
+            "低リスク" { "risk-low" }
+            "正常" { "risk-normal" }
+            default { "" }
+        }
+        
+        $ownerStatus = if ($item.HasValidOwner -eq $true) { "status-yes" } elseif ($item.HasValidOwner -eq $false) { "status-no" } else { "status-partial" }
+        $externalStatus = if ($item.RequireSenderAuthentication -eq $false) { "status-no" } else { "status-yes" }
+        
+        $ownerDisplay = if ($item.HasValidOwner -eq $true) { "あり" } elseif ($item.HasValidOwner -eq $false) { "なし" } else { "不明" }
+        $externalDisplay = if ($item.RequireSenderAuthentication -eq $false) { "許可" } else { "制限" }
+        
+        $htmlContent += @"
+        <tr class="$riskClass">
+            <td><strong>$($item.GroupName)</strong></td>
+            <td>$($item.DisplayName)</td>
+            <td class="text-truncate" title="$($item.PrimarySmtpAddress)">$($item.PrimarySmtpAddress)</td>
+            <td>$($item.TotalMembers)</td>
+            <td>$($item.ValidMembers)</td>
+            <td>$($item.InvalidMembers)</td>
+            <td class="$ownerStatus">$ownerDisplay</td>
+            <td class="$externalStatus">$externalDisplay</td>
+            <td><strong>$($item.IssueLevel)</strong></td>
+            <td class="issues text-truncate" title="$($item.Issues)">$($item.Issues)</td>
+        </tr>
+"@
+    }
+    
+    $htmlContent += @"
+    </table>
+    
+    <div style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>🔍 整合性チェック項目</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <h4>メンバー整合性</h4>
+                <ul>
+                    <li>存在しないユーザー/メールボックスの検出</li>
+                    <li>無効化されたユーザーの検出</li>
+                    <li>外部ドメインメンバーの確認</li>
+                    <li>ネストグループの存在確認</li>
+                </ul>
+            </div>
+            <div>
+                <h4>設定整合性</h4>
+                <ul>
+                    <li>オーナー設定の有効性確認</li>
+                    <li>送信者認証設定の確認</li>
+                    <li>送信制限設定の確認</li>
+                    <li>拒否リスト設定の確認</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h3>🛡️ セキュリティ重要度</h3>
+        <ul>
+            <li><strong>高リスク:</strong> 無効メンバーやオーナー不在など、緊急対応が必要</li>
+            <li><strong>中リスク:</strong> セキュリティ設定や無効化ユーザーなど、確認が必要</li>
+            <li><strong>低リスク:</strong> 軽微な設定問題、定期見直しが推奨</li>
+            <li><strong>正常:</strong> 問題は検出されていません</li>
+        </ul>
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
+        <p>Microsoft Product Management Tools - ITSM/ISO27001/27002準拠</p>
+    </div>
+</body>
+</html>
+"@
+    
+    return $htmlContent
+}
+
+Export-ModuleMember -Function Get-AttachmentAnalysisNEW, Get-ForwardingAndAutoReplySettings, Get-MailDeliveryMonitoring, Get-DistributionGroupIntegrityCheck
