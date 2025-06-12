@@ -28,7 +28,7 @@ function Invoke-DailyReports {
         # Exchange Online 容量監視
         . "$PSScriptRoot\..\EXO\MailboxManagement.ps1"
         $results.EXOCapacity = Get-EXOMailboxCapacityReport
-        $results.EXOAttachment = Get-EXOAttachmentAnalysis
+        $results.EXOAttachment = Get-AttachmentAnalysisNEW
         
         # Exchange Online 配送レポート
         . "$PSScriptRoot\..\EXO\SecurityAnalysis.ps1"
@@ -87,6 +87,28 @@ function Invoke-DailyReports {
                 Summary = $exoSummary
                 Alerts = $alerts
                 Data = $results.EXOCapacity | Where-Object { $_.Status -eq "警告" } | Select-Object -First 20
+            }
+        }
+        
+        # Exchange Online 添付ファイル分析セクション
+        if ($results.EXOAttachment -and $results.EXOAttachment.Data) {
+            $attachmentSummary = New-SummaryStatistics -Data $results.EXOAttachment.Data -CountFields @{
+                "分析メッセージ数" = @{ Type = "Count"; Risk = "低" }
+                "大容量添付" = @{ Type = "Count"; Filter = {$_.HasLargeAttachment -eq $true}; Risk = "中" }
+                "リスク添付" = @{ Type = "Count"; Filter = {$_.RiskLevel -in @("高", "medium", "high")}; Risk = "高" }
+            }
+            
+            $attachmentAlerts = @()
+            $largeAttachmentCount = ($results.EXOAttachment.Data | Where-Object { $_.HasLargeAttachment -eq $true }).Count
+            if ($largeAttachmentCount -gt 0) {
+                $attachmentAlerts += @{ Type = "Warning"; Message = "$largeAttachmentCount件の大容量添付ファイルが検出されました。" }
+            }
+            
+            $reportSections += @{
+                Title = "Exchange Online 添付ファイル分析"
+                Summary = $attachmentSummary
+                Alerts = $attachmentAlerts
+                Data = $results.EXOAttachment.Data | Where-Object { $_.HasLargeAttachment -eq $true -or $_.RiskLevel -in @("高", "medium", "high") } | Select-Object -First 20
             }
         }
         

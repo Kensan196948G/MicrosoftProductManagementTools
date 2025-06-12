@@ -51,6 +51,7 @@ show_main_menu() {
     echo ""
     echo -e "${YELLOW}【Exchange Online監査】${NC}"
     echo -e "  ${WHITE}21.${NC} 自動転送・返信設定確認レポート"
+    echo -e "  ${WHITE}22.${NC} 会議室リソース利用状況監査"
     echo ""
     echo -e "${YELLOW}【ログ・監査】${NC}"
     echo -e "  ${WHITE}13.${NC} ログファイル一覧表示"
@@ -209,12 +210,24 @@ execute_selection() {
             echo -e "${CYAN}実行中... しばらくお待ちください${NC}"
             ./generate-exchange-forwarding-report.sh
             ;;
+        22)
+            echo -e "${YELLOW}🏢 Exchange Online会議室リソース利用状況監査を実行します...${NC}"
+            echo -e "${WHITE}この監査では以下を分析します:${NC}"
+            echo -e "  • 各会議室の利用率計算（過去7日間）"
+            echo -e "  • 高負荷・低稼働・未使用会議室の特定"
+            echo -e "  • ピーク時間帯の分析"
+            echo -e "  • 会議室予約ポリシーの確認"
+            echo -e "  • 利用改善の推奨アクション"
+            echo ""
+            echo -e "${CYAN}実行中... しばらくお待ちください${NC}"
+            pwsh -Command "Import-Module Scripts/Common/Common.psm1; Import-Module Scripts/EXO/SecurityAnalysis.ps1; Get-EXORoomResourceAudit"
+            ;;
         0)
             echo -e "${GREEN}Microsoft製品運用管理ツールを終了します。${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}無効な選択です。1-21または0を入力してください。${NC}"
+            echo -e "${RED}無効な選択です。1-22または0を入力してください。${NC}"
             ;;
     esac
 }
@@ -223,7 +236,7 @@ execute_selection() {
 main_loop() {
     while true; do
         show_main_menu
-        echo -e "${WHITE}選択してください (1-21, 0=終了): ${NC}"
+        echo -e "${WHITE}選択してください (1-22, 0=終了): ${NC}"
         read -r choice
         
         echo ""

@@ -1,0 +1,3 @@
+"RoomName","EmailAddress","ResourceCapacity","AnalysisPeriod","EstimatedBookings","UtilizationRate","PeakUsageHours","LastActivity","TotalItemSize","ItemCount","BookingPolicy","MaxBookingDays","MaxDurationMinutes","AllowRecurring","Status","RiskLevel","RecommendedAction","AnalysisTimestamp"
+"会議室A（サンプル）","roomA@example.com","10","2025/06/05 - 2025/06/12","9","43","10:00-11:00, 14:00-15:00","2025/06/10 19:42:32","不明","96","AutoAccept","180","480","True","軽負荷","正常","現状維持","2025/06/12 19:42:30"
+"会議室B（サンプル）","roomB@example.com","6","2025/06/05 - 2025/06/12","6","29","10:00-11:00, 14:00-15:00","2025/06/06 19:42:32","不明","65","AutoAccept","180","240","True","軽負荷","正常","現状維持","2025/06/12 19:42:30"

@@ -1,3 +1,16 @@
 .env
 node_modules/
 *.log
+
+# Secret files
+Config/appsettings.local.json
+Config/*.local.json
+Config/secrets.json
+
+# Certificate files (keep these local)
+Certificates/*.pfx
+Certificates/*.p12
+
+# Sensitive logs
+Logs/*.sensitive
+Reports/Sensitive/

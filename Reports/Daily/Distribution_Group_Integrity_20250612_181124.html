@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>配布グループ整合性チェックレポート</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .header { background-color: #0078D4; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.9; }
+        .summary { background-color: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .summary h2 { color: #0078D4; margin-top: 0; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .summary-item { background-color: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; }
+        .summary-item .number { font-size: 24px; font-weight: bold; color: #0078D4; }
+        .summary-item .label { font-size: 14px; color: #666; margin-top: 5px; }
+        .success { background-color: #d4edda; color: #155724; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; border-radius: 0 6px 6px 0; }
+        .warning { background-color: #fff3cd; color: #856404; padding: 15px; margin: 15px 0; border-left: 4px solid #ffc107; border-radius: 0 6px 6px 0; }
+        .danger { background-color: #f8d7da; color: #721c24; padding: 15px; margin: 15px 0; border-left: 4px solid #dc3545; border-radius: 0 6px 6px 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #0078D4; color: white; font-weight: 600; }
+        tr:hover { background-color: #f8f9fa; }
+        .risk-high { background-color: #ffebee; }
+        .risk-medium { background-color: #fff8e1; }
+        .risk-low { background-color: #e8f5e8; }
+        .risk-normal { background-color: #e3f2fd; }
+        .status-yes { color: #28a745; font-weight: bold; }
+        .status-no { color: #dc3545; font-weight: bold; }
+        .status-partial { color: #ffc107; font-weight: bold; }
+        .text-truncate { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .issues { color: #dc3545; font-size: 12px; }
+        .chart-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .chart-item { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 配布グループ整合性チェックレポート</h1>
+        <p>生成日時: 2025年06月12日 18:11:24 | 分析方法: Exchange Online PowerShell + 整合性チェック</p>
+    </div>
+    
+    <div class="success">
+        <strong>✅ 分析完了:</strong> 配布グループの整合性チェックが正常に完了しました
+    </div>    <div class="danger">
+        <strong>⚠️ 整合性問題検出:</strong> 95個の配布グループで問題が検出されました。至急確認が必要です。
+    </div>    <div class="warning">
+        <strong>👥 孤立メンバー検出:</strong> 136件の無効なメンバーが見つかりました。
+    </div>    <div class="summary">
+        <h2>📊 整合性チェックサマリー</h2>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="number">95</div>
+                <div class="label">総配布グループ数</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">95</div>
+                <div class="label">問題のあるグループ</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">136</div>
+                <div class="label">孤立メンバー</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">95</div>
+                <div class="label">オーナー不在</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">94</div>
+                <div class="label">外部送信許可</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">0</div>
+                <div class="label">送信制限設定</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-item">
+            <h3>🎯 主要な問題項目</h3>
+            <ul>
+                <li><strong>孤立メンバー:</strong> 存在しないユーザーがメンバーに含まれている</li>
+                <li><strong>オーナー不在:</strong> 有効なオーナーが設定されていない</li>
+                <li><strong>外部送信許可:</strong> セキュリティリスクのある設定</li>
+                <li><strong>無効化ユーザー:</strong> 無効化されたユーザーがメンバーに残っている</li>
+            </ul>
+        </div>
+        <div class="chart-item">
+            <h3>🔧 推奨対応アクション</h3>
+            <ul>
+                <li>高リスクグループの緊急見直し</li>
+                <li>孤立メンバーの削除または再設定</li>
+                <li>オーナー不在グループへのオーナー設定</li>
+                <li>外部送信許可設定の必要性確認</li>
+            </ul>
+        </div>
+    </div>
+    
+    <h2>📋 詳細整合性チェック結果</h2>
+    <table>
+        <tr>
+            <th>グループ名</th>
+            <th>表示名</th>
+            <th>メールアドレス</th>
+            <th>総メンバー数</th>
+            <th>有効メンバー</th>
+            <th>無効メンバー</th>
+            <th>オーナー有無</th>
+            <th>外部送信</th>
+            <th>リスクレベル</th>
+            <th>検出された問題</th>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.amazon-biz</strong></td>
+            <td>Amazonビジネス管理用</td>
+            <td class="text-truncate" title="Fw.amazon-biz@mirai-const.co.jp">Fw.amazon-biz@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.apple-id</strong></td>
+            <td>appleID用</td>
+            <td class="text-truncate" title="Fw.apple-id@mirai-const.co.jp">Fw.apple-id@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cad-master</strong></td>
+            <td>Autocad管理用</td>
+            <td class="text-truncate" title="Fw.cad-master@mirai-const.co.jp">Fw.cad-master@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.survive</strong></td>
+            <td>ＢＣＰ従業員安否確認</td>
+            <td class="text-truncate" title="Fw.survive@mirai-const.co.jp">Fw.survive@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master01</strong></td>
+            <td>CIM用01</td>
+            <td class="text-truncate" title="Fw.cim-master01@mirai-const.co.jp">Fw.cim-master01@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master02</strong></td>
+            <td>CIM用02</td>
+            <td class="text-truncate" title="Fw.cim-master02@mirai-const.co.jp">Fw.cim-master02@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master03</strong></td>
+            <td>CIM用03</td>
+            <td class="text-truncate" title="Fw.cim-master03@mirai-const.co.jp">Fw.cim-master03@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master04</strong></td>
+            <td>CIM用04</td>
+            <td class="text-truncate" title="Fw.cim-master04@mirai-const.co.jp">Fw.cim-master04@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master05</strong></td>
+            <td>CIM用05</td>
+            <td class="text-truncate" title="Fw.cim-master05@mirai-const.co.jp">Fw.cim-master05@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master06</strong></td>
+            <td>CIM用06</td>
+            <td class="text-truncate" title="Fw.cim-master06@mirai-const.co.jp">Fw.cim-master06@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master07</strong></td>
+            <td>CIM用07</td>
+            <td class="text-truncate" title="Fw.cim-master07@mirai-const.co.jp">Fw.cim-master07@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master08</strong></td>
+            <td>CIM用08</td>
+            <td class="text-truncate" title="Fw.cim-master08@mirai-const.co.jp">Fw.cim-master08@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master09</strong></td>
+            <td>CIM用09</td>
+            <td class="text-truncate" title="Fw.cim-master09@mirai-const.co.jp">Fw.cim-master09@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master10</strong></td>
+            <td>CIM用10</td>
+            <td class="text-truncate" title="Fw.cim-master10@mirai-const.co.jp">Fw.cim-master10@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master11</strong></td>
+            <td>CIM用11</td>
+            <td class="text-truncate" title="Fw.cim-master11@mirai-const.co.jp">Fw.cim-master11@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master12</strong></td>
+            <td>CIM用12</td>
+            <td class="text-truncate" title="Fw.cim-master12@mirai-const.co.jp">Fw.cim-master12@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master13</strong></td>
+            <td>CIM用13</td>
+            <td class="text-truncate" title="Fw.cim-master13@mirai-const.co.jp">Fw.cim-master13@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master14</strong></td>
+            <td>CIM用14</td>
+            <td class="text-truncate" title="Fw.cim-master14@mirai-const.co.jp">Fw.cim-master14@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master15</strong></td>
+            <td>CIM用15</td>
+            <td class="text-truncate" title="Fw.cim-master15@mirai-const.co.jp">Fw.cim-master15@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.cim-master16</strong></td>
+            <td>CIM用16</td>
+            <td class="text-truncate" title="Fw.cim-master16@mirai-const.co.jp">Fw.cim-master16@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tech</strong></td>
+            <td>HP問合せﾌｫｰﾑ受信用（技術部）</td>
+            <td class="text-truncate" title="Fw.tech@mirai-const.co.jp">Fw.tech@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.m-info</strong></td>
+            <td>HP問合せ用</td>
+            <td class="text-truncate" title="Fw.m-info@mirai-const.co.jp">Fw.m-info@mirai-const.co.jp</td>
+            <td>5</td>
+            <td>0</td>
+            <td>5</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.sp-info</strong></td>
+            <td>HP技術問合せ用</td>
+            <td class="text-truncate" title="Fw.sp-info@mirai-const.co.jp">Fw.sp-info@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.hp-kanri</strong></td>
+            <td>HP管理</td>
+            <td class="text-truncate" title="Fw.hp-kanri@mirai-const.co.jp">Fw.hp-kanri@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>netis20250402055530</strong></td>
+            <td>netis</td>
+            <td class="text-truncate" title="Fw.netis@mirai-const.co.jp">Fw.netis@mirai-const.co.jp</td>
+            <td>6</td>
+            <td>0</td>
+            <td>6</td>
+            <td class="status-no">なし</td>
+            <td class="status-yes">制限</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 6件; 有効なオーナーが存在しません">無効なメンバー: 6件; 有効なオーナーが存在しません</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.admin</strong></td>
+            <td>Office365管理用</td>
+            <td class="text-truncate" title="Fw.admin@mirai-const.co.jp">Fw.admin@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.sketchup</strong></td>
+            <td>SketchUpPro用（サブスク管理）</td>
+            <td class="text-truncate" title="Fw.sketchup@mirai-const.co.jp">Fw.sketchup@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mirai-sns</strong></td>
+            <td>SNS共用アカウント</td>
+            <td class="text-truncate" title="Fw.mirai-sns@mirai-const.co.jp">Fw.mirai-sns@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.magnetadmin</strong></td>
+            <td>TCSで利用（前橋氏）</td>
+            <td class="text-truncate" title="Fw.magnetadmin@mirai-const.co.jp">Fw.magnetadmin@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tcs-help</strong></td>
+            <td>ＴＣＳヘルプデスク</td>
+            <td class="text-truncate" title="Fw.tcs-help@mirai-const.co.jp">Fw.tcs-help@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tcs-info</strong></td>
+            <td>TCS用</td>
+            <td class="text-truncate" title="Fw.tcs-info@mirai-const.co.jp">Fw.tcs-info@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tcs-kanshi</strong></td>
+            <td>ＴＣＳ監視用</td>
+            <td class="text-truncate" title="Fw.tcs-kanshi@mirai-const.co.jp">Fw.tcs-kanshi@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.web-waf</strong></td>
+            <td>Webｱﾌﾟﾘｹｰｼｮﾝﾌｧｲｱｰｳｫｰﾙ(WAF)ﾛｸﾞ転送用</td>
+            <td class="text-truncate" title="Fw.web-waf@mirai-const.co.jp">Fw.web-waf@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mirai-zoom</strong></td>
+            <td>web会議用</td>
+            <td class="text-truncate" title="Fw.mirai-zoom@mirai-const.co.jp">Fw.mirai-zoom@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.webadmin</strong></td>
+            <td>WEB管理用</td>
+            <td class="text-truncate" title="Fw.webadmin@mirai-const.co.jp">Fw.webadmin@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mk-engagement</strong></td>
+            <td>エンゲージメント委員会事務局用（SuggestionBox）</td>
+            <td class="text-truncate" title="Fw.mk-engagement@mirai-const.co.jp">Fw.mk-engagement@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>エンジニアリング部電子請求書用20250612082149</strong></td>
+            <td>エンジニアリング部電子請求書用</td>
+            <td class="text-truncate" title="Fw.engineering-dept@mirai-const.co.jp">Fw.engineering-dept@mirai-const.co.jp</td>
+            <td>6</td>
+            <td>0</td>
+            <td>6</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 6件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 6件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>カーボンブラックアラート通知用20240305011352</strong></td>
+            <td>カーボンブラックアラート通知用</td>
+            <td class="text-truncate" title="Fw.mirai-edr@mirai-const.co.jp">Fw.mirai-edr@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.compliance-hotline</strong></td>
+            <td>コンプライアンスホットライン</td>
+            <td class="text-truncate" title="Fw.compliance-hotline@mirai-const.co.jp">Fw.compliance-hotline@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.system-info</strong></td>
+            <td>システム窓口</td>
+            <td class="text-truncate" title="Fw.system-info@mirai-const.co.jp">Fw.system-info@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.union</strong></td>
+            <td>みらい建設ユニオン</td>
+            <td class="text-truncate" title="Fw.union@mirai-const.co.jp">Fw.union@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.jinji-saiyou</strong></td>
+            <td>みらい建設工業 人事採用</td>
+            <td class="text-truncate" title="Fw.jinji-saiyou@mirai-const.co.jp">Fw.jinji-saiyou@mirai-const.co.jp</td>
+            <td>5</td>
+            <td>0</td>
+            <td>5</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mail-info</strong></td>
+            <td>メール取得用みらい</td>
+            <td class="text-truncate" title="Fw.mail-info@mirai-const.co.jp">Fw.mail-info@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.m-chugoku</strong></td>
+            <td>中国支店（Zoom）</td>
+            <td class="text-truncate" title="Fw.m-chugoku@mirai-const.co.jp">Fw.m-chugoku@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.chubu</strong></td>
+            <td>中部支店（Zoom）</td>
+            <td class="text-truncate" title="Fw.chubu@mirai-const.co.jp">Fw.chubu@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.m-maruta</strong></td>
+            <td>丸田雅博</td>
+            <td class="text-truncate" title="Fw.m-maruta@mirai-const.co.jp">Fw.m-maruta@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mf-jigyoukikaku</strong></td>
+            <td>事業企画室専用</td>
+            <td class="text-truncate" title="Fw.mf-jigyoukikaku@mirai-const.co.jp">Fw.mf-jigyoukikaku@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.mksystem-alert</strong></td>
+            <td>仕訳入力システム通知用</td>
+            <td class="text-truncate" title="Fw.mksystem-alert@mirai-const.co.jp">Fw.mksystem-alert@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.kaikei-support</strong></td>
+            <td>会計システムサポート用</td>
+            <td class="text-truncate" title="Fw.kaikei-support@mirai-const.co.jp">Fw.kaikei-support@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.saeki2021</strong></td>
+            <td>佐伯港DropBox利用</td>
+            <td class="text-truncate" title="Fw.saeki2021@mirai-const.co.jp">Fw.saeki2021@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.m-hachinohe</strong></td>
+            <td>八戸</td>
+            <td class="text-truncate" title="Fw.m-hachinohe@mirai-const.co.jp">Fw.m-hachinohe@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tc-info</strong></td>
+            <td>勤怠データ送信用（人事部管理）</td>
+            <td class="text-truncate" title="Fw.tc-info@mirai-const.co.jp">Fw.tc-info@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.kita-kyushu</strong></td>
+            <td>北九州営業所（Zoom）</td>
+            <td class="text-truncate" title="Fw.kita-kyushu@mirai-const.co.jp">Fw.kita-kyushu@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.hokkaido</strong></td>
+            <td>北海道支店（Zoom）</td>
+            <td class="text-truncate" title="Fw.hokkaido@mirai-const.co.jp">Fw.hokkaido@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.h-yoshioka</strong></td>
+            <td>吉岡英明</td>
+            <td class="text-truncate" title="Fw.h-yoshioka@mirai-const.co.jp">Fw.h-yoshioka@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.kanri-oosaka</strong></td>
+            <td>大阪支店インボイス用</td>
+            <td class="text-truncate" title="Fw.kanri-oosaka@mirai-const.co.jp">Fw.kanri-oosaka@mirai-const.co.jp</td>
+            <td>6</td>
+            <td>0</td>
+            <td>6</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 6件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 6件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.anpi-admin</strong></td>
+            <td>安否確認管理者用</td>
+            <td class="text-truncate" title="Fw.anpi-admin@mirai-const.co.jp">Fw.anpi-admin@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.k-obara</strong></td>
+            <td>小原恒平</td>
+            <td class="text-truncate" title="Fw.k-obara@mirai-const.co.jp">Fw.k-obara@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.h-yamaguchi</strong></td>
+            <td>山口晴久</td>
+            <td class="text-truncate" title="Fw.h-yamaguchi@mirai-const.co.jp">Fw.h-yamaguchi@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>技術20250417040730</strong></td>
+            <td>技術</td>
+            <td class="text-truncate" title="Fw.gijyutsu@mirai-const.co.jp">Fw.gijyutsu@mirai-const.co.jp</td>
+            <td>7</td>
+            <td>0</td>
+            <td>7</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 7件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 7件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.m-ariake</strong></td>
+            <td>有明営業所（Zoom）</td>
+            <td class="text-truncate" title="Fw.m-ariake@mirai-const.co.jp">Fw.m-ariake@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.honsya2-1</strong></td>
+            <td>本社会議室２階①（Zoom）</td>
+            <td class="text-truncate" title="Fw.honsya2-1@mirai-const.co.jp">Fw.honsya2-1@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.honsya2-2</strong></td>
+            <td>本社会議室２階②（Zoom）</td>
+            <td class="text-truncate" title="Fw.honsya2-2@mirai-const.co.jp">Fw.honsya2-2@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.tokyokoji</strong></td>
+            <td>東京工事事務所（Zoom）</td>
+            <td class="text-truncate" title="Fw.tokyokoji@mirai-const.co.jp">Fw.tokyokoji@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.kanri-tokyo</strong></td>
+            <td>東京支店インボイス用</td>
+            <td class="text-truncate" title="Fw.kanri-tokyo@mirai-const.co.jp">Fw.kanri-tokyo@mirai-const.co.jp</td>
+            <td>4</td>
+            <td>0</td>
+            <td>4</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.okinawa</strong></td>
+            <td>沖縄営業所（Zoom）</td>
+            <td class="text-truncate" title="Fw.okinawa@mirai-const.co.jp">Fw.okinawa@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.k-sagara</strong></td>
+            <td>相良宏介</td>
+            <td class="text-truncate" title="Fw.k-sagara@mirai-const.co.jp">Fw.k-sagara@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>管理（九州）20250508024042</strong></td>
+            <td>管理（中部）</td>
+            <td class="text-truncate" title="Fw.kanri-chubu@mirai-const.co.jp">Fw.kanri-chubu@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>管理（九州）20240905073245</strong></td>
+            <td>管理（九州）</td>
+            <td class="text-truncate" title="Fw.kanri-kyushu@mirai-const.co.jp">Fw.kanri-kyushu@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>管理（北海道）20250610001658</strong></td>
+            <td>管理（北海道）</td>
+            <td class="text-truncate" title="Fw.kanri-hokkaido@mirai-const.co.jp">Fw.kanri-hokkaido@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.keieikikaku</strong></td>
+            <td>経営企画</td>
+            <td class="text-truncate" title="Fw.keieikikaku@mirai-const.co.jp">Fw.keieikikaku@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.soumu-payment</strong></td>
+            <td>総務部インボイス用</td>
+            <td class="text-truncate" title="Fw.soumu-payment@mirai-const.co.jp">Fw.soumu-payment@mirai-const.co.jp</td>
+            <td>5</td>
+            <td>0</td>
+            <td>5</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.a-suwabe</strong></td>
+            <td>諏訪邊明</td>
+            <td class="text-truncate" title="Fw.a-suwabe@mirai-const.co.jp">Fw.a-suwabe@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.zaimu</strong></td>
+            <td>財務用</td>
+            <td class="text-truncate" title="Fw.zaimu@mirai-const.co.jp">Fw.zaimu@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.h-suzuki</strong></td>
+            <td>鈴木弘之</td>
+            <td class="text-truncate" title="Fw.h-suzuki@mirai-const.co.jp">Fw.h-suzuki@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.keikai</strong></td>
+            <td>関西支店・ＷＴＣ現場用</td>
+            <td class="text-truncate" title="Fw.keikai@mirai-const.co.jp">Fw.keikai@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info11m</strong></td>
+            <td>電子入札（中国支店）</td>
+            <td class="text-truncate" title="Fw.bid-info11m@mirai-const.co.jp">Fw.bid-info11m@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info09m</strong></td>
+            <td>電子入札（中部支店）</td>
+            <td class="text-truncate" title="Fw.bid-info09m@mirai-const.co.jp">Fw.bid-info09m@mirai-const.co.jp</td>
+            <td>4</td>
+            <td>0</td>
+            <td>4</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info13m</strong></td>
+            <td>電子入札（九州支店）</td>
+            <td class="text-truncate" title="Fw.bid-info13m@mirai-const.co.jp">Fw.bid-info13m@mirai-const.co.jp</td>
+            <td>8</td>
+            <td>0</td>
+            <td>8</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 8件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 8件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info02m</strong></td>
+            <td>電子入札（北海道支店）</td>
+            <td class="text-truncate" title="Fw.bid-info02m@mirai-const.co.jp">Fw.bid-info02m@mirai-const.co.jp</td>
+            <td>5</td>
+            <td>0</td>
+            <td>5</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 5件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info08m</strong></td>
+            <td>電子入札（北陸営業所）</td>
+            <td class="text-truncate" title="Fw.bid-info08m@mirai-const.co.jp">Fw.bid-info08m@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info05m</strong></td>
+            <td>電子入札（千葉営業所）</td>
+            <td class="text-truncate" title="Fw.bid-info05m@mirai-const.co.jp">Fw.bid-info05m@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info12m</strong></td>
+            <td>電子入札（四国営業支店）</td>
+            <td class="text-truncate" title="Fw.bid-info12m@mirai-const.co.jp">Fw.bid-info12m@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info10m</strong></td>
+            <td>電子入札（大阪支店）</td>
+            <td class="text-truncate" title="Fw.bid-info10m@mirai-const.co.jp">Fw.bid-info10m@mirai-const.co.jp</td>
+            <td>4</td>
+            <td>0</td>
+            <td>4</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 4件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info01m</strong></td>
+            <td>電子入札（本社）</td>
+            <td class="text-truncate" title="Fw.bid-info01m@mirai-const.co.jp">Fw.bid-info01m@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info04m</strong></td>
+            <td>電子入札（東京支店）</td>
+            <td class="text-truncate" title="Fw.bid-info04m@mirai-const.co.jp">Fw.bid-info04m@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info03m</strong></td>
+            <td>電子入札（東北支店）</td>
+            <td class="text-truncate" title="Fw.bid-info03m@mirai-const.co.jp">Fw.bid-info03m@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info06m</strong></td>
+            <td>電子入札（横浜支店）</td>
+            <td class="text-truncate" title="Fw.bid-info06m@mirai-const.co.jp">Fw.bid-info06m@mirai-const.co.jp</td>
+            <td>3</td>
+            <td>0</td>
+            <td>3</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 3件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info14m</strong></td>
+            <td>電子入札（沖縄営業所）</td>
+            <td class="text-truncate" title="Fw.bid-info14m@mirai-const.co.jp">Fw.bid-info14m@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info15m</strong></td>
+            <td>電子入札（能登営業所）</td>
+            <td class="text-truncate" title="Fw.bid-info15m@mirai-const.co.jp">Fw.bid-info15m@mirai-const.co.jp</td>
+            <td>2</td>
+            <td>0</td>
+            <td>2</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 2件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info17m</strong></td>
+            <td>電子入札用</td>
+            <td class="text-truncate" title="Fw.bid-info17m@mirai-const.co.jp">Fw.bid-info17m@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info18m</strong></td>
+            <td>電子入札用</td>
+            <td class="text-truncate" title="Fw.bid-info18m@mirai-const.co.jp">Fw.bid-info18m@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info19m</strong></td>
+            <td>電子入札用</td>
+            <td class="text-truncate" title="Fw.bid-info19m@mirai-const.co.jp">Fw.bid-info19m@mirai-const.co.jp</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.bid-info07m</strong></td>
+            <td>電子入札用（茨木営業支店）</td>
+            <td class="text-truncate" title="Fw.bid-info07m@mirai-const.co.jp">Fw.bid-info07m@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部送信者からのメール受信が許可されています</td>
+        </tr>        <tr class="risk-high">
+            <td><strong>Fw.ta-saitoh</strong></td>
+            <td>齋藤隆</td>
+            <td class="text-truncate" title="Fw.ta-saitoh@mirai-const.co.jp">Fw.ta-saitoh@mirai-const.co.jp</td>
+            <td>1</td>
+            <td>0</td>
+            <td>1</td>
+            <td class="status-no">なし</td>
+            <td class="status-no">許可</td>
+            <td><strong>高リスク</strong></td>
+            <td class="issues text-truncate" title="無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています">無効なメンバー: 1件; 有効なオーナーが存在しません; 外部メンバー: 1件; 外部送信者からのメール受信が許可されています</td>
+        </tr>    </table>
+    
+    <div style="margin-top: 30px; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>🔍 整合性チェック項目</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <h4>メンバー整合性</h4>
+                <ul>
+                    <li>存在しないユーザー/メールボックスの検出</li>
+                    <li>無効化されたユーザーの検出</li>
+                    <li>外部ドメインメンバーの確認</li>
+                    <li>ネストグループの存在確認</li>
+                </ul>
+            </div>
+            <div>
+                <h4>設定整合性</h4>
+                <ul>
+                    <li>オーナー設定の有効性確認</li>
+                    <li>送信者認証設定の確認</li>
+                    <li>送信制限設定の確認</li>
+                    <li>拒否リスト設定の確認</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h3>🛡️ セキュリティ重要度</h3>
+        <ul>
+            <li><strong>高リスク:</strong> 無効メンバーやオーナー不在など、緊急対応が必要</li>
+            <li><strong>中リスク:</strong> セキュリティ設定や無効化ユーザーなど、確認が必要</li>
+            <li><strong>低リスク:</strong> 軽微な設定問題、定期見直しが推奨</li>
+            <li><strong>正常:</strong> 問題は検出されていません</li>
+        </ul>
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
+        <p>Microsoft Product Management Tools - ITSM/ISO27001/27002準拠</p>
+    </div>
+</body>
+</html>
