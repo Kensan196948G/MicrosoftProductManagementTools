@@ -21,7 +21,10 @@
       "Bash(./START.bat)",
       "Bash(grep:*)",
       "Bash(powershell:*)",
-      "Bash(./menu.sh:*)"
+      "Bash(./menu.sh:*)",
+      "Bash(rg:*)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 5 -B 5 \"Attachment|attachment\" /mnt/c/kitting/MicrosoftProductManagementTools/Start-ManagementTools.ps1)",
+      "WebFetch(domain:docs.microsoft.com)"
     ],
     "deny": []
   }

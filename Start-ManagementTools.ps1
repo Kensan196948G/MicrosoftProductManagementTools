@@ -626,7 +626,8 @@ function Show-MainMenu {
                     # 必要なモジュールを事前インポート
                     Import-Module "$Script:ToolRoot\Scripts\Common\Common.psm1" -Force
                     Import-Module "$Script:ToolRoot\Scripts\Common\Authentication.psm1" -Force
-                    Import-Module "$Script:ToolRoot\Scripts\EXO\ExchangeManagement.psm1" -Force
+                    # 新しいGraph API統合モジュールを使用
+                    Import-Module "$Script:ToolRoot\Scripts\EXO\ExchangeManagement-NEW.psm1" -Force
                     
                     switch ($exChoice) {
                         "1" {
@@ -651,7 +652,11 @@ function Show-MainMenu {
                         }
                         "2" {
                             Write-Status "添付ファイル送信履歴分析を実行中..." "Info"
-                            $result = Get-AttachmentAnalysis -Days 30 -SizeThresholdMB 10 -ShowDetails -ExportCSV -ExportHTML
+                            # 完全新バージョンのモジュールを使用
+                            Remove-Module ExchangeManagement* -Force -ErrorAction SilentlyContinue
+                            Import-Module "$Script:ToolRoot\Scripts\EXO\ExchangeManagement-NEW.psm1" -Force -Global
+                            Write-Host "DEBUG: ExchangeManagement-NEW.psm1 (Graph API統合版) 読み込み完了" -ForegroundColor Green
+                            $result = Get-AttachmentAnalysisNEW -Days 30 -SizeThresholdMB 10 -ShowDetails -ExportCSV -ExportHTML -AllUsers
                             if ($result.Success) {
                                 Write-Status "添付ファイル分析完了" "Success"
                                 Write-Host "分析メッセージ数: $($result.TotalMessages)" -ForegroundColor Cyan
@@ -669,7 +674,25 @@ function Show-MainMenu {
                             }
                         }
                         "3" {
-                            Write-Status "自動転送・返信設定確認機能は実装中です" "Warning"
+                            Write-Status "自動転送・返信設定確認を実行中..." "Info"
+                            $result = Get-AutoForwardReplyConfiguration -ShowDetails -ExportCSV -ExportHTML
+                            if ($result.Success) {
+                                Write-Status "自動転送・返信設定確認完了" "Success"
+                                Write-Host "総メールボックス数: $($result.TotalMailboxes)" -ForegroundColor Cyan
+                                Write-Host "自動転送設定: $($result.AutoForwardCount)" -ForegroundColor Yellow
+                                Write-Host "自動返信設定: $($result.AutoReplyCount)" -ForegroundColor Blue
+                                Write-Host "高リスク: $($result.HighRiskCount)" -ForegroundColor Red
+                                Write-Host "中リスク: $($result.MediumRiskCount)" -ForegroundColor Yellow
+                                Write-Host "疑わしいルール: $($result.SuspiciousRulesCount)" -ForegroundColor Yellow
+                                Write-Host "外部転送: $($result.ExternalForwardingCount)" -ForegroundColor Red
+                                
+                                if ($result.OutputPath) {
+                                    Write-Status "CSVレポート: $($result.OutputPath)" "Info"
+                                }
+                                if ($result.HTMLOutputPath) {
+                                    Write-Status "HTMLレポート: $($result.HTMLOutputPath)" "Info"
+                                }
+                            }
                         }
                         "4" {
                             Write-Status "メール配送遅延・障害監視機能は実装中です" "Warning"
