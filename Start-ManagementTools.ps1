@@ -674,28 +674,211 @@ function Show-MainMenu {
                             }
                         }
                         "3" {
-                            Write-Status "自動転送・返信設定確認を実行中..." "Info"
-                            $result = Get-AutoForwardReplyConfiguration -ShowDetails -ExportCSV -ExportHTML
+                            Write-Status "🔄 自動転送・返信設定確認を実行中..." "Info"
+                            Write-Host "このレポートは以下を確認します:" -ForegroundColor Cyan
+                            Write-Host "  • メールボックスの自動転送設定" -ForegroundColor Gray
+                            Write-Host "  • 自動応答（不在通知）設定" -ForegroundColor Gray
+                            Write-Host "  • インボックスルールによる転送" -ForegroundColor Gray
+                            Write-Host "  • 外部ドメインへの転送（セキュリティリスク）" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            $result = Get-ForwardingAndAutoReplySettings -ExportCSV -ExportHTML -ShowDetails
                             if ($result.Success) {
-                                Write-Status "自動転送・返信設定確認完了" "Success"
+                                Write-Status "✅ 自動転送・返信設定確認完了" "Success"
                                 Write-Host "総メールボックス数: $($result.TotalMailboxes)" -ForegroundColor Cyan
-                                Write-Host "自動転送設定: $($result.AutoForwardCount)" -ForegroundColor Yellow
-                                Write-Host "自動返信設定: $($result.AutoReplyCount)" -ForegroundColor Blue
-                                Write-Host "高リスク: $($result.HighRiskCount)" -ForegroundColor Red
-                                Write-Host "中リスク: $($result.MediumRiskCount)" -ForegroundColor Yellow
-                                Write-Host "疑わしいルール: $($result.SuspiciousRulesCount)" -ForegroundColor Yellow
-                                Write-Host "外部転送: $($result.ExternalForwardingCount)" -ForegroundColor Red
+                                Write-Host "転送設定あり: $($result.ForwardingCount)" -ForegroundColor Yellow
+                                Write-Host "自動応答設定あり: $($result.AutoReplyCount)" -ForegroundColor Blue
+                                Write-Host "外部転送あり: $($result.ExternalForwardingCount)" -ForegroundColor Red
+                                Write-Host "リスク検出: $($result.RiskCount)" -ForegroundColor Red
+                                
+                                Write-Host ""
+                                Write-Host "🔒 セキュリティ監査のポイント:" -ForegroundColor Yellow
+                                Write-Host "  • 外部転送設定は情報漏洩リスクがあります" -ForegroundColor Gray
+                                Write-Host "  • 長期間設定された自動応答は要確認です" -ForegroundColor Gray
+                                Write-Host "  • インボックスルールによる自動転送も監視対象です" -ForegroundColor Gray
+                                Write-Host "  • 定期的な設定見直しを推奨します" -ForegroundColor Gray
                                 
                                 if ($result.OutputPath) {
-                                    Write-Status "CSVレポート: $($result.OutputPath)" "Info"
+                                    Write-Status "📄 CSVレポート: $($result.OutputPath)" "Info"
                                 }
                                 if ($result.HTMLOutputPath) {
-                                    Write-Status "HTMLレポート: $($result.HTMLOutputPath)" "Info"
+                                    Write-Status "🌐 HTMLレポート: $($result.HTMLOutputPath)" "Info"
+                                    
+                                    # オプション: HTMLレポートをブラウザで開く
+                                    $openReport = Read-Host "HTMLレポートをブラウザで開きますか？ (y/N)"
+                                    if ($openReport -eq "y" -or $openReport -eq "Y") {
+                                        Start-Process $result.HTMLOutputPath
+                                    }
                                 }
+                            }
+                            else {
+                                Write-Status "❌ エラーが発生しました: $($result.Error)" "Error"
                             }
                         }
                         "4" {
-                            Write-Status "メール配送遅延・障害監視機能は実装中です" "Warning"
+                            Write-Status "📧 メール配送遅延・障害監視を実行中..." "Info"
+                            Write-Host "このレポートは以下を監視します:" -ForegroundColor Cyan
+                            Write-Host "  • メッセージ配送状況（成功/失敗/遅延）" -ForegroundColor Gray
+                            Write-Host "  • 配送遅延時間の分析" -ForegroundColor Gray
+                            Write-Host "  • スパム・検疫メッセージの検出" -ForegroundColor Gray
+                            Write-Host "  • 配送障害アラートの生成" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            # 分析期間とパラメータの選択
+                            Write-Host "分析期間を選択してください:" -ForegroundColor Yellow
+                            Write-Host "1. 過去1時間（高速）"
+                            Write-Host "2. 過去6時間（推奨）"
+                            Write-Host "3. 過去24時間（詳細）"
+                            Write-Host "4. カスタム設定"
+                            Write-Host "5. 戻る"
+                            
+                            $periodChoice = Read-Host "選択 (1-5)"
+                            $hours = 6  # デフォルト
+                            $delayThreshold = 30  # デフォルト30分
+                            $maxMessages = 1000  # デフォルト
+                            
+                            switch ($periodChoice) {
+                                "1" { 
+                                    $hours = 1
+                                    $maxMessages = 500
+                                    Write-Host "✅ 過去1時間の高速分析を実行します" -ForegroundColor Green
+                                }
+                                "2" { 
+                                    $hours = 6
+                                    $maxMessages = 1000
+                                    Write-Host "✅ 過去6時間の推奨分析を実行します" -ForegroundColor Green
+                                }
+                                "3" { 
+                                    $hours = 24
+                                    $maxMessages = 2000
+                                    Write-Host "✅ 過去24時間の詳細分析を実行します" -ForegroundColor Green
+                                }
+                                "4" {
+                                    $hours = Read-Host "分析時間数を入力してください (1-48)"
+                                    $delayThreshold = Read-Host "遅延閾値（分）を入力してください (15-120)"
+                                    $maxMessages = Read-Host "最大メッセージ数を入力してください (100-5000)"
+                                    Write-Host "✅ カスタム設定で分析を実行します: $hours時間, 遅延閾値$delayThreshold分, 最大$maxMessages件" -ForegroundColor Green
+                                }
+                                "5" {
+                                    Write-Status "Exchange Onlineメニューに戻ります" "Info"
+                                    break
+                                }
+                                default { 
+                                    Write-Host "✅ デフォルト設定（過去6時間）で分析を実行します" -ForegroundColor Green
+                                }
+                            }
+                            
+                            # 戻るが選択された場合は処理をスキップ
+                            if ($periodChoice -eq "5") {
+                                break
+                            }
+                            
+                            Write-Host ""
+                            Write-Host "⏳ 分析開始中... しばらくお待ちください" -ForegroundColor Cyan
+                            
+                            $result = Get-MailDeliveryMonitoring -Hours $hours -DelayThresholdMinutes $delayThreshold -MaxMessages $maxMessages -ExportCSV -ExportHTML -ShowDetails
+                            if ($result.Success) {
+                                if ($result.TotalMessages -eq 0) {
+                                    Write-Status "✅ メール配送遅延・障害監視完了（データなし）" "Success"
+                                    Write-Host ""
+                                    Write-Host "📋 分析結果:" -ForegroundColor Yellow
+                                    Write-Host "指定期間内にメッセージトレースデータが見つかりませんでした。" -ForegroundColor Cyan
+                                    Write-Host "これは以下の理由が考えられます:" -ForegroundColor Gray
+                                    Write-Host "  • 分析期間中にメール送受信がなかった" -ForegroundColor Gray
+                                    Write-Host "  • Exchange Onlineのデータ保持期間外" -ForegroundColor Gray
+                                    Write-Host "  • ライセンス制限によるデータアクセス制限" -ForegroundColor Gray
+                                    Write-Host ""
+                                    Write-Host "💡 改善提案:" -ForegroundColor Yellow
+                                    Write-Host "  • より長い期間（6時間～24時間）で再試行" -ForegroundColor Gray
+                                    Write-Host "  • テストメールを送信後に再分析" -ForegroundColor Gray
+                                    Write-Host "  • 組織のメール利用状況を確認" -ForegroundColor Gray
+                                } else {
+                                    Write-Status "✅ メール配送遅延・障害監視完了" "Success"
+                                }
+                                Write-Host ""
+                                Write-Host "📊 配送状況サマリー:" -ForegroundColor Yellow
+                                Write-Host "総メッセージ数: $($result.TotalMessages)" -ForegroundColor Cyan
+                                Write-Host "配送完了: $($result.DeliveredMessages)" -ForegroundColor Green
+                                Write-Host "配送失敗: $($result.FailedMessages)" -ForegroundColor Red
+                                Write-Host "遅延検出: $($result.DelayedMessages)" -ForegroundColor Yellow
+                                Write-Host "スパム検出: $($result.SpamMessages)" -ForegroundColor Magenta
+                                Write-Host "配送中: $($result.ProcessingMessages)" -ForegroundColor Blue
+                                Write-Host "送信者数: $($result.UniqueSenders)" -ForegroundColor Cyan
+                                Write-Host "受信者数: $($result.UniqueRecipients)" -ForegroundColor Cyan
+                                
+                                if ($result.AverageDelay -gt 0) {
+                                    Write-Host "平均遅延時間: $($result.AverageDelay)分" -ForegroundColor Yellow
+                                }
+                                
+                                # 重大な問題のアラート表示
+                                if ($result.CriticalIssues.Count -gt 0) {
+                                    Write-Host ""
+                                    Write-Host "🚨 重大な問題が検出されました:" -ForegroundColor Red
+                                    foreach ($issue in $result.CriticalIssues) {
+                                        Write-Host "  ⚠️  $issue" -ForegroundColor Red
+                                    }
+                                    Write-Host "緊急対応が必要です。詳細はレポートをご確認ください。" -ForegroundColor Red
+                                }
+                                
+                                # 配送健全性の評価
+                                if ($result.TotalMessages -gt 0) {
+                                    $failureRate = ($result.FailedMessages / $result.TotalMessages) * 100
+                                    $delayRate = ($result.DelayedMessages / $result.TotalMessages) * 100
+                                    
+                                    Write-Host ""
+                                    Write-Host "📈 配送健全性評価:" -ForegroundColor Yellow
+                                    
+                                    if ($failureRate -le 1) {
+                                        Write-Host "配送成功率: 優秀 ($($failureRate.ToString('N1'))% 失敗)" -ForegroundColor Green
+                                    } elseif ($failureRate -le 3) {
+                                        Write-Host "配送成功率: 良好 ($($failureRate.ToString('N1'))% 失敗)" -ForegroundColor Yellow
+                                    } else {
+                                        Write-Host "配送成功率: 要改善 ($($failureRate.ToString('N1'))% 失敗)" -ForegroundColor Red
+                                    }
+                                    
+                                    if ($delayRate -le 5) {
+                                        Write-Host "配送速度: 優秀 ($($delayRate.ToString('N1'))% 遅延)" -ForegroundColor Green
+                                    } elseif ($delayRate -le 10) {
+                                        Write-Host "配送速度: 良好 ($($delayRate.ToString('N1'))% 遅延)" -ForegroundColor Yellow
+                                    } else {
+                                        Write-Host "配送速度: 要改善 ($($delayRate.ToString('N1'))% 遅延)" -ForegroundColor Red
+                                    }
+                                }
+                                
+                                Write-Host ""
+                                Write-Host "🔍 分析詳細:" -ForegroundColor Yellow
+                                Write-Host "  • 分析期間: $hours時間"
+                                Write-Host "  • 遅延閾値: $delayThreshold分"
+                                Write-Host "  • 最大分析件数: $maxMessages件"
+                                
+                                if ($result.OutputPath) {
+                                    Write-Status "📄 CSVレポート: $($result.OutputPath)" "Info"
+                                }
+                                if ($result.HTMLOutputPath) {
+                                    Write-Status "🌐 HTMLレポート: $($result.HTMLOutputPath)" "Info"
+                                    
+                                    # オプション: HTMLレポートをブラウザで開く
+                                    $openReport = Read-Host "HTMLレポートをブラウザで開きますか？ (y/N)"
+                                    if ($openReport -eq "y" -or $openReport -eq "Y") {
+                                        Start-Process $result.HTMLOutputPath
+                                    }
+                                }
+                                
+                                Write-Host ""
+                                Write-Host "💡 運用のヒント:" -ForegroundColor Yellow
+                                Write-Host "  • 配送失敗率が5%を超える場合はExchange Onlineサービス状況を確認"
+                                Write-Host "  • 遅延率が10%を超える場合はネットワークとメールフロー設定を確認"
+                                Write-Host "  • スパム率が20%を超える場合は送信者のレピュテーションを確認"
+                                Write-Host "  • 定期的な監視により障害の早期発見が可能です"
+                            }
+                            else {
+                                Write-Status "❌ エラーが発生しました: $($result.Error)" "Error"
+                                Write-Host ""
+                                Write-Host "💡 トラブルシューティング:" -ForegroundColor Yellow
+                                Write-Host "  • Exchange Onlineへの接続状況を確認してください"
+                                Write-Host "  • 分析期間を短縮して再試行してください"
+                                Write-Host "  • 管理者権限とライセンス設定を確認してください"
+                            }
                         }
                         "5" {
                             Write-Status "配布グループ整合性チェック機能は実装中です" "Warning"

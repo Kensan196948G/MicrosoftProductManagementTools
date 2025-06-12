@@ -49,6 +49,9 @@ show_main_menu() {
     echo -e "  ${WHITE}11.${NC} 月次レポート生成"
     echo -e "  ${WHITE}12.${NC} 年次レポート生成"
     echo ""
+    echo -e "${YELLOW}【Exchange Online監査】${NC}"
+    echo -e "  ${WHITE}21.${NC} 自動転送・返信設定確認レポート"
+    echo ""
     echo -e "${YELLOW}【ログ・監査】${NC}"
     echo -e "  ${WHITE}13.${NC} ログファイル一覧表示"
     echo -e "  ${WHITE}14.${NC} 最新ログ表示 (tail -f)"
@@ -195,12 +198,23 @@ execute_selection() {
                 echo "導入完了報告ファイルが見つかりません"
             fi
             ;;
+        21)
+            echo -e "${YELLOW}🔄 Exchange Online自動転送・返信設定確認レポートを生成します...${NC}"
+            echo -e "${WHITE}このレポートは以下を確認します:${NC}"
+            echo -e "  • メールボックスの自動転送設定"
+            echo -e "  • 自動応答（不在通知）設定"
+            echo -e "  • インボックスルールによる転送"
+            echo -e "  • 外部ドメインへの転送（セキュリティリスク）"
+            echo ""
+            echo -e "${CYAN}実行中... しばらくお待ちください${NC}"
+            ./generate-exchange-forwarding-report.sh
+            ;;
         0)
             echo -e "${GREEN}Microsoft製品運用管理ツールを終了します。${NC}"
             exit 0
             ;;
         *)
-            echo -e "${RED}無効な選択です。1-20または0を入力してください。${NC}"
+            echo -e "${RED}無効な選択です。1-21または0を入力してください。${NC}"
             ;;
     esac
 }
@@ -209,7 +223,7 @@ execute_selection() {
 main_loop() {
     while true; do
         show_main_menu
-        echo -e "${WHITE}選択してください (1-20, 0=終了): ${NC}"
+        echo -e "${WHITE}選択してください (1-21, 0=終了): ${NC}"
         read -r choice
         
         echo ""
