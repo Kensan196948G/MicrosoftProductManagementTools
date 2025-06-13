@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft 365 年間消費傾向アラートダッシュボード</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+            color: #333;
+            line-height: 1.6;
+        }
+        .header { 
+            background: linear-gradient(135deg, #d13438 0%, #b91c1c 100%); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            margin-bottom: 30px; 
+            text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header .subtitle { margin: 10px 0 0 0; font-size: 16px; opacity: 0.9; }
+        .summary-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+        .summary-card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            text-align: center; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card h3 { margin: 0 0 10px 0; color: #666; font-size: 14px; }
+        .summary-card .value { font-size: 36px; font-weight: bold; margin: 10px 0; }
+        .value.success { color: #107c10; }
+        .value.warning { color: #ff8c00; }
+        .value.danger { color: #d13438; }
+        .value.info { color: #0078d4; }
+        .section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-header {
+            background: linear-gradient(135deg, #d13438 0%, #b91c1c 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+        }
+        .section-content { padding: 20px; }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+        .data-table th {
+            background-color: #d13438;
+            color: white;
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-size: 12px;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .data-table tr:hover {
+            background-color: #e9ecef;
+        }
+        .risk-normal { background-color: #d4edda !important; color: #155724; }
+        .risk-attention { background-color: #cce5f0 !important; color: #0c5460; }
+        .risk-warning { background-color: #fff3cd !important; color: #856404; }
+        .scrollable-table {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .footer { 
+            text-align: center; 
+            color: #666; 
+            font-size: 12px; 
+            margin-top: 30px; 
+            padding: 20px;
+        }
+        .alert-summary {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚨 Microsoft 365 年間消費傾向アラートダッシュボード</h1>
+        <div class="subtitle">みらい建設工業株式会社 - 年間ライセンス・容量・予算監視システム</div>
+        <div class="subtitle">分析実行日時: 2025年06月13日 17:51:51</div>
+        <div class="subtitle">分析期間: 過去12ヶ月 + 年間予測</div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h3>現在ライセンス数</h3>
+            <div class="value info">463</div>
+            <div class="description">平均利用数</div>
+        </div>
+        <div class="summary-card">
+            <h3>年間予測消費</h3>
+            <div class="value warning">5556</div>
+            <div class="description">ライセンス/年</div>
+        </div>
+        <div class="summary-card">
+            <h3>予算使用率</h3>
+            <div class="value danger">326.7%</div>
+            <div class="description">年間予算対比</div>
+        </div>
+        <div class="summary-card">
+            <h3>容量使用量</h3>
+            <div class="value info">15.9 TB</div>
+            <div class="description">現在合計</div>
+        </div>
+    </div>
+
+    <div class="alert-summary">
+        <h3>🚨 アラートサマリー</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #d13438;">1</div>
+                <div style="font-size: 14px; color: #666;">緊急アラート</div>
+                <div style="font-size: 12px; color: #888;">（要即時対応）</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #ff8c00;">0</div>
+                <div style="font-size: 14px; color: #666;">警告アラート</div>
+                <div style="font-size: 12px; color: #888;">（要監視強化）</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">💰 金額算出根拠詳細</div>
+        <div class="section-content">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #d13438; margin-top: 0;">Microsoft 365 E3ライセンス料金計算根拠</h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 15px 0;">
+                    <div>
+                        <strong>📋 基本情報</strong><br>
+                        • ライセンス種別: Microsoft 365 E3<br>
+                        • 単価: ¥2,940/月/ユーザー<br>
+                        • 実ライセンス数: 463ユーザー<br>
+                        • 算出期間: 年間（12ヶ月）
+                    </div>
+                    <div>
+                        <strong>🧮 計算式</strong><br>
+                        • 月額: 463 × ¥2,940 = ¥1,361,220<br>
+                        • 年額: ¥1,361,220 × 12ヶ月 = ¥16,334,640<br>
+                        • データソース: 実ライセンス使用実績CSV<br>
+                        • 税込み想定価格（参考値）
+                    </div>
+                </div>
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; border-left: 4px solid #2196f3;">
+                    <strong>📊 予算比較分析</strong><br>
+                    予算上限: ¥5,000,000 | 
+                    予測年間費用: ¥16,334,640 | 
+                    予算使用率: 326.7% |
+                    予算超過額: ¥11,334,640
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">📈 年間ライセンス消費トレンド</div>
+        <div class="section-content">
+            <p style="color: #666; margin-bottom: 15px;">過去12ヶ月のライセンス消費実績とトレンド分析</p>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; margin-bottom: 15px;">
+                <strong>💡 月間費用計算方法:</strong> 各月のライセンス数 × ¥2,940 (Microsoft 365 E3単価/月) = 月間費用
+            </div>
+            <div class="scrollable-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>月</th>
+                            <th>ライセンス数</th>
+                            <th>月間費用</th>
+                            <th>利用率</th>
+                            <th>傾向</th>
+                            <th>アラート</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                <tr class="risk-normal">
+            <td><strong>2024年07月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2024年08月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2024年09月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2024年10月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2024年11月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2024年12月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年01月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年02月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年03月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年04月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年05月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>2025年06月</strong></td>
+            <td style="text-align: center;">463</td>
+            <td style="text-align: center;">¥1,361,220</td>
+            <td style="text-align: center;">100%</td>
+            <td style="text-align: center;">Stable</td>
+            <td style="text-align: center;">Normal</td>
+        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">💾 容量使用量予測分析</div>
+        <div class="section-content">
+            <p style="color: #666; margin-bottom: 15px;">各サービスの容量使用量と年間予測</p>
+            <div class="scrollable-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>サービス</th>
+                            <th>現在使用量</th>
+                            <th>年間予測使用量</th>
+                            <th>成長率</th>
+                            <th>アラート</th>
+                            <th>推奨対応</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                <tr class="risk-normal">
+            <td><strong>OneDrive</strong></td>
+            <td style="text-align: center;">9.79 TB</td>
+            <td style="text-align: center;">12.24 TB</td>
+            <td style="text-align: center;">25%</td>
+            <td style="text-align: center;">Normal</td>
+            <td style="text-align: center;">継続監視</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>Teams</strong></td>
+            <td style="text-align: center;">3.96 TB</td>
+            <td style="text-align: center;">5.1 TB</td>
+            <td style="text-align: center;">29%</td>
+            <td style="text-align: center;">Normal</td>
+            <td style="text-align: center;">継続監視</td>
+        </tr>        <tr class="risk-normal">
+            <td><strong>Exchange</strong></td>
+            <td style="text-align: center;">2.12 TB</td>
+            <td style="text-align: center;">2.57 TB</td>
+            <td style="text-align: center;">21%</td>
+            <td style="text-align: center;">Normal</td>
+            <td style="text-align: center;">継続監視</td>
+        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">💰 予算オーバー警告分析</div>
+        <div class="section-content">
+            <p style="color: #666; margin-bottom: 15px;">年間予算に対する消費予測と警告</p>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545; margin-bottom: 15px;">
+                <strong>⚠️ 年間予測費用算出:</strong> 実ライセンス数 × Microsoft 365 E3単価(¥2,940/月) × 12ヶ月 = 年間費用
+            </div>
+            <div class="scrollable-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>予算カテゴリ</th>
+                            <th>年間予測費用</th>
+                            <th>予算上限</th>
+                            <th>予算使用率</th>
+                            <th>アラート</th>
+                            <th>推奨対応</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                <tr class="risk-warning">
+            <td><strong>Microsoft 365 ライセンス</strong></td>
+            <td style="text-align: center;">¥16,334,640</td>
+            <td style="text-align: center;">¥5,000,000</td>
+            <td style="text-align: center;">326.7%</td>
+            <td style="text-align: center;">Critical</td>
+            <td style="text-align: center;">予算増額または削減検討</td>
+        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>この年間消費傾向アラートレポートは Microsoft 365 監視システムにより自動生成されました</p>
+        <p>ITSM/ISO27001/27002準拠 | みらい建設工業株式会社 年間消費予測・予算監視センター</p>
+        <p>生成済み - 2025年06月13日 17:51:51 - 🤖 Generated with Claude Code</p>
+        <p style="color: #d13438; font-weight: bold;">⚠️ アラート閾値: 80% | 年間予算上限: ¥5,000,000</p>
+    </div>
+</body>
+</html>

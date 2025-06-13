@@ -12,7 +12,7 @@ param(
     [string]$CustomFileName,
     
     [Parameter(HelpMessage = "テンプレートファイルパス")]
-    [string]$TemplateFile = "Reports/Monthly/License_Analysis_Dashboard_Template_Latest.html",
+    [string]$TemplateFile = "Reports/Monthly/License_Analysis_Dashboard_Template_Clean.html",
     
     [Parameter(HelpMessage = "出力ディレクトリ")]
     [string]$OutputDirectory = "Reports/Monthly",
@@ -50,7 +50,7 @@ function Get-OutputFileName {
             return "License_Analysis_Dashboard_$timestamp.html"
         }
         "Fixed" {
-            return "License_Analysis_Dashboard_Template_Latest.html"
+            return "License_Analysis_Dashboard_Template_Clean.html"
         }
         "Custom" {
             if ([string]::IsNullOrEmpty($Custom)) {
@@ -99,7 +99,7 @@ function Update-DashboardContent {
 生成タイプ: $GenerationType
 ファイル名: $FileName
 タイムスタンプ: $timestamp
-テンプレート: License_Analysis_Dashboard_Template_Latest.html
+テンプレート: License_Analysis_Dashboard_Template_Clean.html
 生成スクリプト: New-LicenseDashboard.ps1
 ====================================
 -->
@@ -125,7 +125,7 @@ function Update-DashboardContent {
             🕐 生成タイムスタンプ: $timestamp<br>
             📁 ファイル名: $FileName<br>
             🔄 生成タイプ: $GenerationType<br>
-            📖 テンプレート: License_Analysis_Dashboard_Template_Latest.html
+            📖 テンプレート: License_Analysis_Dashboard_Template_Clean.html
         </div>
 "@
     
@@ -218,7 +218,7 @@ try {
         Write-ColorMessage "`n🎯 生成情報:" "Cyan"
         Write-ColorMessage "  🔄 生成タイプ: $FileNameType" "White"
         Write-ColorMessage "  📄 出力ファイル: $outputFileName" "Green"
-        Write-ColorMessage "  📖 テンプレート: License_Analysis_Dashboard_Template_Latest.html" "Gray"
+        Write-ColorMessage "  📖 テンプレート: License_Analysis_Dashboard_Template_Clean.html" "Gray"
         
         # ブラウザで開く
         if ($OpenInBrowser) {

@@ -1,0 +1,4 @@
+"CapacityType","CurrentUsageGB","CurrentUsageTB","PredictedYearlyUsageGB","PredictedYearlyUsageTB","GrowthRate","UsagePercent","AlertLevel","RecommendedAction","AnalysisTimestamp","Note"
+"OneDrive","9770.3","9.54","12310.6","12.02","26","47.7","Normal","継続監視","06/13/2025 17:43:01","E3: 1TB/ユーザー"
+"Teams","2303.9","2.25","2925.9","2.86","27","11.2","Normal","継続監視","06/13/2025 17:43:01","E3: 10GB + 0.5GB/ユーザー"
+"Exchange","2322","2.27","2902.6","2.83","25","11.3","Normal","継続監視","06/13/2025 17:43:01","E3: 50GB/ユーザー"

@@ -452,8 +452,8 @@ function Get-LicenseAnalysis {
         
         # CSV出力
         if ($ExportCSV) {
-            # メインライセンスレポート出力
-            $csvPath = Join-Path $outputDir "License_Analysis_Summary_$timestamp.csv"
+            # メインライセンスレポート出力（クリーンバージョン）
+            $csvPath = Join-Path $outputDir "License_Usage_Summary_$timestamp.csv"
             if ($licenseReport.Count -gt 0) {
                 if (Get-Command "Export-DataToCSV" -ErrorAction SilentlyContinue) {
                     Export-DataToCSV -Data $licenseReport -FilePath $csvPath
@@ -470,15 +470,15 @@ function Get-LicenseAnalysis {
                 $emptyData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
             }
             
-            # 未使用ライセンスレポート出力
-            if ($unusedLicensesReport.Count -gt 0) {
-                $unusedPath = Join-Path $outputDir "License_Unused_Analysis_$timestamp.csv"
-                if (Get-Command "Export-DataToCSV" -ErrorAction SilentlyContinue) {
-                    Export-DataToCSV -Data $unusedLicensesReport -FilePath $unusedPath
-                } else {
-                    $unusedLicensesReport | Export-Csv -Path $unusedPath -NoTypeInformation -Encoding UTF8
-                }
-            }
+            # 未使用ライセンスレポート出力は削除 - クリーンバージョンでは出力しない
+            # if ($unusedLicensesReport.Count -gt 0) {
+            #     $unusedPath = Join-Path $outputDir "License_Unused_Analysis_$timestamp.csv"
+            #     if (Get-Command "Export-DataToCSV" -ErrorAction SilentlyContinue) {
+            #         Export-DataToCSV -Data $unusedLicensesReport -FilePath $unusedPath
+            #     } else {
+            #         $unusedLicensesReport | Export-Csv -Path $unusedPath -NoTypeInformation -Encoding UTF8
+            #     }
+            # }
             
             # ユーザー詳細レポート出力
             if ($IncludeUserDetails -and $userLicenseReport.Count -gt 0) {
@@ -490,15 +490,15 @@ function Get-LicenseAnalysis {
                 }
             }
             
-            # コスト分析レポート出力
-            if ($AnalyzeCosts -and $costAnalysisReport.Count -gt 0) {
-                $costPath = Join-Path $outputDir "License_Cost_Analysis_$timestamp.csv"
-                if (Get-Command "Export-DataToCSV" -ErrorAction SilentlyContinue) {
-                    Export-DataToCSV -Data $costAnalysisReport -FilePath $costPath
-                } else {
-                    $costAnalysisReport | Export-Csv -Path $costPath -NoTypeInformation -Encoding UTF8
-                }
-            }
+            # コスト分析レポート出力は削除 - クリーンバージョンでは出力しない
+            # if ($AnalyzeCosts -and $costAnalysisReport.Count -gt 0) {
+            #     $costPath = Join-Path $outputDir "License_Cost_Analysis_$timestamp.csv"
+            #     if (Get-Command "Export-DataToCSV" -ErrorAction SilentlyContinue) {
+            #         Export-DataToCSV -Data $costAnalysisReport -FilePath $costPath
+            #     } else {
+            #         $costAnalysisReport | Export-Csv -Path $costPath -NoTypeInformation -Encoding UTF8
+            #     }
+            # }
         }
         
         # HTML出力 - 新しいテンプレートシステムを使用
@@ -523,31 +523,91 @@ function Get-LicenseAnalysis {
                 })
             }
             
-            # 新しいテンプレートベースのHTML生成を使用
-            $templatePath = Join-Path $PSScriptRoot "..\..\Reports\Monthly\License_Analysis_Dashboard_Template_Latest.html"
+            # 新しいクリーンテンプレートベースのHTML生成を使用
+            $templatePath = Join-Path $PSScriptRoot "..\..\Reports\Monthly\License_Analysis_Dashboard_Template_Clean.html"
             if (Test-Path $templatePath) {
-                Write-Log "テンプレートベースでHTML生成中: $templatePath"
+                Write-Log "クリーンテンプレートベースでHTML生成中: $templatePath"
                 $templateContent = Get-Content $templatePath -Raw -Encoding UTF8
                 
-                # 統計データの更新
+                # 統計データの計算
                 $totalLicenses = ($licenseReport | Measure-Object -Property TotalLicenses -Sum).Sum
                 $consumedLicenses = ($licenseReport | Measure-Object -Property ConsumedLicenses -Sum).Sum
                 $availableLicenses = ($licenseReport | Measure-Object -Property AvailableLicenses -Sum).Sum
                 $avgUtilization = if ($licenseReport.Count -gt 0) { [math]::Round(($licenseReport | Measure-Object -Property UtilizationRate -Average).Average, 1) } else { 0 }
-                $totalMonthlyCost = ($licenseReport | Measure-Object -Property TotalEstimatedCost -Sum).Sum
-                $totalWastedCost = ($licenseReport | Measure-Object -Property WastedCost -Sum).Sum
-                $costEfficiency = if ($totalMonthlyCost -gt 0) { [math]::Round((($totalMonthlyCost - $totalWastedCost) / $totalMonthlyCost) * 100, 1) } else { 0 }
+                
+                # ライセンス種別の詳細計算
+                $e3Total = ($licenseReport | Where-Object {$_.LicenseName -like "*E3*"} | Measure-Object -Property TotalLicenses -Sum).Sum
+                $e3Used = ($licenseReport | Where-Object {$_.LicenseName -like "*E3*"} | Measure-Object -Property ConsumedLicenses -Sum).Sum
+                $exchTotal = ($licenseReport | Where-Object {$_.LicenseName -like "*Exchange*"} | Measure-Object -Property TotalLicenses -Sum).Sum
+                $exchUsed = ($licenseReport | Where-Object {$_.LicenseName -like "*Exchange*"} | Measure-Object -Property ConsumedLicenses -Sum).Sum
+                $basicTotal = ($licenseReport | Where-Object {$_.LicenseName -like "*Basic*"} | Measure-Object -Property TotalLicenses -Sum).Sum
+                $basicUsed = ($licenseReport | Where-Object {$_.LicenseName -like "*Basic*"} | Measure-Object -Property ConsumedLicenses -Sum).Sum
+                
+                # ユーザーテーブルHTMLの生成
+                $userTableRows = ""
+                foreach ($user in $userLicenseReport) {
+                    # ライセンス種別の正確な名前を取得
+                    $licenseTypes = if ($user.AssignedLicenses) { $user.AssignedLicenses } elseif ($user.LicenseTypes) { $user.LicenseTypes } else { "不明" }
+                    $displayName = if ($user.DisplayName) { $user.DisplayName } else { $user.UserPrincipalName }
+                    $department = if ($user.Department) { $user.Department } else { "" }
+                    $lastSignIn = if ($user.LastSignInStatus) { $user.LastSignInStatus } elseif ($user.LastSignInDateTime) { $user.LastSignInDateTime } else { "不明" }
+                    $accountStatus = if ($user.AccountEnabled -eq "True") { "アクティブ" } elseif ($user.UtilizationStatus) { $user.UtilizationStatus } else { "不明" }
+                    $optimization = if ($user.OptimizationRecommendations) { $user.OptimizationRecommendations } elseif ($user.OptimizationStatus) { $user.OptimizationStatus } else { "最適化済み" }
+                    
+                    $userTableRows += @"
+                        <tr class="risk-normal">
+                            <td><strong>$displayName</strong></td>
+                            <td>$department</td>
+                            <td style="text-align: center;">$($user.LicenseCount)</td>
+                            <td>$licenseTypes</td>
+                            <td style="text-align: center;">$lastSignIn</td>
+                            <td style="text-align: center;">$accountStatus</td>
+                            <td>$optimization</td>
+                        </tr>
+"@
+                }
                 
                 # テンプレートの統計値を実際のデータで更新
                 $updatedContent = $templateContent -replace '分析実行日時: \d{4}年\d{2}月\d{2}日 \d{2}:\d{2}:\d{2}', "分析実行日時: $(Get-Date -Format 'yyyy年MM月dd日 HH:mm:ss')"
-                $updatedContent = $updatedContent -replace 'コスト効率性: [\d.]+%', "コスト効率性: $costEfficiency%"
-                $updatedContent = $updatedContent -replace 'style="width: [\d.]+%"', "style=`"width: $costEfficiency%`""
-                $updatedContent = $updatedContent -replace '月額総コスト:</strong> ¥[\d,]+', "月額総コスト:</strong> ¥$($totalMonthlyCost.ToString('N0'))"
-                $updatedContent = $updatedContent -replace '月額無駄コスト:</strong> ¥[\d,]+', "月額無駄コスト:</strong> ¥$($totalWastedCost.ToString('N0'))"
-                $updatedContent = $updatedContent -replace '年間削減可能額:</strong> ¥[\d,]+', "年間削減可能額:</strong> ¥$(($totalWastedCost * 12).ToString('N0'))"
+                $updatedContent = $updatedContent -replace '<div class="value info">508</div>', "<div class=`"value info`">$totalLicenses</div>"
+                $updatedContent = $updatedContent -replace '<div class="value success">463</div>', "<div class=`"value success`">$consumedLicenses</div>"
+                $updatedContent = $updatedContent -replace '<div class="value warning">45</div>', "<div class=`"value warning`">$availableLicenses</div>"
+                $updatedContent = $updatedContent -replace '<div class="value info">91\.1%</div>', "<div class=`"value info`">$avgUtilization%</div>"
+                
+                # ライセンス詳細の更新
+                $updatedContent = $updatedContent -replace 'E3: 440 \| Exchange: 50 \| Basic: 18', "E3: $e3Total | Exchange: $exchTotal | Basic: $basicTotal"
+                $updatedContent = $updatedContent -replace 'E3: 413 \| Exchange: 49 \| Basic: 1', "E3: $e3Used | Exchange: $exchUsed | Basic: $basicUsed"
+                $updatedContent = $updatedContent -replace 'E3: 27 \| Exchange: 1 \| Basic: 17', "E3: $($e3Total - $e3Used) | Exchange: $($exchTotal - $exchUsed) | Basic: $($basicTotal - $basicUsed)"
+                
+                # ライセンス種別プルダウンメニューの動的生成
+                $uniqueLicenseTypes = @()
+                foreach ($user in $userLicenseReport) {
+                    $licenseType = if ($user.AssignedLicenses) { $user.AssignedLicenses } elseif ($user.LicenseTypes) { $user.LicenseTypes } else { "不明" }
+                    if ($licenseType -and $uniqueLicenseTypes -notcontains $licenseType) {
+                        $uniqueLicenseTypes += $licenseType
+                    }
+                }
+                
+                $licenseOptions = ""
+                foreach ($license in ($uniqueLicenseTypes | Sort-Object)) {
+                    $licenseOptions += "<option value=`"$license`">$license</option>`n                    "
+                }
+                
+                # プルダウンメニューの更新
+                $oldOptions = @'
+                    <option value="">📋 すべてのライセンス</option>
+                    <option value="Microsoft 365 E3">Microsoft 365 E3</option>
+                    <option value="Exchange Online Plan 2">Exchange Online Plan 2</option>
+                    <option value="Microsoft 365 Business Basic (レガシー)">Microsoft 365 Business Basic (レガシー)</option>
+'@
+                $newOptions = "<option value=`"`">📋 すべてのライセンス</option>`n                    $licenseOptions"
+                $updatedContent = $updatedContent -replace [regex]::Escape($oldOptions), $newOptions
+                
+                # ユーザーテーブルの挿入
+                $updatedContent = $updatedContent -replace '<!-- ユーザーデータはここに動的に挿入される -->', $userTableRows
                 
                 $updatedContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                Write-Log "テンプレートベースHTMLダッシュボード生成完了: $htmlPath"
+                Write-Log "クリーンテンプレートベースHTMLダッシュボード生成完了: $htmlPath"
             } else {
                 # フォールバック: 従来のHTML生成
                 Write-Log "テンプレートファイルが見つからないため、従来のHTML生成を使用"

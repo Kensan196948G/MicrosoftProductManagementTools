@@ -1,9 +1,9 @@
 # Microsoft 365ライセンス分析ダッシュボード タイムスタンプ版生成スクリプト
-# License_Analysis_Dashboard_Template_Latest.html をテンプレートとして使用して
+# License_Analysis_Dashboard_Template_Clean.html をテンプレートとして使用して
 # License_Analysis_Dashboard_YYYYMMDD_HHMMSS.html を生成
 
 param(
-    [string]$TemplateFile = "Reports/Monthly/License_Analysis_Dashboard_Template_Latest.html",
+    [string]$TemplateFile = "Reports/Monthly/License_Analysis_Dashboard_Template_Clean.html",
     [string]$OutputDirectory = "Reports/Monthly"
 )
 
@@ -87,7 +87,7 @@ try {
 生成情報:
 - 生成日時: $currentDateTime
 - タイムスタンプ: $timestamp
-- テンプレート: License_Analysis_Dashboard_Template_Latest.html
+- テンプレート: License_Analysis_Dashboard_Template_Clean.html
 - 生成スクリプト: Generate-TimestampedDashboard.ps1
 -->
 "@
@@ -119,7 +119,7 @@ try {
         Write-ColorMessage "  📉 ライセンス利用率: 91.1% (良好)" "Green"
         
         Write-ColorMessage "`n🎯 ファイル情報:" "Cyan"
-        Write-ColorMessage "  📄 テンプレート: License_Analysis_Dashboard_Template_Latest.html" "Gray"
+        Write-ColorMessage "  📄 テンプレート: License_Analysis_Dashboard_Template_Clean.html" "Gray"
         Write-ColorMessage "  📄 新規ファイル: $outputFileName" "Green"
         Write-ColorMessage "  🕐 タイムスタンプ: $timestamp" "Green"
         

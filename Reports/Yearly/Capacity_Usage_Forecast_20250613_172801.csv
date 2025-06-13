@@ -1,0 +1,5 @@
+"CapacityType","CurrentUsageGB","CurrentUsageTB","PredictedYearlyUsageGB","PredictedYearlyUsageTB","GrowthRate","UsagePercent","AlertLevel","RecommendedAction","AnalysisTimestamp"
+"OneDrive","10998.3","10.74","12978","12.67","18","53.7","Normal","継続監視","06/13/2025 17:28:01"
+"Teams","4337.2","4.24","5421.5","5.29","25","21.2","Normal","継続監視","06/13/2025 17:28:01"
+"Exchange","3164.5","3.09","4177.2","4.08","32","15.5","Normal","継続監視","06/13/2025 17:28:01"
+"SharePoint","0","0","0","0","21","0","Normal","継続監視","06/13/2025 17:28:01"

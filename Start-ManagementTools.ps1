@@ -1653,18 +1653,193 @@ function Show-MainMenu {
                             }
                         }
                         "5" {
-                            Write-Status "利用率・アクティブ率レポート機能は実装中です" "Warning"
-                            Write-Host "実装予定機能:" -ForegroundColor Yellow
-                            Write-Host "- ユーザーアクティビティ分析" -ForegroundColor Gray
-                            Write-Host "- アプリケーション利用統計" -ForegroundColor Gray
-                            Write-Host "- 非アクティブユーザー検出" -ForegroundColor Gray
+                            Write-Status "📊 Microsoft 365利用率・アクティブ率レポートを実行中..." "Info"
+                            Write-Host "この分析は以下を監視します:" -ForegroundColor Cyan
+                            Write-Host "  • ユーザーアクティビティ分析（サインイン履歴）" -ForegroundColor Gray
+                            Write-Host "  • アプリケーション利用統計（Teams、Outlook等）" -ForegroundColor Gray
+                            Write-Host "  • 非アクティブユーザー検出（セキュリティリスク評価）" -ForegroundColor Gray
+                            Write-Host "  • 部署別利用率統計" -ForegroundColor Gray
+                            Write-Host "  • 全体的なアクティブ率レポート" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            $usageScriptPath = Join-Path $Script:ToolRoot "Scripts\EntraID\UsageActivityReport_Simple.ps1"
+                            if (Test-Path $usageScriptPath) {
+                                Write-Status "⏳ 利用率・アクティブ率分析を開始中... しばらくお待ちください" "Info"
+                                $result = & $usageScriptPath
+                                
+                                if ($result.Success) {
+                                    Write-Status "✅ Microsoft 365利用率・アクティブ率レポート完了" "Success"
+                                    Write-Host ""
+                                    Write-Host "📊 分析結果サマリー:" -ForegroundColor Cyan
+                                    Write-Host "総ユーザー数: $($result.TotalUsers)" -ForegroundColor White
+                                    Write-Host "アクティブユーザー: $($result.ActiveUsers)" -ForegroundColor Green
+                                    Write-Host "非アクティブユーザー: $($result.InactiveUsers)" -ForegroundColor Yellow
+                                    Write-Host "全体利用率: $($result.OverallUtilizationRate)%" -ForegroundColor Blue
+                                    Write-Host ""
+                                    Write-Host "🔝 主要アプリケーション:" -ForegroundColor Cyan
+                                    foreach ($app in $result.TopApplications) {
+                                        Write-Host "  • $app" -ForegroundColor Gray
+                                    }
+                                    Write-Host ""
+                                    
+                                    if ($result.InactiveUsers -gt 0) {
+                                        Write-Host "⚠️ セキュリティ注意:" -ForegroundColor Yellow
+                                        Write-Host "  $($result.InactiveUsers)名の非アクティブユーザーが検出されました" -ForegroundColor Yellow
+                                        Write-Host "  定期的なアカウント監査を推奨します" -ForegroundColor Yellow
+                                    }
+                                    
+                                    if ($result.OverallUtilizationRate -lt 70) {
+                                        Write-Host "🚨 利用率改善機会:" -ForegroundColor Red
+                                        Write-Host "  全体利用率が70%を下回っています" -ForegroundColor Red
+                                        Write-Host "  ユーザー教育・トレーニングの実施を検討してください" -ForegroundColor Red
+                                    }
+                                    
+                                    Write-Host ""
+                                } else {
+                                    Write-Status "❌ 利用率・アクティブ率レポート分析エラー: $($result.Error)" "Error"
+                                }
+                                
+                                if ($result.HTMLPath) {
+                                    Write-Status "🌐 HTMLダッシュボード: $($result.HTMLPath)" "Info"
+                                }
+                                if ($result.CSVPaths -and $result.CSVPaths.Count -gt 0) {
+                                    Write-Status "📄 CSVレポート: $($result.CSVPaths -join ', ')" "Info"
+                                }
+                                
+                                Write-Host "利用率・アクティブ率ダッシュボードをブラウザで開きますか？ (y/N): " -NoNewline -ForegroundColor Yellow
+                                $openBrowser = Read-Host
+                                if ($openBrowser -eq "y" -or $openBrowser -eq "Y") {
+                                    if ($result.HTMLPath -and (Test-Path $result.HTMLPath)) {
+                                        try {
+                                            Start-Process $result.HTMLPath
+                                            Write-Status "ブラウザで利用率・アクティブ率ダッシュボードを開きました" "Success"
+                                        } catch {
+                                            Write-Status "ブラウザで開けませんでした: $_" "Warning"
+                                        }
+                                    }
+                                }
+                            } else {
+                                Write-Status "❌ UsageActivityReport.ps1が見つかりません: $usageScriptPath" "Error"
+                            }
                         }
                         "6" {
-                            Write-Status "年間消費傾向アラート機能は実装中です" "Warning"
-                            Write-Host "実装予定機能:" -ForegroundColor Yellow
-                            Write-Host "- 年間ライセンス消費トレンド" -ForegroundColor Gray
-                            Write-Host "- 容量使用量の予測" -ForegroundColor Gray
-                            Write-Host "- 予算オーバー警告" -ForegroundColor Gray
+                            Write-Status "🚨 Microsoft 365 年間消費傾向アラートシステムを実行中..." "Info"
+                            Write-Host "この分析は以下を監視します:" -ForegroundColor Cyan
+                            Write-Host "  • 年間ライセンス消費トレンド（過去12ヶ月）" -ForegroundColor Gray
+                            Write-Host "  • 容量使用量の予測分析（OneDrive、Teams等）" -ForegroundColor Gray
+                            Write-Host "  • 予算オーバー警告（年間予算対比）" -ForegroundColor Gray
+                            Write-Host "  • アラート分析（緊急・警告レベル）" -ForegroundColor Gray
+                            Write-Host "  • コスト最適化提案" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            $yearlyAlertScriptPath = Join-Path $Script:ToolRoot "Scripts\EntraID\YearlyConsumptionAlert.ps1"
+                            if (Test-Path $yearlyAlertScriptPath) {
+                                Write-Status "⏳ 年間消費傾向アラート分析を開始中... しばらくお待ちください" "Info"
+                                
+                                # 予算上限の確認
+                                $budgetLimit = Read-Host "年間予算上限を入力してください（円、デフォルト: 5,000,000円）"
+                                if ([string]::IsNullOrWhiteSpace($budgetLimit)) {
+                                    $budgetLimit = 5000000
+                                } else {
+                                    try {
+                                        $budgetLimit = [int]$budgetLimit
+                                    } catch {
+                                        Write-Host "無効な予算額です。デフォルト（5,000,000円）を使用します。" -ForegroundColor Yellow
+                                        $budgetLimit = 5000000
+                                    }
+                                }
+                                
+                                # アラート閾値の確認
+                                $alertThreshold = Read-Host "アラート閾値を入力してください（％、デフォルト: 80%）"
+                                if ([string]::IsNullOrWhiteSpace($alertThreshold)) {
+                                    $alertThreshold = 80
+                                } else {
+                                    try {
+                                        $alertThreshold = [int]$alertThreshold
+                                    } catch {
+                                        Write-Host "無効な閾値です。デフォルト（80%）を使用します。" -ForegroundColor Yellow
+                                        $alertThreshold = 80
+                                    }
+                                }
+                                
+                                Write-Host ""
+                                Write-Host "設定内容:" -ForegroundColor Cyan
+                                Write-Host "  年間予算上限: ¥$($budgetLimit.ToString('N0'))" -ForegroundColor Blue
+                                Write-Host "  アラート閾値: $alertThreshold%" -ForegroundColor Blue
+                                Write-Host ""
+                                
+                                # スクリプト読み込みと実行
+                                . $yearlyAlertScriptPath
+                                $result = Get-YearlyConsumptionAlert -BudgetLimit $budgetLimit -AlertThreshold $alertThreshold -ExportHTML -ExportCSV
+                                
+                                if ($result.Success) {
+                                    Write-Status "✅ 年間消費傾向アラート分析完了" "Success"
+                                    Write-Host ""
+                                    Write-Host "📊 年間消費傾向サマリー:" -ForegroundColor Yellow
+                                    Write-Host "現在ライセンス数: $($result.TotalLicenses)" -ForegroundColor Cyan
+                                    Write-Host "年間予測消費: $($result.PredictedYearlyConsumption)" -ForegroundColor Yellow
+                                    Write-Host "予算使用率: $($result.BudgetUtilization)%" -ForegroundColor $(if($result.BudgetUtilization -ge 100) { "Red" } elseif($result.BudgetUtilization -ge 90) { "Yellow" } else { "Green" })
+                                    Write-Host "緊急アラート: $($result.CriticalAlerts)件" -ForegroundColor Red
+                                    Write-Host "警告アラート: $($result.WarningAlerts)件" -ForegroundColor Yellow
+                                    Write-Host ""
+                                    
+                                    # アラート評価
+                                    if ($result.CriticalAlerts -gt 0) {
+                                        Write-Host "🚨 緊急対応が必要:" -ForegroundColor Red
+                                        Write-Host "  $($result.CriticalAlerts)件の緊急アラートが検出されました" -ForegroundColor Red
+                                        Write-Host "  即座に対応策を検討してください" -ForegroundColor Red
+                                        Write-Host ""
+                                    }
+                                    
+                                    if ($result.BudgetUtilization -ge 100) {
+                                        Write-Host "💰 予算オーバー警告:" -ForegroundColor Red
+                                        Write-Host "  年間予算を超過する予測です" -ForegroundColor Red
+                                        Write-Host "  ライセンス見直しまたは予算増額を検討してください" -ForegroundColor Red
+                                        Write-Host ""
+                                    } elseif ($result.BudgetUtilization -ge 90) {
+                                        Write-Host "⚠️ 予算警告:" -ForegroundColor Yellow
+                                        Write-Host "  年間予算の90%を超過する予測です" -ForegroundColor Yellow
+                                        Write-Host "  早期の対策検討を推奨します" -ForegroundColor Yellow
+                                        Write-Host ""
+                                    }
+                                    
+                                    if ($result.WarningAlerts -gt 0) {
+                                        Write-Host "📊 監視強化推奨:" -ForegroundColor Yellow
+                                        Write-Host "  $($result.WarningAlerts)件の警告アラートが検出されました" -ForegroundColor Yellow
+                                        Write-Host "  継続的な監視を強化してください" -ForegroundColor Yellow
+                                        Write-Host ""
+                                    }
+                                    
+                                    if ($result.HTMLPath) {
+                                        Write-Status "🌐 HTMLダッシュボード: $($result.HTMLPath)" "Info"
+                                    }
+                                    if ($result.CSVPaths -and $result.CSVPaths.Count -gt 0) {
+                                        Write-Status "📄 CSVレポート: $($result.CSVPaths -join ', ')" "Info"
+                                    }
+                                    
+                                    Write-Host "年間消費傾向アラートダッシュボードをブラウザで開きますか？ (y/N): " -NoNewline -ForegroundColor Yellow
+                                    $openBrowser = Read-Host
+                                    if ($openBrowser -eq "y" -or $openBrowser -eq "Y") {
+                                        if ($result.HTMLPath -and (Test-Path $result.HTMLPath)) {
+                                            try {
+                                                Start-Process $result.HTMLPath
+                                                Write-Status "ブラウザで年間消費傾向アラートダッシュボードを開きました" "Success"
+                                            } catch {
+                                                Write-Status "ブラウザで開けませんでした: $_" "Warning"
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Write-Status "❌ 年間消費傾向アラート分析エラー: $($result.Error)" "Error"
+                                    Write-Host ""
+                                    Write-Host "💡 トラブルシューティング:" -ForegroundColor Yellow
+                                    Write-Host "  • ライセンスデータファイルの存在を確認してください" -ForegroundColor Gray
+                                    Write-Host "  • ネットワーク接続を確認してください" -ForegroundColor Gray
+                                    Write-Host "  • 権限設定を確認してください" -ForegroundColor Gray
+                                }
+                            } else {
+                                Write-Status "❌ YearlyConsumptionAlert.ps1が見つかりません: $yearlyAlertScriptPath" "Error"
+                            }
                         }
                         "7" {
                             Write-Status "メインメニューに戻ります" "Info"
