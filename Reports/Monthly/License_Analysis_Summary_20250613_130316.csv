@@ -1,0 +1,4 @@
+"LicenseName","SkuPartNumber","SkuId","TotalLicenses","ConsumedLicenses","AvailableLicenses","UtilizationRate","EstimatedCostPerUser","TotalEstimatedCost","WastedCost","LongTermInactiveUsers","RiskLevel","AlertLevel","Recommendations","AnalysisTimestamp"
+"Exchange Online Plan 2","EXCHANGEENTERPRISE","19ec0d23-8335-4cbd-94ac-6050e30712fa","50","49","1","98","960","47040","960","0","警告","Warning","利用率が高い（98%）- 追加ライセンスの準備を検討してください","06/13/2025 13:03:25"
+"Microsoft 365 Business Basic (レガシー)","O365_BUSINESS","cdd28e44-67e3-425e-be4c-737fab2899d3","18","1","17","5.56","1000","1000","17000","0","注意","Warning","利用率が低い（5.56%）- ライセンス数の見直しを検討してください;  - コスト削減の機会","06/13/2025 13:03:26"
+"Microsoft 365 E3","ENTERPRISEPACK","6fd2c87f-b296-42f0-b197-1e91e994b900","440","412","28","93.64","2840","1170080","79520","0","警告","Warning","利用率が高い（93.64%）- 追加ライセンスの準備を検討してください;  - コスト削減の機会","06/13/2025 13:03:26"

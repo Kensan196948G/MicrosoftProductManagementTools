@@ -1,0 +1,6 @@
+﻿"LicenseName","SkuPartNumber","UnusedCount","WastedCostPerMonth","PotentialSavingsPerYear","RecommendedAction","Priority"
+"Exchange Online Plan 2","EXCHANGEENTERPRISE","1","960","11520","現状維持（予備として保持）","低"
+"O365_BUSINESS","O365_BUSINESS","17","17000","204000","ライセンス数削減を推奨","高"
+"Windows Store for Business","WINDOWS_STORE","1000000","0","0","ライセンス数削減を推奨","低"
+"ENTERPRISEPACK","ENTERPRISEPACK","28","28000","336000","ライセンス数削減を推奨","高"
+"Power Automate (無料)","FLOW_FREE","9982","0","0","ライセンス数削減を推奨","低"

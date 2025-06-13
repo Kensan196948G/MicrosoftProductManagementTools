@@ -25,7 +25,10 @@
       "Bash(rg:*)",
       "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 5 -B 5 \"Attachment|attachment\" /mnt/c/kitting/MicrosoftProductManagementTools/Start-ManagementTools.ps1)",
       "WebFetch(domain:docs.microsoft.com)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(python:*)",
+      "Bash(cp:*)",
+      "Bash(./New-LicenseDashboard.ps1 -FileNameType Timestamp -Verbose -OpenInBrowser)"
     ],
     "deny": []
   }

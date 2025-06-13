@@ -1446,6 +1446,8 @@ function Show-MainMenu {
                             Write-Host "  • 録画設定とポリシーのコンプライアンス確認" -ForegroundColor Gray
                             Write-Host "  • Teamsガバナンススコアの算出" -ForegroundColor Gray
                             Write-Host ""
+                            Write-Host "⚠️ 注意: Microsoft TeamsのAPI制限により、サンプルデータを使用した分析を実行します" -ForegroundColor Yellow
+                            Write-Host ""
                             
                             # スクリプトファイル読み込み
                             $teamsScriptPath = Join-Path $Script:ToolRoot "Scripts\EntraID\TeamsConfigurationAnalysis.ps1"
@@ -1494,18 +1496,161 @@ function Show-MainMenu {
                             }
                         }
                         "3" {
-                            Write-Status "OneDrive外部共有状況確認機能は実装中です" "Warning"
-                            Write-Host "実装予定機能:" -ForegroundColor Yellow
-                            Write-Host "- 外部共有ファイル/フォルダ検出" -ForegroundColor Gray
-                            Write-Host "- 共有権限とアクセス状況" -ForegroundColor Gray
-                            Write-Host "- セキュリティリスク評価" -ForegroundColor Gray
+                            Write-Status "🔒 OneDrive外部共有状況確認を実行中..." "Info"
+                            Write-Host "この分析は以下のセキュリティ監査を実行します:" -ForegroundColor Cyan
+                            Write-Host "  • 外部共有ファイル/フォルダの検出" -ForegroundColor Gray
+                            Write-Host "  • 匿名リンクと権限設定の確認" -ForegroundColor Gray
+                            Write-Host "  • 機密ファイルの外部共有リスク評価" -ForegroundColor Gray
+                            Write-Host "  • セキュリティ対策の推奨事項" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            # スクリプトファイル読み込み
+                            $externalSharingScriptPath = Join-Path $Script:ToolRoot "Scripts\EntraID\OneDriveExternalSharingAnalysis.ps1"
+                            if (Test-Path $externalSharingScriptPath) {
+                                . $externalSharingScriptPath
+                                
+                                Write-Host "⏳ OneDrive外部共有状況確認を開始中... しばらくお待ちください" -ForegroundColor Cyan
+                                Write-Host "※ セキュリティ分析のため処理に時間がかかる場合があります" -ForegroundColor Yellow
+                                
+                                $result = Get-OneDriveExternalSharingAnalysis -IncludeFileDetails -ExportCSV -ExportHTML
+                                if ($result -and $result.Success) {
+                                    Write-Status "✅ OneDrive外部共有状況確認完了" "Success"
+                                    Write-Host ""
+                                    Write-Host "🔒 外部共有セキュリティサマリー:" -ForegroundColor Yellow
+                                    Write-Host "分析対象ユーザー: $($result.Statistics.TotalUsers)" -ForegroundColor Cyan
+                                    Write-Host "外部共有あり: $($result.Statistics.UsersWithExternalSharing)" -ForegroundColor $(if($result.Statistics.UsersWithExternalSharing -gt 0) { "Yellow" } else { "Green" })
+                                    Write-Host "高リスクユーザー: $($result.Statistics.HighRiskUsers)" -ForegroundColor $(if($result.Statistics.HighRiskUsers -gt 0) { "Red" } else { "Green" })
+                                    Write-Host "緊急対応必要: $($result.Statistics.CriticalRiskUsers)" -ForegroundColor $(if($result.Statistics.CriticalRiskUsers -gt 0) { "Red" } else { "Green" })
+                                    Write-Host "外部共有総数: $($result.Statistics.TotalExternalShares)" -ForegroundColor $(if($result.Statistics.TotalExternalShares -gt 10) { "Yellow" } else { "Green" })
+                                    Write-Host "匿名リンク: $($result.Statistics.TotalAnonymousLinks)" -ForegroundColor $(if($result.Statistics.TotalAnonymousLinks -gt 0) { "Red" } else { "Green" })
+                                    
+                                    # 重要な警告表示
+                                    if ($result.Statistics.CriticalRiskUsers -gt 0) {
+                                        Write-Host ""
+                                        Write-Host "🚨 緊急対応が必要:" -ForegroundColor Red
+                                        Write-Host "   $($result.Statistics.CriticalRiskUsers)名のユーザーで機密ファイルの危険な外部共有が検出されました" -ForegroundColor Red
+                                        Write-Host "   セキュリティインシデントの可能性があります" -ForegroundColor Red
+                                    }
+                                    elseif ($result.Statistics.HighRiskUsers -gt 0) {
+                                        Write-Host ""
+                                        Write-Host "⚠️ 注意が必要:" -ForegroundColor Yellow
+                                        Write-Host "   $($result.Statistics.HighRiskUsers)名のユーザーで高リスクな外部共有が検出されました" -ForegroundColor Yellow
+                                        Write-Host "   セキュリティ確認と対策を実施してください" -ForegroundColor Yellow
+                                    }
+                                    elseif ($result.Statistics.TotalAnonymousLinks -gt 0) {
+                                        Write-Host ""
+                                        Write-Host "⚠️ 匿名リンク検出:" -ForegroundColor Yellow
+                                        Write-Host "   $($result.Statistics.TotalAnonymousLinks)個の匿名アクセスリンクが検出されました" -ForegroundColor Yellow
+                                        Write-Host "   セキュリティポリシーの確認を推奨します" -ForegroundColor Yellow
+                                    }
+                                    else {
+                                        Write-Host ""
+                                        Write-Host "✅ セキュリティ状況良好:" -ForegroundColor Green
+                                        Write-Host "   危険な外部共有は検出されませんでした" -ForegroundColor Green
+                                    }
+                                    
+                                    if ($result.CSVPath) {
+                                        Write-Status "📄 CSVレポート: $($result.CSVPath)" "Info"
+                                    }
+                                    if ($result.HTMLPath) {
+                                        Write-Status "🌐 HTMLセキュリティダッシュボード: $($result.HTMLPath)" "Info"
+                                        
+                                        # オプション: HTMLレポートをブラウザで開く
+                                        $openReport = Read-Host "セキュリティダッシュボードをブラウザで開きますか？ (y/N)"
+                                        if ($openReport -eq "y" -or $openReport -eq "Y") {
+                                            Start-Process $result.HTMLPath
+                                        }
+                                    }
+                                }
+                                else {
+                                    Write-Status "❌ エラーが発生しました: $($result.Error)" "Error"
+                                }
+                            } else {
+                                Write-Status "❌ OneDriveExternalSharingAnalysis.ps1が見つかりません: $externalSharingScriptPath" "Error"
+                            }
                         }
                         "4" {
-                            Write-Status "ライセンス配布状況監視機能は実装中です" "Warning"
-                            Write-Host "実装予定機能:" -ForegroundColor Yellow
-                            Write-Host "- ライセンス種別と使用状況" -ForegroundColor Gray
-                            Write-Host "- 未使用ライセンス検出" -ForegroundColor Gray
-                            Write-Host "- コスト最適化提案" -ForegroundColor Gray
+                            Write-Status "💰 Microsoft 365ライセンス配布状況・未使用ライセンス監視を実行中..." "Info"
+                            Write-Host "この分析は以下を監視します:" -ForegroundColor Cyan
+                            Write-Host "  • ライセンス種別と使用状況の詳細分析" -ForegroundColor Gray
+                            Write-Host "  • 未使用ライセンスの検出とコスト分析" -ForegroundColor Gray
+                            Write-Host "  • ユーザー別ライセンス利用状況" -ForegroundColor Gray
+                            Write-Host "  • コスト最適化提案と年間節約可能額" -ForegroundColor Gray
+                            Write-Host "  • 長期未利用ユーザーの検出" -ForegroundColor Gray
+                            Write-Host ""
+                            
+                            # スクリプトファイル読み込み
+                            $licenseScriptPath = Join-Path $Script:ToolRoot "Scripts\EntraID\LicenseAnalysis.ps1"
+                            if (Test-Path $licenseScriptPath) {
+                                . $licenseScriptPath
+                                
+                                Write-Host "⏳ ライセンス分析を開始中... しばらくお待ちください" -ForegroundColor Cyan
+                                
+                                $result = Get-LicenseAnalysis -IncludeUserDetails -AnalyzeCosts -ExportCSV -ExportHTML
+                                if ($result -and $result.Success) {
+                                    Write-Status "✅ Microsoft 365ライセンス分析完了" "Success"
+                                    Write-Host ""
+                                    Write-Host "📊 ライセンス使用状況サマリー:" -ForegroundColor Yellow
+                                    Write-Host "ライセンス種別数: $($result.Statistics.TotalLicenseTypes)" -ForegroundColor Cyan
+                                    Write-Host "総ライセンス数: $($result.Statistics.TotalLicenses)" -ForegroundColor Cyan
+                                    Write-Host "使用中ライセンス: $($result.Statistics.TotalConsumedLicenses)" -ForegroundColor Green
+                                    Write-Host "未使用ライセンス: $($result.Statistics.TotalAvailableLicenses)" -ForegroundColor $(if($result.Statistics.TotalAvailableLicenses -gt 10) { "Yellow" } else { "Green" })
+                                    Write-Host "平均利用率: $(if($result.Statistics.AverageUtilizationRate -ne $null) { $result.Statistics.AverageUtilizationRate.ToString('N1') } else { '0.0' })%" -ForegroundColor Cyan
+                                    Write-Host ""
+                                    Write-Host "💰 コスト分析:" -ForegroundColor Yellow
+                                    Write-Host "月額総コスト: ¥$(if($result.Statistics.TotalMonthlyCost -ne $null) { $result.Statistics.TotalMonthlyCost.ToString('N0') } else { '0' })" -ForegroundColor Blue
+                                    Write-Host "月額無駄コスト: ¥$(if($result.Statistics.TotalWastedCost -ne $null) { $result.Statistics.TotalWastedCost.ToString('N0') } else { '0' })" -ForegroundColor $(if($result.Statistics.TotalWastedCost -gt 10000) { "Red" } else { "Yellow" })
+                                    Write-Host "年間節約可能額: ¥$(if($result.Statistics.TotalAnnualSavingsPotential -ne $null) { $result.Statistics.TotalAnnualSavingsPotential.ToString('N0') } else { '0' })" -ForegroundColor $(if($result.Statistics.TotalAnnualSavingsPotential -gt 100000) { "Green" } else { "Cyan" })
+                                    Write-Host ""
+                                    Write-Host "⚠️ 最適化機会:" -ForegroundColor Yellow
+                                    Write-Host "低利用率ライセンス: $($result.Statistics.LowUtilizationLicenses)" -ForegroundColor $(if($result.Statistics.LowUtilizationLicenses -gt 0) { "Yellow" } else { "Green" })
+                                    Write-Host "高リスクライセンス: $($result.Statistics.HighRiskLicenses)" -ForegroundColor $(if($result.Statistics.HighRiskLicenses -gt 0) { "Red" } else { "Green" })
+                                    Write-Host "非アクティブユーザー: $($result.Statistics.InactiveUsers)" -ForegroundColor $(if($result.Statistics.InactiveUsers -gt 0) { "Red" } else { "Green" })
+                                    
+                                    # 重要な警告表示
+                                    if ($result.Statistics.TotalAnnualSavingsPotential -gt 500000) {
+                                        Write-Host ""
+                                        Write-Host "🚨 高額な節約機会:" -ForegroundColor Red
+                                        Write-Host "   年間$('{0:N0}' -f $result.Statistics.TotalAnnualSavingsPotential)円の節約が可能です" -ForegroundColor Red
+                                        Write-Host "   ライセンス最適化の緊急実施を推奨します" -ForegroundColor Red
+                                    }
+                                    elseif ($result.Statistics.TotalAnnualSavingsPotential -gt 100000) {
+                                        Write-Host ""
+                                        Write-Host "💰 節約機会あり:" -ForegroundColor Yellow
+                                        Write-Host "   年間$('{0:N0}' -f $result.Statistics.TotalAnnualSavingsPotential)円の節約が可能です" -ForegroundColor Yellow
+                                        Write-Host "   ライセンス見直しを検討してください" -ForegroundColor Yellow
+                                    }
+                                    elseif ($result.Statistics.InactiveUsers -gt 5) {
+                                        Write-Host ""
+                                        Write-Host "⚠️ 非アクティブユーザー検出:" -ForegroundColor Yellow
+                                        Write-Host "   $($result.Statistics.InactiveUsers)名の長期未利用ユーザーが検出されました" -ForegroundColor Yellow
+                                        Write-Host "   ライセンス回収を検討してください" -ForegroundColor Yellow
+                                    }
+                                    else {
+                                        Write-Host ""
+                                        Write-Host "✅ ライセンス利用効率良好:" -ForegroundColor Green
+                                        Write-Host "   ライセンス利用は最適化されています" -ForegroundColor Green
+                                    }
+                                    
+                                    if ($result.CSVPath) {
+                                        Write-Status "📄 CSVレポート: $($result.CSVPath)" "Info"
+                                    }
+                                    if ($result.HTMLPath) {
+                                        Write-Status "🌐 HTMLダッシュボード: $($result.HTMLPath)" "Info"
+                                        
+                                        # オプション: HTMLレポートをブラウザで開く
+                                        $openReport = Read-Host "ライセンス分析ダッシュボードをブラウザで開きますか？ (y/N)"
+                                        if ($openReport -eq "y" -or $openReport -eq "Y") {
+                                            Start-Process $result.HTMLPath
+                                        }
+                                    }
+                                }
+                                else {
+                                    Write-Status "❌ エラーが発生しました: $($result.Error)" "Error"
+                                }
+                            } else {
+                                Write-Status "❌ LicenseAnalysis.ps1が見つかりません: $licenseScriptPath" "Error"
+                            }
                         }
                         "5" {
                             Write-Status "利用率・アクティブ率レポート機能は実装中です" "Warning"

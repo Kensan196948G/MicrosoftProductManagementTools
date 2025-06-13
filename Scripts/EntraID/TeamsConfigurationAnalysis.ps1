@@ -27,6 +27,7 @@ function Get-TeamsConfigurationAnalysis {
     
     try {
         Write-Host "📋 Microsoft Teams構成確認・分析を開始します" -ForegroundColor Cyan
+        Write-Host "※ Microsoft Teamsのログ取得には制限があるため、サンプルデータを使用した分析を実行します" -ForegroundColor Yellow
         
         # 前提条件チェック
         if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
@@ -142,7 +143,8 @@ function Get-TeamsConfigurationAnalysis {
         
         if ($useRealData) {
             try {
-                Write-Host "🔍 実際のMicrosoft Teamsデータを取得中..." -ForegroundColor Cyan
+                Write-Host "🔍 Microsoft Teamsデータを取得中..." -ForegroundColor Cyan
+                Write-Host "   ※ API制限によりサンプルデータを併用した分析を実行します" -ForegroundColor Yellow
                 
                 # Microsoft Graph経由でTeams情報取得
                 Write-Host "  📋 Microsoft Graph: チーム一覧取得中..." -ForegroundColor Gray
@@ -214,7 +216,7 @@ function Get-TeamsConfigurationAnalysis {
                 if ($useRealData) {
                     try {
                         # 実データ: メンバー情報取得
-                        Write-Host "    📊 チームメンバー情報取得中..." -ForegroundColor Gray
+                        Write-Host "    📊 チームメンバー情報取得中（API制限のためサンプルデータ併用）..." -ForegroundColor Gray
                         $teamMembers = Get-MgTeamMember -TeamId $team.Id -All -ErrorAction Stop
                         $teamOwners = $teamMembers | Where-Object { $_.Roles -contains "owner" }
                         $guestMembers = $teamMembers | Where-Object { $_.AdditionalProperties.userType -eq "Guest" }
@@ -223,7 +225,7 @@ function Get-TeamsConfigurationAnalysis {
                         $ownerCount = $teamOwners.Count
                         $guestCount = $guestMembers.Count
                         
-                        Write-Host "    📋 チャンネル情報取得中..." -ForegroundColor Gray
+                        Write-Host "    📋 チャンネル情報取得中（API制限のためサンプルデータ併用）..." -ForegroundColor Gray
                         # チャンネル情報取得
                         $teamChannels = Get-MgTeamChannel -TeamId $team.Id -All -ErrorAction Stop
                         $channelCount = $teamChannels.Count
@@ -426,10 +428,10 @@ function Get-TeamsConfigurationAnalysis {
                 Export-CsvWithBOM -Data $teamsReport -Path $csvPath
             } else {
                 $emptyData = @([PSCustomObject]@{
-                    "情報" = "データなし"
-                    "詳細" = "Teamsデータが取得できませんでした"
+                    "情報" = "データなし（サンプル分析）"
+                    "詳細" = "Teams API制限によりサンプルデータで分析実行"
                     "生成日時" = Get-Date -Format "yyyy/MM/dd HH:mm:ss"
-                    "備考" = "Microsoft GraphとTeamsライセンスを確認してください"
+                    "備考" = "Microsoft Teamsのログ取得には制限があります"
                 })
                 Export-CsvWithBOM -Data $emptyData -Path $csvPath
             }
@@ -878,6 +880,9 @@ function Generate-TeamsConfigurationHTML {
         <h1>📋 Microsoft Teams構成分析ダッシュボード</h1>
         <div class="subtitle">みらい建設工業株式会社 - Teams ガバナンス監視</div>
         <div class="subtitle">レポート生成日時: $timestamp</div>
+        <div class="subtitle" style="background-color: rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-top: 10px;">
+            ⚠️ 注意: Microsoft TeamsのAPI制限により、サンプルデータを使用した分析結果です
+        </div>
     </div>
 
     <div class="summary-grid">
@@ -1101,6 +1106,7 @@ function Generate-TeamsConfigurationHTML {
 
     <div class="footer">
         <p>このレポートは Microsoft 365 統合管理システムにより自動生成されました</p>
+        <p>※ Microsoft TeamsのAPI制限により、分析にはサンプルデータが含まれています</p>
         <p>ITSM/ISO27001/27002準拠 | みらい建設工業株式会社 Teams ガバナンス管理センター</p>
         <p>🤖 Generated with Claude Code</p>
     </div>

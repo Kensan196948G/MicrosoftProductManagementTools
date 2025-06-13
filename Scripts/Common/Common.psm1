@@ -7,6 +7,7 @@
 Import-Module "$PSScriptRoot\Authentication.psm1" -Force
 Import-Module "$PSScriptRoot\Logging.psm1" -Force
 Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
+Import-Module "$PSScriptRoot\ReportGenerator.psm1" -Force
 
 function Initialize-ManagementTools {
     param(

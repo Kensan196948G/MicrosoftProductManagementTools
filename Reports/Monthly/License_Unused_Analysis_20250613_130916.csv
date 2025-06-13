@@ -1,0 +1,4 @@
+﻿"LicenseName","SkuPartNumber","UnusedCount","WastedCostPerMonth","PotentialSavingsPerYear","RecommendedAction","Priority"
+"Exchange Online Plan 2","EXCHANGEENTERPRISE","1","960","11520","現状維持（予備として保持）","低"
+"Microsoft 365 Business Basic (レガシー)","O365_BUSINESS","17","17000","204000","ライセンス数削減を推奨","高"
+"Microsoft 365 E3","ENTERPRISEPACK","28","79520","954240","ライセンス数削減を推奨","高"

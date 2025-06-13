@@ -1,0 +1,6 @@
+﻿"LicenseName","SkuPartNumber","SkuId","TotalLicenses","ConsumedLicenses","AvailableLicenses","UtilizationRate","EstimatedCostPerUser","TotalEstimatedCost","WastedCost","LongTermInactiveUsers","RiskLevel","AlertLevel","Recommendations","AnalysisTimestamp"
+"Exchange Online Plan 2","EXCHANGEENTERPRISE","19ec0d23-8335-4cbd-94ac-6050e30712fa","50","49","1","98","960","47040","960","0","警告","Warning","利用率が高い（98%）- 追加ライセンスの準備を検討してください","2025/06/13 12:55:04"
+"O365_BUSINESS","O365_BUSINESS","cdd28e44-67e3-425e-be4c-737fab2899d3","18","1","17","5.56","1000","1000","17000","0","注意","Warning","利用率が低い（5.56%）- ライセンス数の見直しを検討してください;  - コスト削減の機会","2025/06/13 12:55:04"
+"Windows Store for Business","WINDOWS_STORE","6470687e-a428-4b7a-bef2-8a291ad947c9","1000000","0","1000000","0","0","0","0","0","注意","Warning","利用率が低い（0%）- ライセンス数の見直しを検討してください;  - コスト削減の機会","2025/06/13 12:55:04"
+"ENTERPRISEPACK","ENTERPRISEPACK","6fd2c87f-b296-42f0-b197-1e91e994b900","440","412","28","93.64","1000","412000","28000","0","警告","Warning","利用率が高い（93.64%）- 追加ライセンスの準備を検討してください;  - コスト削減の機会","2025/06/13 12:55:04"
+"Power Automate (無料)","FLOW_FREE","f30db892-07e9-47e9-837c-80727f46fd3d","10000","18","9982","0.18","0","0","0","0","注意","Warning","利用率が低い（0.18%）- ライセンス数の見直しを検討してください;  - コスト削減の機会","2025/06/13 12:55:04"
