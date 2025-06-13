@@ -28,7 +28,9 @@
       "Bash(git reset:*)",
       "Bash(python:*)",
       "Bash(cp:*)",
-      "Bash(./New-LicenseDashboard.ps1 -FileNameType Timestamp -Verbose -OpenInBrowser)"
+      "Bash(./New-LicenseDashboard.ps1 -FileNameType Timestamp -Verbose -OpenInBrowser)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

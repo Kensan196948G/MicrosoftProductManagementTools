@@ -12,7 +12,10 @@ Import-Module "$PSScriptRoot\ReportGenerator.psm1" -Force
 function Initialize-ManagementTools {
     param(
         [Parameter(Mandatory = $false)]
-        [string]$ConfigPath = "Config\appsettings.json"
+        [string]$ConfigPath = "Config\appsettings.json",
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipAuthentication
     )
     
     try {
@@ -21,6 +24,29 @@ function Initialize-ManagementTools {
         if (Test-Path $ConfigPath) {
             $config = Get-Content $ConfigPath | ConvertFrom-Json
             Write-Log "設定ファイルを読み込みました: $ConfigPath" -Level "Info"
+            
+            # 自動認証の実行（スキップしない場合）
+            if (-not $SkipAuthentication) {
+                try {
+                    Write-Log "Microsoft 365サービスへの自動認証を開始します" -Level "Info"
+                    $authResult = Connect-ToMicrosoft365 -Config $config -Services @("MicrosoftGraph", "ExchangeOnline")
+                    
+                    if ($authResult.Success) {
+                        Write-Log "認証成功: 接続済みサービス - $($authResult.ConnectedServices -join ', ')" -Level "Info"
+                        if ($authResult.FailedServices.Count -gt 0) {
+                            Write-Log "認証失敗サービス: $($authResult.FailedServices -join ', ')" -Level "Warning"
+                        }
+                    }
+                    else {
+                        Write-Log "認証が部分的に失敗しました。一部機能が制限される可能性があります" -Level "Warning"
+                    }
+                }
+                catch {
+                    Write-Log "自動認証エラー: $($_.Exception.Message)" -Level "Warning"
+                    Write-Log "一部機能は手動認証が必要になる場合があります" -Level "Info"
+                }
+            }
+            
             return $config
         }
         else {
