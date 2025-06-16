@@ -14,3 +14,6 @@ Certificates/*.p12
 # Sensitive logs
 Logs/*.sensitive
 Reports/Sensitive/
+
+# YoYo AI version control directory
+.yoyo/
