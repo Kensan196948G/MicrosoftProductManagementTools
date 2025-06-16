@@ -762,8 +762,10 @@ function Export-ReportData {
         # CSV出力
         if ($Data -is [System.Collections.IEnumerable] -and $Data -isnot [string]) {
             $Data | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+            Show-OutputFile -FilePath $csvPath -FileType "CSV"
         } else {
             $Data | Out-String | Set-Content -Path $csvPath -Encoding UTF8BOM
+            Show-OutputFile -FilePath $csvPath -FileType "CSV"
         }
         
         # HTML出力
@@ -1246,9 +1248,11 @@ function Export-ReportData {
         if ($Data -is [Array] -and $Data.Count -gt 0) {
             Write-Host "データ配列をCSVに出力中... (${Data.Count}件)" -ForegroundColor Green
             $Data | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+            Show-OutputFile -FilePath $csvPath -FileType "CSV"
         } else {
             Write-Host "データを文字列としてCSVに出力中..." -ForegroundColor Green
             $Data | Out-String | Set-Content -Path $csvPath -Encoding UTF8BOM
+            Show-OutputFile -FilePath $csvPath -FileType "CSV"
         }
         
         # HTML出力
@@ -1897,6 +1901,86 @@ function Open-ReportsFolder {
     }
 }
 
+# ファイル自動表示機能（拡張版）
+function Show-OutputFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$FileType = "Auto"
+    )
+    
+    try {
+        if (-not (Test-Path $FilePath)) {
+            Write-GuiLog "ファイルが見つかりません: $FilePath" "Warning"
+            return $false
+        }
+        
+        # ファイルタイプの自動判定
+        if ($FileType -eq "Auto") {
+            $extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
+            switch ($extension) {
+                ".csv" { $FileType = "CSV" }
+                ".html" { $FileType = "HTML" }
+                ".htm" { $FileType = "HTML" }
+                default { $FileType = "Default" }
+            }
+        }
+        
+        # ファイルタイプ別の表示処理
+        switch ($FileType) {
+            "CSV" {
+                # CSVファイルを関連付けられたアプリで開く
+                Write-GuiLog "CSVファイルを既定のアプリで表示中: $(Split-Path $FilePath -Leaf)" "Info"
+                Invoke-Item $FilePath
+            }
+            "HTML" {
+                # HTMLファイルを既定のブラウザで開く
+                Write-GuiLog "HTMLファイルを既定のブラウザで表示中: $(Split-Path $FilePath -Leaf)" "Info"
+                Start-Process $FilePath
+            }
+            default {
+                # その他のファイルを既定のアプリで開く
+                Write-GuiLog "ファイルを既定のアプリで表示中: $(Split-Path $FilePath -Leaf)" "Info"
+                Invoke-Item $FilePath
+            }
+        }
+        
+        return $true
+    }
+    catch {
+        Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Error"
+        return $false
+    }
+}
+
+# 複数ファイル一括表示機能
+function Show-OutputFiles {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$FilePaths,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$DelayMilliseconds = 500
+    )
+    
+    Write-GuiLog "生成されたファイルを自動表示中..." "Info"
+    
+    foreach ($filePath in $FilePaths) {
+        if (Test-Path $filePath) {
+            $result = Show-OutputFile -FilePath $filePath
+            if ($result) {
+                Write-GuiLog "表示成功: $(Split-Path $filePath -Leaf)" "Success"
+            }
+            # ファイル間の表示間隔
+            if ($DelayMilliseconds -gt 0) {
+                Start-Sleep -Milliseconds $DelayMilliseconds
+            }
+        }
+    }
+}
+
 # メインフォーム作成
 function New-MainForm {
     try {
@@ -2235,7 +2319,9 @@ function New-MainForm {
                             
                             # CSV出力（API仕様書準拠）
                             $authData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $summaryData | Export-Csv -Path $summaryPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $summaryPath -FileType "CSV"
                             
                             # 高機能HTML出力（API仕様書準拠）
                             $htmlContent = New-EnhancedHtml -Title "認証テスト結果（API仕様書準拠）" -Data $authData -PrimaryColor "#28a745" -IconClass "fas fa-shield-alt"
@@ -2314,6 +2400,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "日次レポート_${timestamp}.html"
                             
                             $dailyData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # 日次レポート用のHTMLテンプレート生成
                             $tableRows = @()
@@ -2551,6 +2638,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "週次レポート_${timestamp}.html"
                             
                             $weeklyData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # 週次レポート用のHTMLテンプレート生成
                             $htmlContent = @"
@@ -2758,6 +2846,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "月次レポート_${timestamp}.html"
                             
                             $monthlyData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # 月次レポート用のHTMLテンプレート生成
                             $htmlContent = @"
@@ -3076,6 +3165,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "ライセンス分析_${timestamp}.html"
                             
                             $licenseData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # ライセンス分析用のHTMLテンプレート生成
                             $tableRows = @()
@@ -3441,6 +3531,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "権限監査レポート_${timestamp}.html"
                             
                             $permissionData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # 権限監査用のHTMLテンプレート生成
                             $htmlContent = @"
@@ -3697,11 +3788,13 @@ function New-MainForm {
                             
                             # CSVレポートの生成
                             $securityData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "セキュリティ分析レポート" -Data $securityData -PrimaryColor "#dc3545" -IconClass "fas fa-shield-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の表示
@@ -3812,6 +3905,7 @@ function New-MainForm {
                             $htmlPath = Join-Path $outputFolder "年次レポート_${timestamp}.html"
                             
                             $yearlyData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # 年次レポート用のHTMLテンプレート生成
                             $htmlContent = @"
@@ -4555,11 +4649,13 @@ function New-MainForm {
                             
                             # CSVレポートの生成
                             $usageData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "使用状況分析レポート" -Data $usageData -PrimaryColor "#17a2b8" -IconClass "fas fa-chart-line"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -4695,11 +4791,13 @@ function New-MainForm {
                             
                             # CSVレポートの生成
                             $performanceData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "パフォーマンス監視レポート" -Data $performanceData -PrimaryColor "#28a745" -IconClass "fas fa-tachometer-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -4840,8 +4938,10 @@ function New-MainForm {
                             $htmlPath = "$Script:ToolRoot\Reports\ConfigManagement_$timestamp.html"
                             
                             $configData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "設定管理レポート" -Data $configData -PrimaryColor "#f59e0b" -IconClass "fas fa-cogs"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalItems = $configData.Count
                             $configuredItems = ($configData | Where-Object { $_.設定状態 -eq "設定済み" -or $_.設定状態 -eq "有効" }).Count
@@ -4965,8 +5065,10 @@ function New-MainForm {
                             $htmlPath = "$Script:ToolRoot\Reports\LogViewer_$timestamp.html"
                             
                             $logData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "ログビューアレポート" -Data $logData -PrimaryColor "#6b7280" -IconClass "fas fa-file-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalFiles = $logData.Count
                             $totalErrors = ($logData.エラー数 | ForEach-Object { [int]$_ } | Measure-Object -Sum).Sum
@@ -5088,17 +5190,22 @@ function New-MainForm {
                             
                             # CSV出力（API仕様書準拠）
                             $mailboxData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             if ($exchangeResult.QuotaAnalysis.Count -gt 0) {
                                 $exchangeResult.QuotaAnalysis | Export-Csv -Path $quotaPath -NoTypeInformation -Encoding UTF8BOM
+                                Show-OutputFile -FilePath $quotaPath -FileType "CSV"
                             }
                             if ($exchangeResult.AttachmentAnalysis.Count -gt 0) {
                                 $exchangeResult.AttachmentAnalysis | Export-Csv -Path $attachmentPath -NoTypeInformation -Encoding UTF8BOM
+                                Show-OutputFile -FilePath $attachmentPath -FileType "CSV"
                             }
                             if ($exchangeResult.SecurityAnalysis.Count -gt 0) {
                                 $exchangeResult.SecurityAnalysis | Export-Csv -Path $securityPath -NoTypeInformation -Encoding UTF8BOM
+                                Show-OutputFile -FilePath $securityPath -FileType "CSV"
                             }
                             if ($exchangeResult.AuditAnalysis.Count -gt 0) {
                                 $exchangeResult.AuditAnalysis | Export-Csv -Path $auditPath -NoTypeInformation -Encoding UTF8BOM
+                                Show-OutputFile -FilePath $auditPath -FileType "CSV"
                             }
                             
                             # 高機能HTML出力（API仕様書準拠）
@@ -5106,6 +5213,7 @@ function New-MainForm {
                             
                             # HTML保存
                             Set-Content -Path $htmlPath -Value $htmlContent -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             Write-GuiLog "Exchange監視レポートを出力しました" "Success"
                             Write-GuiLog "メールボックス統計: $csvPath" "Info"
@@ -5237,11 +5345,13 @@ function New-MainForm {
                             
                             # CSVレポートの生成
                             $mailFlowData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "Exchange メールフロー分析レポート" -Data $mailFlowData -PrimaryColor "#fd7e14" -IconClass "fas fa-envelope-open-text"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -5379,11 +5489,13 @@ Exchange メールフロー分析が完了しました。
                             
                             # CSVレポートの生成
                             $antiSpamData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "Exchange スパム対策分析レポート" -Data $antiSpamData -PrimaryColor "#dc3545" -IconClass "fas fa-shield-virus"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -5524,11 +5636,13 @@ Exchange スパム対策分析が完了しました。
                             
                             # CSVレポートの生成
                             $deliveryData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "Exchange 配信レポート" -Data $deliveryData -PrimaryColor "#6f42c1" -IconClass "fas fa-paper-plane"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -5650,6 +5764,7 @@ Exchange 配信レポートが完了しました。
                             
                             # CSV出力
                             $teamsUsageData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # HTML出力
                             $htmlContent = @"
@@ -6063,6 +6178,7 @@ Teams アプリ利用状況 (ダミーデータ)
                             $htmlPath = Join-Path $outputFolder "OneDriveストレージ利用状況_${timestamp}.html"
                             
                             $oneDriveData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # OneDriveストレージ用のHTMLテンプレート生成
                             $tableRows = @()
@@ -6330,11 +6446,13 @@ Teams アプリ利用状況 (ダミーデータ)
                             
                             # CSVレポートの生成
                             $sharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "OneDrive 共有ファイル監視レポート" -Data $sharingData -PrimaryColor "#0078d4" -IconClass "fas fa-share-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -6473,11 +6591,13 @@ OneDrive 共有ファイル監視が完了しました。
                             
                             # CSVレポートの生成
                             $syncErrorData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "OneDrive 同期エラー分析レポート" -Data $syncErrorData -PrimaryColor "#e74c3c" -IconClass "fas fa-exclamation-triangle"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -6618,11 +6738,13 @@ $(($errorTypes | ForEach-Object { "・$($_.Name): $($_.Count)件" }) -join "`n")
                             
                             # CSVレポートの生成
                             $externalSharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
                             
                             # HTMLレポートの生成
                             $htmlContent = New-EnhancedHtml -Title "OneDrive 外部共有レポート" -Data $externalSharingData -PrimaryColor "#ff6b35" -IconClass "fas fa-external-link-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
                             
                             # 統計情報の計算
@@ -6854,6 +6976,7 @@ OneDrive 外部共有レポートが完了しました。
                             $htmlPath = Join-Path $outputFolder "EntraIDユーザー監視_${timestamp}.html"
                             
                             $entraUserData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             
                             # EntraIDユーザー監視用のHTMLテンプレート生成
                             $tableRows = @()
@@ -7096,8 +7219,10 @@ OneDrive 外部共有レポートが完了しました。
                             $htmlPath = "$Script:ToolRoot\Reports\EntraIdSignInLogs_$timestamp.html"
                             
                             $signInData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "Entra ID サインインログ分析レポート" -Data $signInData -PrimaryColor "#0066cc" -IconClass "fas fa-sign-in-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalLogins = $signInData.Count
                             $failedLogins = ($signInData | Where-Object { $_.結果 -like "*失敗*" }).Count
@@ -7199,8 +7324,10 @@ Entra ID サインインログ分析が完了しました。
                             $htmlPath = "$Script:ToolRoot\Reports\EntraIdConditionalAccess_$timestamp.html"
                             
                             $conditionalAccessData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "Entra ID 条件付きアクセス分析レポート" -Data $conditionalAccessData -PrimaryColor "#6b46c1" -IconClass "fas fa-shield-check"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalPolicies = $conditionalAccessData.Count
                             $activePolicies = ($conditionalAccessData | Where-Object { $_.状態 -eq "有効" }).Count
@@ -7299,8 +7426,10 @@ Entra ID 条件付きアクセス分析が完了しました。
                             $htmlPath = "$Script:ToolRoot\Reports\EntraIdMFA_$timestamp.html"
                             
                             $mfaData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "Entra ID MFA状況確認レポート" -Data $mfaData -PrimaryColor "#10b981" -IconClass "fas fa-mobile-alt"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalUsers = $mfaData.Count
                             $mfaEnabled = ($mfaData | Where-Object { $_.MFA状態 -eq "有効" }).Count
@@ -7404,8 +7533,10 @@ Entra ID MFA状況確認が完了しました。
                             $htmlPath = "$Script:ToolRoot\Reports\EntraIdAppRegistrations_$timestamp.html"
                             
                             $appRegistrationData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             $htmlContent = New-EnhancedHtml -Title "Entra ID アプリ登録監視レポート" -Data $appRegistrationData -PrimaryColor "#8b5cf6" -IconClass "fas fa-apps"
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             
                             $totalApps = $appRegistrationData.Count
                             $activeApps = ($appRegistrationData | Where-Object { $_.状態 -eq "アクティブ" }).Count
