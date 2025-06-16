@@ -1,34 +1,43 @@
-# 🚀 Microsoft 365統合管理ツール
+# 🚀 Microsoft 365統合管理ツール (GUI/CLI両対応版)
 
-**PowerShellバージョン対応・文字化け対策済み・エンタープライズ向け統合管理システム**
+**Windows 11 + PowerShell 7.5.1対応・GUI/CLI両対応・エンタープライズ向け統合管理システム**
 
-[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B%20%7C%207%2B-blue)](https://github.com/PowerShell/PowerShell)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B%20%7C%207.5.1%2B-blue)](https://github.com/PowerShell/PowerShell)
+[![GUI](https://img.shields.io/badge/GUI-Windows%20Forms-green)](https://docs.microsoft.com/dotnet/desktop/winforms/)
+[![CLI](https://img.shields.io/badge/CLI-Cross%20Compatible-orange)](https://docs.microsoft.com/powershell/)
 [![License](https://img.shields.io/badge/License-Enterprise-green)](LICENSE)
 [![ITSM](https://img.shields.io/badge/ITSM-ISO%2020000-orange)](https://www.iso.org/iso-20000-it-service-management.html)
 [![Security](https://img.shields.io/badge/Security-ISO%2027001%2F27002-red)](https://www.iso.org/isoiec-27001-information-security.html)
 
 ## 📋 概要
 
-ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエンタープライズ向けMicrosoft 365管理ツール群です。PowerShellバージョンに応じて最適なメニューインターフェースを自動選択し、Active Directory、Entra ID、Exchange Online、OneDrive、Microsoft Teamsの自動監視、レポート生成、コンプライアンス追跡機能を提供します。
+ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエンタープライズ向けMicrosoft 365管理ツール群です。最新のGUI/CLI両対応アーキテクチャにより、Active Directory、Entra ID、Exchange Online、OneDrive、Microsoft Teamsの自動監視、レポート生成、コンプライアンス追跡機能を直感的なGUIまたは強力なCLIで利用できます。
 
 ## ✨ 主な特徴
 
-### 🎯 PowerShellバージョン対応
-- **🔧 PowerShell 5.1**: 改良CLIメニューシステム
-- **🎨 PowerShell 7**: ConsoleGUIインタラクティブメニュー
-- **🤖 自動判別**: 環境に応じた最適なUI自動選択
-- **🛡️ フォールバック**: エラー時の安全な代替システム
+### 🎮 GUI/CLI両対応アーキテクチャ
+- **🖼️ GUIモード**: System.Windows.Formsによる直感的な操作画面
+- **💻 CLIモード**: PowerShell 5.1/7.x クロスバージョン対応コマンドライン
+- **🔄 統一ランチャー**: `run_launcher.ps1`による自動モード選択
+- **⚙️ PowerShell 7.5.1自動管理**: 未インストール時の自動セットアップ
 
-### 🌐 文字化け完全対策
-- **🔤 UTF-8自動設定**: エンコーディング問題を根本解決
-- **📝 ASCII代替文字**: Unicode非対応環境でも完璧表示
-- **✅ 互換性テスト**: 文字サポート状況の自動判定
+### 🎯 ユーザーエクスペリエンス
+- **📱 リアルタイム表示**: 処理進行状況・ステータス・ログの即座更新
+- **🎨 視覚的フィードバック**: プログレスバー・色分けログ・アイコン表示
+- **⌨️ バッチ処理対応**: 自動化スクリプト・スケジュール実行に最適
+- **🔗 ショートカット自動作成**: デスクトップ・スタートメニュー統合
+
+### 🌐 クロスバージョン互換性
+- **🔧 PowerShell 5.1**: 基本機能・レガシー環境対応
+- **🚀 PowerShell 7.5.1**: 全機能・最新API・高性能処理
+- **🤖 自動判別**: 環境に応じた最適機能の提供
+- **🛡️ 安全なフォールバック**: バージョン非対応時の代替処理
 
 ### 📊 包括的監視機能
 - **👥 Active Directory**: ユーザー・グループ・同期状況管理
 - **📧 Exchange Online**: メールボックス容量・スパム分析・添付ファイル監視
 - **☁️ OneDrive & Teams**: 容量使用量・利用状況・生産性分析
-- **💰 予算管理**: 年間消費傾向・ライセンス最適化・コスト予測
+- **💰 ライセンス管理**: 使用状況・コスト分析・最適化提案
 
 ### 📈 高度な分析・レポート
 - **📅 定期レポート**: 日次/週次/月次/年次の自動生成
@@ -39,189 +48,278 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
 ## 🚀 クイックスタート
 
 ### 📋 前提条件
-- ✅ Windows 10/11 または Windows Server 2016+
-- ✅ PowerShell 5.1+ または PowerShell 7+
-- ✅ 管理者権限
+- ✅ Windows 11 (推奨) または Windows 10
+- ✅ PowerShell 5.1+ (PowerShell 7.5.1は自動インストール可能)
+- ✅ 管理者権限 (PowerShell自動インストール時)
 - ✅ Microsoft 365 管理者アカウント
 
 ### ⚡ 即座実行
+
+#### 🖼️ GUIモードで開始
 ```powershell
-# 1. 管理者権限でPowerShellを起動
+# 管理者権限でPowerShellを起動
 Start-Process PowerShell -Verb RunAs
 
-# 2. ディレクトリに移動
-cd "E:\MicrosoftProductManagementTools"
-
-# 3. ツール起動（自動選択モード）
-.\Start-ManagementTools.ps1
+# GUIアプリケーション起動
+.\run_launcher.ps1 -Mode gui
 ```
 
-### 🎯 メニュータイプ指定実行
+#### 💻 CLIモードで開始
 ```powershell
-# CLIメニュー（PowerShell 5.1推奨）
-.\Start-ManagementTools.ps1 -MenuType CLI
+# CLIアプリケーション起動
+.\run_launcher.ps1 -Mode cli
 
-# ConsoleGUIメニュー（PowerShell 7推奨）
-.\Start-ManagementTools.ps1 -MenuType ConsoleGUI
-
-# システム情報表示
-.\Start-ManagementTools.ps1 -Mode Info
+# または直接コマンド実行
+.\Apps\CliApp.ps1 -Action auth  # 認証テスト
+.\Apps\CliApp.ps1 -Action daily # 日次レポート
 ```
 
-## 📖 詳細ドキュメント
-
-### 📚 ユーザーガイド
-- 📋 **[操作手順書](Docs/Microsoft365統合管理ツール操作手順書.md)** - 詳細な操作方法とトラブルシューティング
-- 🔧 **[技術仕様書](Docs/Microsoft365統合管理ツール技術仕様書.md)** - アーキテクチャと技術詳細
-- ⚙️ **[設定ガイド](Docs/Microsoft365統合管理ツール設定ガイド.md)** - 初期設定と環境構築
-- 🛡️ **[セキュリティガイド](Docs/Microsoft365統合管理ツールセキュリティガイド.md)** - セキュリティ設定と監査
-
-### 📁 ディレクトリ構造
+#### 🔄 自動モード選択
+```powershell
+# GUI/CLI選択画面を表示
+.\run_launcher.ps1
 ```
-MicrosoftProductManagementTools/
-├── 📄 Start-ManagementTools.ps1     # メインランチャー
-├── 📄 README.md                     # このファイル
-├── 📁 Config/                       # 設定ファイル
-│   └── appsettings.json
-├── 📁 Scripts/                      # スクリプト群
-│   ├── 📁 UI/                       # UIモジュール
-│   │   ├── MenuEngine.psm1          # メニューエンジン基盤
-│   │   ├── CLIMenu.psm1             # CLI メニュー
-│   │   ├── ConsoleGUIMenu.psm1      # ConsoleGUI メニュー
-│   │   └── EncodingManager.psm1     # 文字化け対策
-│   ├── 📁 Common/                   # 共通機能
-│   │   ├── VersionDetection.psm1    # バージョン検出
-│   │   ├── MenuConfig.psm1          # 設定管理
-│   │   ├── Logging.psm1             # ログ機能
-│   │   └── ScheduledReports.ps1     # レポート生成
-│   ├── 📁 AD/                       # Active Directory
-│   ├── 📁 EXO/                      # Exchange Online
-│   └── 📁 EntraID/                  # Entra ID・Teams・OneDrive
-├── 📁 Reports/                      # レポート出力
+
+### 🔧 初回セットアップ
+
+#### 1. PowerShell 7.5.1準備
+```powershell
+# 自動ダウンロード（推奨）
+.\Download-PowerShell751.ps1
+
+# 手動配置の場合
+# PowerShell-7.5.1-win-x64.msi を Installers/ フォルダに配置
+```
+
+#### 2. ショートカット作成
+```powershell
+# 現在のユーザー向けショートカット作成
+.\Create-Shortcuts.ps1
+
+# 全ユーザー向け（管理者権限必要）
+.\Create-Shortcuts.ps1 -AllUsers
+```
+
+#### 3. 設定確認
+```powershell
+# 認証設定テスト
+.\test-auth-simple.ps1
+
+# システムチェック
+.\Check-System.ps1
+```
+
+## 📁 プロジェクト構造
+
+```
+Microsoft365ProductManagementTools/
+├── 🚀 run_launcher.ps1              # メインランチャー
+├── 🔍 test-auth-simple.ps1          # 認証テスト
+├── ✅ Check-System.ps1               # システムチェック
+├── 📦 Download-PowerShell751.ps1     # PowerShell自動ダウンロード
+├── 🔗 Create-Shortcuts.ps1          # ショートカット作成
+├── 📱 Apps/                         # GUI/CLIアプリケーション
+│   ├── GuiApp.ps1                   # GUI版 (PowerShell 7専用)
+│   └── CliApp.ps1                   # CLI版 (クロスバージョン)
+├── ⚙️ Config/                       # 設定ファイル
+│   ├── appsettings.json             # Microsoft 365設定
+│   └── launcher-config.json         # ランチャー設定
+├── 📦 Installers/                   # PowerShell 7.5.1インストーラー
+├── 🔐 Certificates/                 # 証明書ファイル
+├── 📚 Docs/                         # ドキュメント（日本語）
+├── 📝 Scripts/                      # 管理スクリプト群
+│   ├── Common/                      # 共通機能モジュール
+│   ├── AD/                          # Active Directory管理
+│   ├── EXO/                         # Exchange Online管理
+│   ├── EntraID/                     # Entra ID・Teams・OneDrive管理
+│   └── UI/                          # ユーザーインターフェース
+├── 📊 Reports/                      # 生成レポート
 │   ├── Daily/                       # 日次レポート
 │   ├── Weekly/                      # 週次レポート
 │   ├── Monthly/                     # 月次レポート
 │   └── Yearly/                      # 年次レポート
-├── 📁 Logs/                         # ログファイル
-└── 📁 Docs/                         # ドキュメント
-    ├── Microsoft365統合管理ツール操作手順書.md
-    ├── Microsoft365統合管理ツール技術仕様書.md
-    ├── Microsoft365統合管理ツール設定ガイド.md
-    └── Microsoft365統合管理ツールセキュリティガイド.md
+├── 📋 Templates/                    # レポートテンプレート
+├── 📄 Logs/                         # ログファイル
+└── 🗃️ Archive/                      # アーカイブファイル
+    ├── LegacyScripts/               # レガシースクリプト
+    ├── OldTools/                    # 旧管理ツール
+    ├── TestFiles/                   # テストファイル
+    ├── BatchFiles/                  # バッチファイル
+    ├── PythonScripts/               # Pythonスクリプト
+    ├── SystemScripts/               # システムスクリプト
+    └── UtilityFiles/                # ユーティリティファイル
 ```
 
-## 🎯 主要機能
+## 🎮 GUI機能
 
-### 🏢 Active Directory管理
-- 👥 ユーザー・グループ管理
-- 🔄 Entra ID同期状況監視
-- 🔒 パスワードポリシー確認
-- 📊 グループメンバーシップ分析
+### 📱 メイン画面
+- **🔐 認証テスト**: Microsoft 365への接続確認
+- **📊 レポート生成**: 日次・週次・月次・年次レポート
+- **💰 ライセンス分析**: 使用状況ダッシュボード
+- **📁 レポートフォルダ**: 生成結果へのアクセス
 
-### 📧 Exchange Online管理
-- 📦 メールボックス容量監視
-- 📎 添付ファイル分析
-- 🛡️ スパムフィルター効果測定
-- 📈 メール利用統計
+### 🎨 特徴
+- **⏱️ リアルタイム処理表示**: プログレスバーとステータス更新
+- **📜 実行ログ表示**: 操作履歴の即座確認
+- **🎯 エラーハンドリング**: 分かりやすいエラーメッセージ
+- **🖱️ ワンクリック操作**: 複雑な処理も簡単実行
 
-### ☁️ Teams & OneDrive管理
-- 💾 OneDrive容量使用状況
-- 👥 Teams会議利用分析
-- 📊 コラボレーション統計
-- 🚨 容量アラート機能
+## 💻 CLI機能
 
-### 💰 予算・ライセンス管理
-- 📊 年間消費傾向アラート
-- 💡 ライセンス最適化提案
-- 📈 コスト予測分析
-- 🎯 予算超過警告
+### 📋 対話メニュー
+```
+メインメニュー
+============================================================
+1. 認証テスト
+2. 日次レポート生成
+3. 週次レポート生成
+4. 月次レポート生成
+5. 年次レポート生成
+6. ライセンス分析
+7. システム情報表示
+8. ヘルプ表示
+0. 終了
+============================================================
+```
 
-### 📋 レポート・監査
-- 📅 定期レポート自動生成
-- 🔒 セキュリティ監査
-- 📊 コンプライアンス追跡
-- 📄 監査証跡保持
-
-## 🔧 技術仕様
-
-### 💻 対応環境
-- **OS**: Windows 10/11, Windows Server 2016+
-- **PowerShell**: 5.1, 7.0+
-- **プラットフォーム**: x64, ARM64
-- **.NET**: Framework 4.7.2+, Core 3.1+
-
-### 📦 依存関係
+### ⌨️ コマンドライン実行
 ```powershell
-# 必須モジュール
-Microsoft.Graph                     # Microsoft Graph API
-ExchangeOnlineManagement            # Exchange Online管理
-Microsoft.PowerShell.ConsoleGuiTools # ConsoleGUI（PowerShell 7のみ）
+# 認証テスト
+.\Apps\CliApp.ps1 -Action auth
 
-# オプションモジュール
-ImportExcel                         # Excel出力機能
-PSWriteHTML                         # 高度なHTML生成
+# レポート生成
+.\Apps\CliApp.ps1 -Action daily
+.\Apps\CliApp.ps1 -Action weekly
+.\Apps\CliApp.ps1 -Action monthly
+
+# バッチモード（非対話）
+.\Apps\CliApp.ps1 -Action monthly -Batch
+
+# ライセンス分析
+.\Apps\CliApp.ps1 -Action license
 ```
 
-### 🛡️ セキュリティ機能
-- 🔐 証明書ベース認証対応
-- 🔒 クライアントシークレット管理
-- 📝 監査ログ自動記録
-- 🛡️ 権限最小化原則
-- 🔍 アクセス制御
+## 🔧 設定管理
 
-## 📊 利用統計
+### 📄 Microsoft 365設定 (`Config/appsettings.json`)
+```json
+{
+  "EntraID": {
+    "TenantId": "your-tenant-id",
+    "ClientId": "your-client-id",
+    "CertificateThumbprint": "your-cert-thumbprint"
+  },
+  "ExchangeOnline": {
+    "Organization": "your-org.onmicrosoft.com"
+  }
+}
+```
 
-### 📈 パフォーマンス指標
-- ⚡ **起動時間**: 平均2-3秒
-- 🔄 **レポート生成**: 平均30秒-2分
-- 💾 **メモリ使用量**: 50-100MB
-- 📊 **同時処理**: 最大10セッション
+### ⚙️ ランチャー設定 (`Config/launcher-config.json`)
+```json
+{
+  "LauncherSettings": {
+    "DefaultMode": "auto",
+    "RequiredPowerShellVersion": "7.5.1",
+    "EnableAutoInstall": true
+  }
+}
+```
 
-### 🎯 対応規模
-- 👥 **ユーザー数**: 最大10,000ユーザー
-- 📧 **メールボックス**: 最大5,000ボックス
-- 📁 **OneDriveサイト**: 最大10,000サイト
-- 📊 **レポート保持**: 1年間
+## 📈 レポート機能
 
-## 🤝 サポート・コントリビューション
+### 📅 定期レポート
+- **🌅 日次**: ログイン失敗、容量監視、添付ファイル分析
+- **📆 週次**: MFA状況、外部共有、グループレビュー
+- **📊 月次**: 利用率、権限レビュー、スパム分析
+- **📈 年次**: ライセンス消費、インシデント統計、コンプライアンス
 
-### 📞 サポート
-- 📖 **ドキュメント**: [Docs/](Docs/) フォルダ内の詳細ガイド
-- 🐛 **バグ報告**: GitHub Issues
-- 💡 **機能要望**: GitHub Discussions
-- 📧 **技術サポート**: システム管理者にお問い合わせ
+### 📋 出力形式
+- **🌐 HTML**: 視覚的ダッシュボード
+- **📄 CSV**: データ分析・監査証跡用
+- **📊 JSON**: API連携・自動処理用
 
-### 🔄 更新・メンテナンス
-- 📅 **定期更新**: 月次機能追加
-- 🛡️ **セキュリティパッチ**: 即座適用
-- 📊 **パフォーマンス改善**: 継続的最適化
-- 🔧 **バグ修正**: 優先的対応
+## 🏢 企業展開
 
-## 📜 ライセンス・コンプライアンス
+### 📦 配布パッケージ
+- **📁 ZIP形式**: 単一パッケージでの簡単展開
+- **🔧 MSIインストーラー**: PowerShell 7.5.1自動セットアップ
+- **📋 サイレントインストール**: 無人環境での自動配置
 
-### 🏢 企業向けライセンス
-- ✅ **エンタープライズ利用**: 無制限
-- 🔒 **ソースコード**: 組織内共有可能
-- 📊 **カスタマイズ**: 自由な改変許可
-- 🛡️ **サポート**: 企業向け技術支援
+### 🔗 統合ツール対応
+- **📱 Microsoft Intune**: MDM展開対応
+- **🖥️ SCCM**: 企業内自動配布
+- **🔧 Group Policy**: グループポリシー統合
 
-### 📋 準拠標準
-- 🏅 **ITSM**: ISO/IEC 20000準拠
-- 🔒 **セキュリティ**: ISO/IEC 27001準拠
-- 📊 **管理**: ISO/IEC 27002準拠
-- 🛡️ **プライバシー**: GDPR対応
+## 🔍 トラブルシューティング
+
+### 📋 一般的な問題と解決策
+
+#### PowerShell 7.5.1が見つからない
+```powershell
+# 手動確認
+Get-Command pwsh -ErrorAction SilentlyContinue
+
+# 自動ダウンロード
+.\Download-PowerShell751.ps1
+```
+
+#### 認証エラー
+```powershell
+# 認証テスト実行
+.\test-auth-simple.ps1
+
+# 設定ファイル確認
+Test-Path "Config\appsettings.json"
+```
+
+#### GUI起動エラー
+```powershell
+# PowerShell 7確認
+$PSVersionTable.PSVersion -ge [Version]"7.0.0"
+
+# .NET Framework確認
+[System.Windows.Forms.Application]::EnableVisualStyles()
+```
+
+### 📞 ログファイル確認
+```powershell
+# アプリケーションログ
+Get-Content "Logs\cli_app.log" -Tail 20
+
+# システムログ
+Get-Content "Logs\system.log" -Tail 20
+
+# 管理ツールログ
+Get-Content "Logs\Management_$(Get-Date -Format yyyyMMdd).log" -Tail 20
+```
+
+## 📚 詳細ドキュメント
+
+- 📖 **[GUI/CLI使用ガイド](GUI-CLI-GUIDE.md)**: 詳細な操作方法
+- 🔧 **[インストールガイド](Docs/インストールガイド.md)**: セットアップ手順
+- ⚙️ **[設定リファレンス](Docs/設定リファレンス.md)**: 全設定項目説明
+- 🏢 **[企業展開ガイド](Docs/企業展開ガイド.md)**: 大規模展開手順
+- 🔍 **[トラブルシューティング](Docs/トラブルシューティング.md)**: 問題解決集
+
+## 🎉 新機能ハイライト
+
+### ✨ バージョン 2.0.0
+- **🖼️ GUI対応**: Windows Forms ベースの直感的インターフェース
+- **💻 CLI強化**: PowerShell 5.1/7.x クロスバージョン対応
+- **🔄 統一ランチャー**: GUI/CLI自動選択機能
+- **⚙️ PowerShell自動管理**: 7.5.1の自動インストール
+- **🔗 ショートカット統合**: デスクトップ・スタートメニュー対応
+- **📊 リアルタイム表示**: 処理状況の即座可視化
+
+## 📄 ライセンス
+
+Enterprise License - 企業向け統合管理システム
+
+## 🤝 サポート
+
+技術サポート・機能要望については、システム管理者またはプロジェクト担当者までお問い合わせください。
 
 ---
 
-## 🎉 始めましょう！
-
-1. 📁 **[操作手順書](Docs/Microsoft365統合管理ツール操作手順書.md)** で詳細な使い方を確認
-2. ⚡ **`.\Start-ManagementTools.ps1`** で即座に開始
-3. 🎯 **自動選択モード** で最適な体験を享受
-4. 📊 **年間消費傾向アラート** で予算管理を開始
-
-**Microsoft 365の運用管理を次のレベルへ！** 🚀
-
----
-
-*🤖 Generated with Claude Code | 📅 最終更新: 2025年6月*
+**🚀 今すぐ開始**: `.\run_launcher.ps1` を実行してMicrosoft 365統合管理の新しい体験をお楽しみください！

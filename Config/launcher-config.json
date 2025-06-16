@@ -1,0 +1,156 @@
+{
+  "LauncherSettings": {
+    "ApplicationName": "Microsoft 365統合管理ツール",
+    "Version": "2.0.0",
+    "DefaultMode": "auto",
+    "RequiredPowerShellVersion": "7.5.1",
+    "SupportedPowerShellVersions": ["5.1", "7.0", "7.1", "7.2", "7.3", "7.4", "7.5"],
+    "EnableAutoInstall": true,
+    "RequireAdminForInstall": true
+  },
+  "PathSettings": {
+    "GuiAppPath": "Apps\\GuiApp.ps1",
+    "CliAppPath": "Apps\\CliApp.ps1",
+    "InstallerPath": "Installers\\PowerShell-7.5.1-win-x64.msi",
+    "LogDirectory": "Logs",
+    "ReportsDirectory": "Reports",
+    "ConfigDirectory": "Config"
+  },
+  "GuiSettings": {
+    "WindowTitle": "Microsoft 365統合管理ツール - GUI版",
+    "WindowSize": {
+      "Width": 800,
+      "Height": 600
+    },
+    "Theme": "Default",
+    "EnableProgressBar": true,
+    "EnableLogDisplay": true,
+    "LogLevel": "Info"
+  },
+  "CliSettings": {
+    "ShowBanner": true,
+    "EnableColors": true,
+    "DefaultLogLevel": "Info",
+    "BatchModeEnabled": true,
+    "InteractiveMenuEnabled": true,
+    "CompatibilityMode": {
+      "PowerShell51": {
+        "Enabled": true,
+        "LimitedFeatures": [
+          "AdvancedReporting",
+          "GraphAuthentication",
+          "RealTimeMonitoring"
+        ]
+      }
+    }
+  },
+  "InstallationSettings": {
+    "PowerShell751": {
+      "DownloadUrl": "https://github.com/PowerShell/PowerShell/releases/download/v7.5.1/PowerShell-7.5.1-win-x64.msi",
+      "InstallArguments": "/i \"{0}\" /qn /l*v \"{1}\"",
+      "LogFileTemplate": "%TEMP%\\PowerShell751Install_{timestamp}.log",
+      "RestartRequired": false,
+      "PostInstallActions": [
+        "EnvironmentRefresh",
+        "PathUpdate"
+      ]
+    },
+    "Prerequisites": [
+      {
+        "Name": ".NET Framework 4.7.2+",
+        "Check": "Registry",
+        "Path": "HKLM:\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full",
+        "Value": "Release",
+        "MinValue": 461808
+      }
+    ]
+  },
+  "SecuritySettings": {
+    "RequiredExecutionPolicy": "RemoteSigned",
+    "AllowBypass": true,
+    "EnableScriptSigning": false,
+    "TrustedPaths": [
+      "Scripts\\Common",
+      "Scripts\\AD",
+      "Scripts\\EXO",
+      "Scripts\\EntraID",
+      "Apps"
+    ]
+  },
+  "FeatureFlags": {
+    "EnableGUIMode": true,
+    "EnableCLIMode": true,
+    "EnableAutoUpdate": false,
+    "EnableTelemetry": false,
+    "EnableCrashReporting": true,
+    "EnableDebugMode": false
+  },
+  "IntegrationSettings": {
+    "Microsoft365": {
+      "SupportedServices": [
+        "EntraID",
+        "ExchangeOnline",
+        "OneDrive",
+        "Teams",
+        "SharePoint"
+      ],
+      "AuthenticationMethods": [
+        "Certificate",
+        "ClientSecret",
+        "ManagedIdentity"
+      ]
+    },
+    "ReportingEngines": [
+      "HTML",
+      "CSV",
+      "JSON",
+      "XML"
+    ]
+  },
+  "DeploymentSettings": {
+    "PackageType": "ZIP",
+    "SupportedDeploymentMethods": [
+      "Manual",
+      "Intune",
+      "SCCM",
+      "GPO"
+    ],
+    "ShortcutCreation": {
+      "Desktop": true,
+      "StartMenu": true,
+      "QuickLaunch": false
+    },
+    "FileAssociations": [
+      {
+        "Extension": ".m365config",
+        "Description": "Microsoft 365管理ツール設定ファイル",
+        "Action": "Configure"
+      }
+    ]
+  },
+  "UpdateSettings": {
+    "AutoCheckEnabled": false,
+    "UpdateServer": "https://updates.contoso.com/m365tools",
+    "CheckInterval": "Weekly",
+    "AllowPreRelease": false
+  },
+  "LoggingSettings": {
+    "EnableFileLogging": true,
+    "LogRotation": {
+      "Enabled": true,
+      "MaxFileSizeMB": 10,
+      "MaxFiles": 5
+    },
+    "LogFormats": {
+      "Console": "[{timestamp}] [{level}] {message}",
+      "File": "{timestamp:yyyy-MM-dd HH:mm:ss.fff} [{level:u3}] {message}"
+    }
+  },
+  "PerformanceSettings": {
+    "MaxConcurrentOperations": 3,
+    "TimeoutSeconds": 300,
+    "RetryAttempts": 3,
+    "RetryDelay": 5,
+    "MemoryThresholdMB": 512
+  }
+}
