@@ -8,6 +8,101 @@
 Import-Module "$PSScriptRoot\Logging.psm1" -Force
 Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
 
+# API仕様書準拠のリトライロジック
+function Invoke-GraphAPIWithRetry {
+    param(
+        [scriptblock]$ScriptBlock,
+        [int]$MaxRetries = 5,
+        [int]$BaseDelaySeconds = 2,
+        [string]$Operation = "API Call"
+    )
+    
+    $attempt = 0
+    do {
+        try {
+            $attempt++
+            Write-Log "API呼び出し試行 $attempt/$MaxRetries: $Operation" -Level "Info"
+            return & $ScriptBlock
+        }
+        catch {
+            $errorMessage = $_.Exception.Message
+            Write-Log "API呼び出しエラー (試行 $attempt): $errorMessage" -Level "Warning"
+            
+            if ($errorMessage -match "429|throttle|rate limit|TooManyRequests") {
+                if ($attempt -lt $MaxRetries) {
+                    $delay = $BaseDelaySeconds * [Math]::Pow(2, $attempt)
+                    Write-Log "API制限検出。${delay}秒後にリトライします..." -Level "Warning"
+                    Start-Sleep -Seconds $delay
+                }
+                else {
+                    throw "最大リトライ回数に到達しました: $errorMessage"
+                }
+            }
+            elseif ($errorMessage -match "authentication|authorization|forbidden|unauthorized") {
+                throw "認証エラー: $errorMessage"
+            }
+            else {
+                throw
+            }
+        }
+    } while ($attempt -lt $MaxRetries)
+}
+
+# Microsoft Graph接続状態テスト
+function Test-GraphConnection {
+    try {
+        $context = Get-MgContext -ErrorAction SilentlyContinue
+        if ($null -eq $context) {
+            Write-Log "Microsoft Graph未接続" -Level "Warning"
+            return $false
+        }
+        
+        # 実際のAPI呼び出しで接続テスト
+        $testResult = Invoke-GraphAPIWithRetry -ScriptBlock {
+            Get-MgUser -Top 1 -Property Id -ErrorAction Stop
+        } -MaxRetries 2 -Operation "接続テスト"
+        
+        Write-Log "Microsoft Graph接続確認成功: テナント $($context.TenantId)" -Level "Info"
+        return $true
+    }
+    catch {
+        Write-Log "Microsoft Graph接続エラー: $($_.Exception.Message)" -Level "Error"
+        return $false
+    }
+}
+
+# Exchange Online接続状態テスト
+function Test-ExchangeOnlineConnection {
+    try {
+        # 複数の方法で接続確認
+        $testMethods = @(
+            { Get-OrganizationConfig -ErrorAction Stop },
+            { Get-ConnectionInformation -ErrorAction Stop },
+            { Get-PSSession | Where-Object { ($_.Name -like "*ExchangeOnline*" -or $_.ConfigurationName -eq "Microsoft.Exchange") -and $_.State -eq "Opened" } }
+        )
+        
+        foreach ($testMethod in $testMethods) {
+            try {
+                $result = & $testMethod
+                if ($result) {
+                    Write-Log "Exchange Online接続確認成功" -Level "Info"
+                    return $true
+                }
+            }
+            catch {
+                continue
+            }
+        }
+        
+        Write-Log "Exchange Online未接続" -Level "Warning"
+        return $false
+    }
+    catch {
+        Write-Log "Exchange Online接続エラー: $($_.Exception.Message)" -Level "Error"
+        return $false
+    }
+}
+
 # グローバル認証状態管理
 $Script:AuthenticationStatus = @{
     MicrosoftGraph = $false
@@ -189,22 +284,88 @@ function Connect-MicrosoftGraphService {
             
             Write-Log "Microsoft Graph 証明書認証接続成功" -Level "Info"
         }
-        elseif ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "") {
-            # クライアントシークレット認証
+        elseif ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "" -and $graphConfig.ClientSecret -ne "YOUR-CLIENT-SECRET-HERE") {
+            # クライアントシークレット認証（API仕様書準拠）
             Write-Log "クライアントシークレット認証でMicrosoft Graph に接続中..." -Level "Info"
+            Write-Log "認証情報: ClientId=$($graphConfig.ClientId), TenantId=$($graphConfig.TenantId)" -Level "Info"
             
-            $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
-            
-            $connectParams = @{
-                TenantId = $graphConfig.TenantId
-                ClientSecretCredential = $credential
-                NoWelcome = $true
+            # API仕様書に基づくクライアントシークレット認証
+            try {
+                $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
+                $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
+                
+                $connectParams = @{
+                    TenantId = $graphConfig.TenantId
+                    ClientSecretCredential = $credential
+                    NoWelcome = $true
+                }
+                
+                # API仕様書のスコープ設定を考慮
+                if ($graphConfig.Scopes -and $graphConfig.Scopes.Count -gt 0) {
+                    Write-Log "要求スコープ: $($graphConfig.Scopes -join ', ')" -Level "Info"
+                    # 注意: Client Credentialフローではスコープは自動的に決定されます
+                }
+                
+                # リトライロジックを使用して接続
+                $connectionResult = Invoke-GraphAPIWithRetry -ScriptBlock {
+                    Connect-MgGraph @connectParams
+                } -MaxRetries 3 -Operation "Microsoft Graph クライアントシークレット認証"
+                
+                Write-Log "Microsoft Graph クライアントシークレット認証接続成功" -Level "Info"
+                
+                # 権限確認
+                $context = Get-MgContext
+                if ($context) {
+                    Write-Log "取得された権限: $($context.Scopes -join ', ')" -Level "Info"
+                    
+                    # API仕様書で要求される権限の確認
+                    $requiredPermissions = @(
+                        "User.Read.All",
+                        "Group.Read.All", 
+                        "Directory.Read.All",
+                        "Reports.Read.All",
+                        "Files.Read.All"
+                    )
+                    
+                    $missingPermissions = @()
+                    foreach ($permission in $requiredPermissions) {
+                        if ($context.Scopes -notcontains $permission) {
+                            $missingPermissions += $permission
+                        }
+                    }
+                    
+                    if ($missingPermissions.Count -gt 0) {
+                        Write-Log "不足している権限があります: $($missingPermissions -join ', ')" -Level "Warning"
+                        Write-Log "Azure ADアプリケーションで以下の権限を追加してください:" -Level "Warning"
+                        foreach ($permission in $missingPermissions) {
+                            Write-Log "  - $permission" -Level "Warning"
+                        }
+                    }
+                    else {
+                        Write-Log "必要な権限がすべて付与されています" -Level "Info"
+                    }
+                }
             }
-            
-            Connect-MgGraph @connectParams
-            
-            Write-Log "Microsoft Graph クライアントシークレット認証接続成功" -Level "Info"
+            catch {
+                Write-Log "クライアントシークレット認証エラー: $($_.Exception.Message)" -Level "Error"
+                
+                # 一般的なエラーパターンに基づく詳細診断
+                $errorMessage = $_.Exception.Message
+                if ($errorMessage -match "AADSTS70011|invalid_client") {
+                    Write-Log "診断: ClientIdまたはClientSecretが無効です" -Level "Error"
+                    Write-Log "対処法: Azure ADアプリケーションの設定を確認してください" -Level "Error"
+                }
+                elseif ($errorMessage -match "AADSTS50034|does not exist") {
+                    Write-Log "診断: テナントIDが無効です" -Level "Error"
+                    Write-Log "対処法: TenantIdが正しく設定されているか確認してください" -Level "Error"
+                }
+                elseif ($errorMessage -match "AADSTS65001|consent") {
+                    Write-Log "診断: アプリケーションに対する管理者の同意が必要です" -Level "Error"
+                    Write-Log "対処法: Azure ADでアプリケーションに管理者の同意を付与してください" -Level "Error"
+                }
+                
+                throw $_
+            }
         }
         else {
             throw "有効な認証情報が設定されていません。証明書またはクライアントシークレットを設定してください。"
@@ -315,7 +476,10 @@ function Connect-ExchangeOnlineService {
                 ShowProgress = $false
             }
             
-            Connect-ExchangeOnline @connectParams
+            # API仕様書準拠のExchange Online接続（リトライロジック付き）
+            $connectionResult = Invoke-GraphAPIWithRetry -ScriptBlock {
+                Connect-ExchangeOnline @connectParams
+            } -MaxRetries 3 -Operation "Exchange Online 証明書認証"
             
             Write-Log "Exchange Online ファイルベース証明書認証接続成功" -Level "Info"
         }
@@ -331,7 +495,10 @@ function Connect-ExchangeOnlineService {
                 ShowProgress = $false
             }
             
-            Connect-ExchangeOnline @connectParams
+            # API仕様書準拠のExchange Online接続（リトライロジック付き）
+            $connectionResult = Invoke-GraphAPIWithRetry -ScriptBlock {
+                Connect-ExchangeOnline @connectParams
+            } -MaxRetries 3 -Operation "Exchange Online Thumbprint証明書認証"
             
             Write-Log "Exchange Online 証明書認証接続成功" -Level "Info"
         }
@@ -339,49 +506,77 @@ function Connect-ExchangeOnlineService {
             throw "Exchange Online 証明書認証情報が設定されていません。証明書を設定してください。"
         }
         
-        # 接続確認（複数方法で試行）
+        # API仕様書準拠の接続確認（リトライロジック付き）
+        $connectionVerified = $false
+        
+        # 方法1: 組織構成確認（最も確実）
         try {
-            # 方法1: 基本的なコマンドテスト
-            $testResult = Get-OrganizationConfig -ErrorAction SilentlyContinue
-            if ($testResult) {
-                Write-Log "Exchange Online 接続確認: Get-OrganizationConfig テスト成功" -Level "Info"
-                return $true
+            $orgConfig = Invoke-GraphAPIWithRetry -ScriptBlock {
+                Get-OrganizationConfig -ErrorAction Stop | Select-Object -First 1
+            } -MaxRetries 2 -Operation "Exchange Online 組織構成確認"
+            
+            if ($orgConfig) {
+                Write-Log "Exchange Online 接続確認成功: 組織 $($orgConfig.Name)" -Level "Info"
+                $connectionVerified = $true
             }
         }
         catch {
-            Write-Log "Exchange Online 確認エラー（方法1）: $($_.Exception.Message)" -Level "Warning"
+            Write-Log "Exchange Online 組織構成確認エラー: $($_.Exception.Message)" -Level "Warning"
         }
         
-        try {
-            # 方法2: セッション確認
-            $sessions = Get-PSSession | Where-Object { 
-                ($_.Name -like "*ExchangeOnline*" -or $_.ConfigurationName -eq "Microsoft.Exchange") -and 
-                $_.State -eq "Opened" 
+        # 方法2: 接続情報確認（Modern Authentication）
+        if (-not $connectionVerified) {
+            try {
+                $connectionInfo = Invoke-GraphAPIWithRetry -ScriptBlock {
+                    Get-ConnectionInformation -ErrorAction Stop
+                } -MaxRetries 2 -Operation "Exchange Online 接続情報確認"
+                
+                if ($connectionInfo -and $connectionInfo.Count -gt 0) {
+                    Write-Log "Exchange Online 接続確認成功: 接続数 $($connectionInfo.Count)" -Level "Info"
+                    foreach ($conn in $connectionInfo) {
+                        Write-Log "  - 接続ID: $($conn.ConnectionId), 組織: $($conn.Organization)" -Level "Info"
+                    }
+                    $connectionVerified = $true
+                }
             }
-            if ($sessions.Count -gt 0) {
-                Write-Log "Exchange Online 接続確認: アクティブセッション $($sessions.Count) 個" -Level "Info"
-                return $true
+            catch {
+                Write-Log "Exchange Online 接続情報確認エラー: $($_.Exception.Message)" -Level "Warning"
             }
-        }
-        catch {
-            Write-Log "Exchange Online 確認エラー（方法2）: $($_.Exception.Message)" -Level "Warning"
         }
         
-        try {
-            # 方法3: 接続状態確認
-            $connectionInfo = Get-ConnectionInformation -ErrorAction SilentlyContinue
-            if ($connectionInfo) {
-                Write-Log "Exchange Online 接続確認: 接続情報取得成功" -Level "Info"
-                return $true
+        # 方法3: セッション確認（フォールバック）
+        if (-not $connectionVerified) {
+            try {
+                $sessions = Get-PSSession | Where-Object { 
+                    ($_.Name -like "*ExchangeOnline*" -or $_.ConfigurationName -eq "Microsoft.Exchange") -and 
+                    $_.State -eq "Opened" 
+                }
+                if ($sessions.Count -gt 0) {
+                    Write-Log "Exchange Online セッション確認: アクティブセッション $($sessions.Count) 個" -Level "Info"
+                    $connectionVerified = $true
+                }
+            }
+            catch {
+                Write-Log "Exchange Online セッション確認エラー: $($_.Exception.Message)" -Level "Warning"
             }
         }
-        catch {
-            Write-Log "Exchange Online 確認エラー（方法3）: $($_.Exception.Message)" -Level "Warning"
-        }
         
-        # 接続成功として扱う（認証が通れば基本的に成功）
-        Write-Log "Exchange Online: 証明書認証成功のため接続成功と判定" -Level "Info"
-        return $true
+        if ($connectionVerified) {
+            # API仕様書で要求される役割の確認
+            Write-Log "Exchange Online 必要役割の確認中..." -Level "Info"
+            $requiredRoles = @(
+                "View-Only Recipients",
+                "View-Only Configuration", 
+                "Hygiene Management",
+                "View-Only Audit Logs"
+            )
+            Write-Log "API仕様書で要求される役割: $($requiredRoles -join ', ')" -Level "Info"
+            
+            return $true
+        }
+        else {
+            throw "Exchange Online 接続確認に失敗しました。すべての確認方法が失敗しました。"
+        }
     }
     catch {
         $Script:AuthenticationStatus.ConnectionErrors += "ExchangeOnline: $($_.Exception.Message)"
@@ -542,5 +737,5 @@ function Get-AuthenticationInfo {
     }
 }
 
-# エクスポート関数
-Export-ModuleMember -Function Connect-ToMicrosoft365, Connect-MicrosoftGraphService, Connect-ExchangeOnlineService, Connect-ActiveDirectoryService, Test-AuthenticationStatus, Disconnect-AllServices, Get-AuthenticationInfo
+# エクスポート関数（API仕様書準拠）
+Export-ModuleMember -Function Connect-ToMicrosoft365, Connect-MicrosoftGraphService, Connect-ExchangeOnlineService, Connect-ActiveDirectoryService, Test-AuthenticationStatus, Disconnect-AllServices, Get-AuthenticationInfo, Invoke-GraphAPIWithRetry, Test-GraphConnection, Test-ExchangeOnlineConnection

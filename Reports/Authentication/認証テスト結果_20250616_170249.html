@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>認証テスト結果 - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif; 
+            margin: 0; padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px; margin: 0 auto;
+            background: white; border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white; padding: 25px; text-align: center;
+            position: relative;
+        }
+        .header::before {
+            content: '\f023'; font-family: 'Font Awesome 6 Free';
+            font-weight: 900; font-size: 40px;
+            position: absolute; left: 30px; top: 50%;
+            transform: translateY(-50%); opacity: 0.3;
+        }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 300; }
+        .timestamp {
+            color: rgba(255,255,255,0.8); font-size: 14px;
+            margin-top: 8px; display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+        }
+        .timestamp::before {
+            content: '\f017'; font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+        }
+        .controls {
+            padding: 20px; background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex; flex-wrap: wrap; gap: 15px;
+            align-items: center;
+        }
+        .search-box {
+            position: relative; flex: 1; min-width: 250px;
+        }
+        .search-box input {
+            width: 100%; padding: 10px 40px 10px 15px;
+            border: 2px solid #e9ecef; border-radius: 25px;
+            font-size: 14px; transition: all 0.3s;
+        }
+        .search-box input:focus {
+            outline: none; border-color: #28a745;
+            box-shadow: 0 0 0 3px rgba(40,167,69,0.1);
+        }
+        .search-box::after {
+            content: '\f002'; font-family: 'Font Awesome 6 Free';
+            font-weight: 900; position: absolute;
+            right: 15px; top: 50%; transform: translateY(-50%);
+            color: #6c757d;
+        }
+        .page-size {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .page-size select {
+            padding: 8px 12px; border: 2px solid #e9ecef;
+            border-radius: 5px; font-size: 14px;
+        }
+        .content { padding: 0; }
+        .table-container { overflow-x: auto; }
+        table {
+            width: 100%; border-collapse: collapse;
+            background: white;
+        }
+        th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px 12px; font-weight: 600;
+            text-align: left; color: #495057;
+            border-bottom: 2px solid #28a745;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .filter-header {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .filter-select {
+            padding: 5px 8px; border: 1px solid #ced4da;
+            border-radius: 3px; font-size: 12px;
+            background: white;
+        }
+        td {
+            padding: 12px; border-bottom: 1px solid #f1f3f4;
+            vertical-align: top;
+        }
+        tr:nth-child(even) { background: #fafbfc; }
+        tr:hover { background: #e8f5e8; transition: background 0.2s; }
+        .pagination {
+            display: flex; justify-content: space-between;
+            align-items: center; padding: 20px;
+            background: #f8f9fa; border-top: 1px solid #dee2e6;
+        }
+        .pagination-info {
+            color: #6c757d; font-size: 14px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .pagination-info::before {
+            content: '\f05a'; font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+        }
+        .pagination-controls { display: flex; gap: 5px; }
+        .pagination-btn {
+            padding: 8px 12px; border: 1px solid #28a745;
+            background: white; color: #28a745;
+            border-radius: 5px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pagination-btn:hover {
+            background: #28a745; color: white;
+        }
+        .pagination-btn:disabled {
+            opacity: 0.5; cursor: not-allowed;
+        }
+        .pagination-btn.active {
+            background: #28a745; color: white;
+        }
+        .no-data {
+            text-align: center; padding: 50px;
+            color: #6c757d; font-size: 16px;
+        }
+        .no-data::before {
+            content: '\f071'; font-family: 'Font Awesome 6 Free';
+            font-weight: 900; font-size: 48px;
+            display: block; margin-bottom: 15px;
+            color: #ffc107;
+        }
+        .footer {
+            text-align: center; padding: 20px;
+            background: #f8f9fa; color: #6c757d;
+            font-size: 12px; border-top: 1px solid #dee2e6;
+        }
+        @media (max-width: 768px) {
+            .controls { flex-direction: column; align-items: stretch; }
+            .search-box { min-width: unset; }
+            .pagination { flex-direction: column; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> 認証テスト結果</h1>
+            <div class="timestamp">生成日時: 2025年06月16日 17:02:49</div>
+        </div>
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="認証データを検索...">
+            </div>
+            <div class="page-size">
+                <label><i class="fas fa-list"></i> 表示件数:</label>
+                <select id="pageSizeSelect">
+                    <option value="25">25件</option>
+                    <option value="50" selected>50件</option>
+                    <option value="75">75件</option>
+                    <option value="100">100件</option>
+                </select>
+            </div>
+        </div>
+        <div class="content">
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div id="noDataMessage" class="no-data" style="display: none;">
+                    認証データが見つかりません
+                </div>
+            </div>
+        </div>
+        <div class="pagination">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls" id="paginationControls"></div>
+        </div>
+        <div class="footer">
+            <i class="fas fa-cog"></i> Generated by Microsoft 365統合管理ツール
+        </div>
+    </div>
+    <script>
+        const rawData = $(   | ConvertTo-Json -Depth 10 -Compress | ForEach-Object { Auth -replace '', '\' -replace '"', '\"' });
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let pageSize = 50;
+        
+        try {
+            allData = JSON.parse(rawData) || [];
+            if (!Array.isArray(allData)) {
+                allData = [allData];
+            }
+        } catch (e) {
+            console.error('データ解析エラー:', e);
+            allData = [];
+        }
+        
+        filteredData = [...allData];
+        
+        function initializeTable() {
+            if (allData.length === 0) {
+                document.getElementById('noDataMessage').style.display = 'block';
+                document.getElementById('dataTable').style.display = 'none';
+                return;
+            }
+            
+            const headers = Object.keys(allData[0] || {});
+            const thead = document.getElementById('tableHead');
+            
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                const filterDiv = document.createElement('div');
+                filterDiv.className = 'filter-header';
+                
+                const headerText = document.createElement('div');
+                headerText.textContent = header;
+                filterDiv.appendChild(headerText);
+                
+                const filterSelect = document.createElement('select');
+                filterSelect.className = 'filter-select';
+                filterSelect.innerHTML = '<option value="">全て</option>';
+                
+                const uniqueValues = [...new Set(allData.map(item => 
+                    item[header] !== null && item[header] !== undefined ? String(item[header]) : ''
+                ).filter(val => val !== ''))];
+                
+                uniqueValues.sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value.length > 20 ? value.substring(0, 20) + '...' : value;
+                    filterSelect.appendChild(option);
+                });
+                
+                filterSelect.addEventListener('change', () => applyFilters());
+                filterDiv.appendChild(filterSelect);
+                
+                th.appendChild(filterDiv);
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            updateTable();
+        }
+        
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filters = {};
+            
+            document.querySelectorAll('.filter-select').forEach((select, index) => {
+                const header = Object.keys(allData[0] || {})[index];
+                if (select.value) {
+                    filters[header] = select.value;
+                }
+            });
+            
+            filteredData = allData.filter(item => {
+                const matchesSearch = !searchTerm || Object.values(item).some(value => 
+                    String(value || '').toLowerCase().includes(searchTerm)
+                );
+                
+                const matchesFilters = Object.entries(filters).every(([key, filterValue]) => 
+                    String(item[key] || '') === filterValue
+                );
+                
+                return matchesSearch && matchesFilters;
+            });
+            
+            currentPage = 1;
+            updateTable();
+        }
+        
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredData.slice(start, end);
+            
+            if (pageData.length === 0) {
+                document.getElementById('noDataMessage').style.display = 'block';
+                document.getElementById('dataTable').style.display = 'none';
+            } else {
+                document.getElementById('noDataMessage').style.display = 'none';
+                document.getElementById('dataTable').style.display = 'table';
+                
+                pageData.forEach(item => {
+                    const row = document.createElement('tr');
+                    Object.values(item).forEach(value => {
+                        const td = document.createElement('td');
+                        td.textContent = value !== null && value !== undefined ? String(value) : '';
+                        row.appendChild(td);
+                    });
+                    tbody.appendChild(row);
+                });
+            }
+            
+            updatePagination();
+        }
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / pageSize);
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, filteredData.length);
+            
+            document.getElementById('paginationInfo').textContent = 
+                ${start}- / 件を表示;
+            
+            const controls = document.getElementById('paginationControls');
+            controls.innerHTML = '';
+            
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> 前へ';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; updateTable(); } };
+            controls.appendChild(prevBtn);
+            
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = pagination-btn ;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => { currentPage = i; updateTable(); };
+                controls.appendChild(pageBtn);
+            }
+            
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.innerHTML = '次へ <i class="fas fa-chevron-right"></i>';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; updateTable(); } };
+            controls.appendChild(nextBtn);
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            pageSize = parseInt(e.target.value);
+            currentPage = 1;
+            updateTable();
+        });
+        
+        initializeTable();
+    </script>
+</body>
+</html>
