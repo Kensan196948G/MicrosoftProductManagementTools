@@ -173,7 +173,13 @@ function Get-ApplicationMode {
         return $Mode
     }
     
-    # Windows 11のGUIサポート確認
+    # プラットフォームとGUIサポート確認
+    if ($IsLinux -or $IsMacOS) {
+        Write-LauncherLog "Linux/macOS環境が検出されました。CLIモードで起動します。" -Level Info
+        return "cli"
+    }
+    
+    # Windows環境でのGUIサポート確認
     if ([Environment]::OSVersion.Version.Major -ge 10 -and $env:USERDOMAIN) {
         Write-Host "アプリケーションモードを選択してください:" -ForegroundColor Yellow
         Write-Host "1. GUI モード (推奨)" -ForegroundColor Green
@@ -202,6 +208,14 @@ function Get-ApplicationMode {
 
 # GUI アプリケーション起動
 function Start-GuiApplication {
+    # プラットフォーム確認
+    if ($IsLinux -or $IsMacOS) {
+        Write-LauncherLog "エラー: GUIモードはWindows環境でのみサポートされています" -Level Error
+        Write-LauncherLog "現在の環境: $($PSVersionTable.Platform)" -Level Info
+        Write-LauncherLog "CLIモードをご利用ください" -Level Info
+        return $false
+    }
+    
     $guiAppPath = Join-Path $Script:ToolRoot "Apps\GuiApp.ps1"
     
     if (-not (Test-Path $guiAppPath)) {

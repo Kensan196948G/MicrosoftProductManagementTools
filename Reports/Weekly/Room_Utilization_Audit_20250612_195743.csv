@@ -1,2 +1,0 @@
-"RoomName","EmailAddress","ResourceCapacity","AnalysisPeriod","EstimatedBookings","UtilizationRate","PeakUsageHours","LastActivity","TotalItemSize","ItemCount","BookingPolicy","MaxBookingDays","MaxDurationMinutes","AllowRecurring","Status","RiskLevel","RecommendedAction","AnalysisTimestamp"
-"テスト会議室_20250612_195612","Gd652a879f2f2490b9c29b33a77e0d4b2@miraiconst.onmicrosoft.com","8","2025/06/05 - 2025/06/12","0","0","随時利用可能","不明","4.621 KB (4,732 bytes)","0",,,,,"未使用","低（未活用）","利用促進・設定見直し","2025/06/12 19:57:43"

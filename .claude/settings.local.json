@@ -30,7 +30,8 @@
       "Bash(cp:*)",
       "Bash(./New-LicenseDashboard.ps1 -FileNameType Timestamp -Verbose -OpenInBrowser)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(tree:*)"
     ],
     "deny": []
   }

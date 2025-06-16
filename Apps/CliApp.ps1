@@ -29,6 +29,7 @@ $Script:ToolRoot = Split-Path $PSScriptRoot -Parent
 $Script:PSVersion = $PSVersionTable.PSVersion
 $Script:IsCore = $PSVersionTable.PSEdition -eq "Core"
 $Script:ConfigLoaded = $false
+$Script:ShouldExit = $false
 
 # PowerShell バージョン互換性チェック
 $Script:CompatibilityMode = if ($Script:PSVersion -ge [Version]"7.0.0") { "Full" } else { "Limited" }
@@ -344,7 +345,8 @@ function Show-InteractiveMenu {
             }
             "0" { 
                 Write-CliLog "アプリケーションを終了します" -Level Info
-                return 
+                $Script:ShouldExit = $true
+                break 
             }
             default { 
                 Write-Host "無効な選択です。0-8の数字を入力してください。" -ForegroundColor Red 
@@ -359,7 +361,10 @@ function Invoke-CliAction {
     param([string]$ActionName)
     
     switch ($ActionName.ToLower()) {
-        "menu" { Show-InteractiveMenu }
+        "menu" { 
+            Show-InteractiveMenu
+            return $Script:ShouldExit
+        }
         "auth" { Invoke-AuthenticationTest }
         "daily" { Invoke-ReportGeneration -ReportType "Daily" }
         "weekly" { Invoke-ReportGeneration -ReportType "Weekly" }
@@ -373,6 +378,7 @@ function Invoke-CliAction {
             Show-Help
         }
     }
+    return $false
 }
 
 # メイン実行
@@ -399,7 +405,12 @@ function Main {
         Import-RequiredModules
         
         # アクション実行
-        Invoke-CliAction -ActionName $Action
+        $shouldExit = Invoke-CliAction -ActionName $Action
+        
+        if ($shouldExit) {
+            Write-CliLog "アプリケーションを終了します" -Level Info
+            return
+        }
         
         Write-CliLog "処理が完了しました" -Level Success
     }

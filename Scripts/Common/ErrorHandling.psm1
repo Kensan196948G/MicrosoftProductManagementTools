@@ -12,6 +12,24 @@ function Get-ErrorDetails {
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
     
+    $errorType = "Unknown"
+    $isNetworkError = $false
+    
+    # ネットワーク関連エラーの検出
+    if ($ErrorRecord.Exception.Message -match "Connection reset by peer|The operation has timed out|A connection attempt failed|The remote name could not be resolved") {
+        $errorType = "NetworkError"
+        $isNetworkError = $true
+    }
+    elseif ($ErrorRecord.Exception.Message -match "401|Unauthorized|Authentication failed") {
+        $errorType = "AuthenticationError"
+    }
+    elseif ($ErrorRecord.Exception.Message -match "403|Forbidden|Access denied") {
+        $errorType = "AuthorizationError"
+    }
+    elseif ($ErrorRecord.Exception.Message -match "429|Too Many Requests|Rate limit") {
+        $errorType = "RateLimitError"
+    }
+    
     return @{
         Message = $ErrorRecord.Exception.Message
         StackTrace = $ErrorRecord.ScriptStackTrace
@@ -21,6 +39,8 @@ function Get-ErrorDetails {
         Timestamp = Get-Date
         Category = $ErrorRecord.CategoryInfo.Category
         FullyQualifiedErrorId = $ErrorRecord.FullyQualifiedErrorId
+        ErrorType = $errorType
+        IsNetworkError = $isNetworkError
     }
 }
 
@@ -88,8 +108,15 @@ function Invoke-RetryLogic {
             Write-Log "$Operation でエラーが発生しました (試行回数: $attempt): $($_.Exception.Message)" -Level "Warning"
             
             if ($attempt -lt $MaxRetries) {
-                Write-Log "$DelaySeconds 秒後に再試行します..." -Level "Info"
-                Start-Sleep -Seconds $DelaySeconds
+                # ネットワークエラーの場合は待機時間を延長
+                $waitTime = if ($errorDetails.IsNetworkError) {
+                    $DelaySeconds * [Math]::Pow(2, $attempt - 1)  # 指数バックオフ
+                } else {
+                    $DelaySeconds
+                }
+                
+                Write-Log "$waitTime 秒後に再試行します..." -Level "Info"
+                Start-Sleep -Seconds $waitTime
             }
             else {
                 Write-Log "$Operation の最大再試行回数 ($MaxRetries) に達しました" -Level "Error"
