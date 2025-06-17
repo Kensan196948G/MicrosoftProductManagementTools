@@ -3898,17 +3898,25 @@ function New-MainForm {
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                            $reportDir = Join-Path $Script:ToolRoot "Reports\Analysis\Security"
-                            if (-not (Test-Path $reportDir)) {
-                                New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
-                            }
+                            $csvPath = $null
+                            $htmlPath = $null
                             
-                            $csvPath = Join-Path $reportDir "SecurityAnalysis_$timestamp.csv"
-                            $htmlPath = Join-Path $reportDir "SecurityAnalysis_$timestamp.html"
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
+                            } else {
+                                $reportDir = Join-Path $Script:ToolRoot "Reports\Analysis\Security"
+                                if (-not (Test-Path $reportDir)) {
+                                    New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
+                                }
+                                
+                                $csvPath = Join-Path $reportDir "SecurityAnalysis_$timestamp.csv"
+                                $htmlPath = Join-Path $reportDir "SecurityAnalysis_$timestamp.html"
+                            }
                             
                             # CSVレポートの生成
                             try {
-                                if ($securityData -and $securityData.Count -gt 0 -and $csvPath) {
+                                if ($securityData -and $securityData.Count -gt 0 -and $csvPath -and (Test-Path (Split-Path $csvPath -Parent))) {
                                     $securityData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
                                     try {
                                         Show-OutputFile -FilePath $csvPath -FileType "CSV"
@@ -3927,7 +3935,7 @@ function New-MainForm {
                             
                             # HTMLレポートの生成
                             try {
-                                if ($securityData -and $securityData.Count -gt 0 -and $htmlPath) {
+                                if ($securityData -and $securityData.Count -gt 0 -and $htmlPath -and (Test-Path (Split-Path $htmlPath -Parent))) {
                                     $htmlContent = New-EnhancedHtml -Title "セキュリティ分析レポート" -Data $securityData -PrimaryColor "#dc3545" -IconClass "fas fa-shield-alt"
                                     $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
                                     try {
@@ -5121,31 +5129,58 @@ function New-MainForm {
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                            $reportDir = Join-Path $Script:ToolRoot "Reports\System\Configuration"
-                            if (-not (Test-Path $reportDir)) {
-                                New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
-                            }
-                            $csvPath = Join-Path $reportDir "ConfigManagement_$timestamp.csv"
-                            $htmlPath = Join-Path $reportDir "ConfigManagement_$timestamp.html"
+                            $csvPath = $null
+                            $htmlPath = $null
                             
-                            if ($configData -and $configData.Count -gt 0 -and $csvPath) {
-                                $configData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
-                                try {
-                                    Show-OutputFile -FilePath $csvPath -FileType "CSV"
-                                } catch {
-                                    Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
-                                    Write-GuiLog "ファイルパス: $csvPath" "Info"
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
+                            } else {
+                                $reportDir = Join-Path $Script:ToolRoot "Reports\System\Configuration"
+                                if (-not (Test-Path $reportDir)) {
+                                    New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
+                                }
+                                $csvPath = Join-Path $reportDir "ConfigManagement_$timestamp.csv"
+                                $htmlPath = Join-Path $reportDir "ConfigManagement_$timestamp.html"
+                            }
+                            
+                            # CSVレポートの生成
+                            try {
+                                if ($configData -and $configData.Count -gt 0 -and $csvPath -and (Test-Path (Split-Path $csvPath -Parent))) {
+                                    $configData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                    try {
+                                        Show-OutputFile -FilePath $csvPath -FileType "CSV"
+                                    } catch {
+                                        Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
+                                        Write-GuiLog "ファイルパス: $csvPath" "Info"
+                                    }
+                                    Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
+                                } else {
+                                    Write-GuiLog "CSVレポート生成をスキップ: データまたはパスが無効" "Warning"
                                 }
                             }
-                            if ($configData -and $configData.Count -gt 0 -and $htmlPath) {
-                                $htmlContent = New-EnhancedHtml -Title "設定管理レポート" -Data $configData -PrimaryColor "#f59e0b" -IconClass "fas fa-cogs"
-                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                                try {
-                                    Show-OutputFile -FilePath $htmlPath -FileType "HTML"
-                                } catch {
-                                    Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
-                                    Write-GuiLog "ファイルパス: $htmlPath" "Info"
+                            catch {
+                                Write-GuiLog "CSVレポート生成エラー: $($_.Exception.Message)" "Error"
+                            }
+                            
+                            # HTMLレポートの生成
+                            try {
+                                if ($configData -and $configData.Count -gt 0 -and $htmlPath -and (Test-Path (Split-Path $htmlPath -Parent))) {
+                                    $htmlContent = New-EnhancedHtml -Title "設定管理レポート" -Data $configData -PrimaryColor "#f59e0b" -IconClass "fas fa-cogs"
+                                    $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                    try {
+                                        Show-OutputFile -FilePath $htmlPath -FileType "HTML"
+                                    } catch {
+                                        Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
+                                        Write-GuiLog "ファイルパス: $htmlPath" "Info"
+                                    }
+                                    Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
+                                } else {
+                                    Write-GuiLog "HTMLレポート生成をスキップ: データまたはパスが無効" "Warning"
                                 }
+                            }
+                            catch {
+                                Write-GuiLog "HTMLレポート生成エラー: $($_.Exception.Message)" "Error"
                             }
                             
                             $totalItems = if ($configData) { $configData.Count } else { 0 }
@@ -5186,9 +5221,16 @@ function New-MainForm {
                         try {
                             # ログファイルの検索と分析
                             $logData = @()
-                            $logsPath = Join-Path $Script:ToolRoot "Logs"
+                            $logsPath = $null
                             
-                            if (Test-Path $logsPath) {
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。ログディレクトリを特定できません。" "Warning"
+                            } else {
+                                $logsPath = Join-Path $Script:ToolRoot "Logs"
+                            }
+                            
+                            if ($logsPath -and (Test-Path $logsPath)) {
                                 $logFiles = Get-ChildItem -Path $logsPath -Filter "*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 10
                                 
                                 foreach ($logFile in $logFiles) {
@@ -5266,31 +5308,58 @@ function New-MainForm {
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                            $reportDir = Join-Path $Script:ToolRoot "Reports\System\Logs"
-                            if (-not (Test-Path $reportDir)) {
-                                New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
-                            }
-                            $csvPath = Join-Path $reportDir "LogViewer_$timestamp.csv"
-                            $htmlPath = Join-Path $reportDir "LogViewer_$timestamp.html"
+                            $csvPath = $null
+                            $htmlPath = $null
                             
-                            if ($logData -and $logData.Count -gt 0 -and $csvPath) {
-                                $logData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
-                                try {
-                                    Show-OutputFile -FilePath $csvPath -FileType "CSV"
-                                } catch {
-                                    Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
-                                    Write-GuiLog "ファイルパス: $csvPath" "Info"
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
+                            } else {
+                                $reportDir = Join-Path $Script:ToolRoot "Reports\System\Logs"
+                                if (-not (Test-Path $reportDir)) {
+                                    New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
+                                }
+                                $csvPath = Join-Path $reportDir "LogViewer_$timestamp.csv"
+                                $htmlPath = Join-Path $reportDir "LogViewer_$timestamp.html"
+                            }
+                            
+                            # CSVレポートの生成
+                            try {
+                                if ($logData -and $logData.Count -gt 0 -and $csvPath -and (Test-Path (Split-Path $csvPath -Parent))) {
+                                    $logData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                    try {
+                                        Show-OutputFile -FilePath $csvPath -FileType "CSV"
+                                    } catch {
+                                        Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
+                                        Write-GuiLog "ファイルパス: $csvPath" "Info"
+                                    }
+                                    Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
+                                } else {
+                                    Write-GuiLog "CSVレポート生成をスキップ: データまたはパスが無効" "Warning"
                                 }
                             }
-                            if ($logData -and $logData.Count -gt 0 -and $htmlPath) {
-                                $htmlContent = New-EnhancedHtml -Title "ログビューアレポート" -Data $logData -PrimaryColor "#6b7280" -IconClass "fas fa-file-alt"
-                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                                try {
-                                    Show-OutputFile -FilePath $htmlPath -FileType "HTML"
-                                } catch {
-                                    Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
-                                    Write-GuiLog "ファイルパス: $htmlPath" "Info"
+                            catch {
+                                Write-GuiLog "CSVレポート生成エラー: $($_.Exception.Message)" "Error"
+                            }
+                            
+                            # HTMLレポートの生成
+                            try {
+                                if ($logData -and $logData.Count -gt 0 -and $htmlPath -and (Test-Path (Split-Path $htmlPath -Parent))) {
+                                    $htmlContent = New-EnhancedHtml -Title "ログビューアレポート" -Data $logData -PrimaryColor "#6b7280" -IconClass "fas fa-file-alt"
+                                    $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                    try {
+                                        Show-OutputFile -FilePath $htmlPath -FileType "HTML"
+                                    } catch {
+                                        Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
+                                        Write-GuiLog "ファイルパス: $htmlPath" "Info"
+                                    }
+                                    Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
+                                } else {
+                                    Write-GuiLog "HTMLレポート生成をスキップ: データまたはパスが無効" "Warning"
                                 }
+                            }
+                            catch {
+                                Write-GuiLog "HTMLレポート生成エラー: $($_.Exception.Message)" "Error"
                             }
                             
                             $totalFiles = if ($logData) { $logData.Count } else { 0 }
@@ -5631,6 +5700,10 @@ function New-MainForm {
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
+                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                $Script:ToolRoot = Get-Location
+                            }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\MailFlow"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5638,8 +5711,19 @@ function New-MainForm {
                             $csvPath = Join-Path $reportDir "ExchangeMailFlow_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "ExchangeMailFlow_$timestamp.html"
                             
+                            # パス有効性の確認
+                            if ([string]::IsNullOrEmpty($csvPath) -or [string]::IsNullOrEmpty($htmlPath)) {
+                                Write-GuiLog "レポートファイルパスの生成に失敗しました" "Error"
+                                return
+                            }
+                            
                             # CSVレポートの生成
-                            $mailFlowData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $mailFlowData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            } catch {
+                                Write-GuiLog "CSVファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -5648,8 +5732,13 @@ function New-MainForm {
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "Exchange メールフロー分析レポート" -Data $mailFlowData -PrimaryColor "#fd7e14" -IconClass "fas fa-envelope-open-text"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Exchange メールフロー分析レポート" -Data $mailFlowData -PrimaryColor "#fd7e14" -IconClass "fas fa-envelope-open-text"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            } catch {
+                                Write-GuiLog "HTMLファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -5800,6 +5889,10 @@ Exchange メールフロー分析が完了しました。
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
+                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                $Script:ToolRoot = Get-Location
+                            }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\AntiSpam"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5807,8 +5900,19 @@ Exchange メールフロー分析が完了しました。
                             $csvPath = Join-Path $reportDir "ExchangeAntiSpam_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "ExchangeAntiSpam_$timestamp.html"
                             
+                            # パス有効性の確認
+                            if ([string]::IsNullOrEmpty($csvPath) -or [string]::IsNullOrEmpty($htmlPath)) {
+                                Write-GuiLog "レポートファイルパスの生成に失敗しました" "Error"
+                                return
+                            }
+                            
                             # CSVレポートの生成
-                            $antiSpamData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $antiSpamData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            } catch {
+                                Write-GuiLog "CSVファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -5817,8 +5921,13 @@ Exchange メールフロー分析が完了しました。
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "Exchange スパム対策分析レポート" -Data $antiSpamData -PrimaryColor "#dc3545" -IconClass "fas fa-shield-virus"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Exchange スパム対策分析レポート" -Data $antiSpamData -PrimaryColor "#dc3545" -IconClass "fas fa-shield-virus"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            } catch {
+                                Write-GuiLog "HTMLファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -5972,6 +6081,10 @@ Exchange スパム対策分析が完了しました。
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
+                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                $Script:ToolRoot = Get-Location
+                            }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\Delivery"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5979,8 +6092,19 @@ Exchange スパム対策分析が完了しました。
                             $csvPath = Join-Path $reportDir "ExchangeDeliveryReport_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "ExchangeDeliveryReport_$timestamp.html"
                             
+                            # パス有効性の確認
+                            if ([string]::IsNullOrEmpty($csvPath) -or [string]::IsNullOrEmpty($htmlPath)) {
+                                Write-GuiLog "レポートファイルパスの生成に失敗しました" "Error"
+                                return
+                            }
+                            
                             # CSVレポートの生成
-                            $deliveryData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $deliveryData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            } catch {
+                                Write-GuiLog "CSVファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -5989,8 +6113,13 @@ Exchange スパム対策分析が完了しました。
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "Exchange 配信レポート" -Data $deliveryData -PrimaryColor "#6f42c1" -IconClass "fas fa-paper-plane"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Exchange 配信レポート" -Data $deliveryData -PrimaryColor "#6f42c1" -IconClass "fas fa-paper-plane"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            } catch {
+                                Write-GuiLog "HTMLファイル出力エラー: $($_.Exception.Message)" "Error"
+                                return
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -6804,6 +6933,12 @@ Teams アプリ利用状況 (ダミーデータ)
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                throw "ツールのルートパスが設定されていません。アプリケーションを再起動してください。"
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\OneDrive\Sharing"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -6811,8 +6946,19 @@ Teams アプリ利用状況 (ダミーデータ)
                             $csvPath = Join-Path $reportDir "OneDriveSharing_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "OneDriveSharing_$timestamp.html"
                             
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルのパス生成に失敗しました。"
+                            }
+                            
                             # CSVレポートの生成
-                            $sharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $sharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSVレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "CSVレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -6821,8 +6967,14 @@ Teams アプリ利用状況 (ダミーデータ)
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "OneDrive 共有ファイル監視レポート" -Data $sharingData -PrimaryColor "#0078d4" -IconClass "fas fa-share-alt"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "OneDrive 共有ファイル監視レポート" -Data $sharingData -PrimaryColor "#0078d4" -IconClass "fas fa-share-alt"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTMLレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "HTMLレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -6961,6 +7113,12 @@ OneDrive 共有ファイル監視が完了しました。
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                throw "ツールのルートパスが設定されていません。アプリケーションを再起動してください。"
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\OneDrive\SyncErrors"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -6968,8 +7126,19 @@ OneDrive 共有ファイル監視が完了しました。
                             $csvPath = Join-Path $reportDir "OneDriveSyncErrors_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "OneDriveSyncErrors_$timestamp.html"
                             
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルのパス生成に失敗しました。"
+                            }
+                            
                             # CSVレポートの生成
-                            $syncErrorData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $syncErrorData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSVレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "CSVレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -6978,8 +7147,14 @@ OneDrive 共有ファイル監視が完了しました。
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "OneDrive 同期エラー分析レポート" -Data $syncErrorData -PrimaryColor "#e74c3c" -IconClass "fas fa-exclamation-triangle"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "OneDrive 同期エラー分析レポート" -Data $syncErrorData -PrimaryColor "#e74c3c" -IconClass "fas fa-exclamation-triangle"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTMLレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "HTMLレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -7120,6 +7295,12 @@ $(($errorTypes | ForEach-Object { "・$($_.Name): $($_.Count)件" }) -join "`n")
                             
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                throw "ツールのルートパスが設定されていません。アプリケーションを再起動してください。"
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\OneDrive\ExternalSharing"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -7127,8 +7308,19 @@ $(($errorTypes | ForEach-Object { "・$($_.Name): $($_.Count)件" }) -join "`n")
                             $csvPath = Join-Path $reportDir "OneDriveExternalSharing_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "OneDriveExternalSharing_$timestamp.html"
                             
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルのパス生成に失敗しました。"
+                            }
+                            
                             # CSVレポートの生成
-                            $externalSharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            try {
+                                $externalSharingData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVレポートを生成しました: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSVレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "CSVレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
@@ -7137,8 +7329,14 @@ $(($errorTypes | ForEach-Object { "・$($_.Name): $($_.Count)件" }) -join "`n")
                             }
                             
                             # HTMLレポートの生成
-                            $htmlContent = New-EnhancedHtml -Title "OneDrive 外部共有レポート" -Data $externalSharingData -PrimaryColor "#ff6b35" -IconClass "fas fa-external-link-alt"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "OneDrive 外部共有レポート" -Data $externalSharingData -PrimaryColor "#ff6b35" -IconClass "fas fa-external-link-alt"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLレポートを生成しました: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTMLレポート生成エラー: $($_.Exception.Message)" "Error"
+                                throw "HTMLレポートの生成に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -7619,6 +7817,16 @@ OneDrive 外部共有レポートが完了しました。
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                $Script:ToolRoot = $PSScriptRoot
+                                if (-not $Script:ToolRoot) {
+                                    $Script:ToolRoot = Get-Location
+                                }
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\EntraID\SignInLogs"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -7626,15 +7834,34 @@ OneDrive 外部共有レポートが完了しました。
                             $csvPath = Join-Path $reportDir "EntraIdSignInLogs_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "EntraIdSignInLogs_$timestamp.html"
                             
-                            $signInData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルパスの生成に失敗しました"
+                            }
+                            
+                            # CSV出力（エラーハンドリング付き）
+                            try {
+                                $signInData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVファイル出力完了: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSV出力エラー: $($_.Exception.Message)" "Error"
+                                throw "CSV出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
                                 Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
                                 Write-GuiLog "ファイルパス: $csvPath" "Info"
                             }
-                            $htmlContent = New-EnhancedHtml -Title "Entra ID サインインログ分析レポート" -Data $signInData -PrimaryColor "#0066cc" -IconClass "fas fa-sign-in-alt"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            # HTML出力（エラーハンドリング付き）
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Entra ID サインインログ分析レポート" -Data $signInData -PrimaryColor "#0066cc" -IconClass "fas fa-sign-in-alt"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLファイル出力完了: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTML出力エラー: $($_.Exception.Message)" "Error"
+                                throw "HTML出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -7738,6 +7965,16 @@ Entra ID サインインログ分析が完了しました。
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                $Script:ToolRoot = $PSScriptRoot
+                                if (-not $Script:ToolRoot) {
+                                    $Script:ToolRoot = Get-Location
+                                }
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\EntraID\ConditionalAccess"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -7745,15 +7982,34 @@ Entra ID サインインログ分析が完了しました。
                             $csvPath = Join-Path $reportDir "EntraIdConditionalAccess_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "EntraIdConditionalAccess_$timestamp.html"
                             
-                            $conditionalAccessData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルパスの生成に失敗しました"
+                            }
+                            
+                            # CSV出力（エラーハンドリング付き）
+                            try {
+                                $conditionalAccessData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVファイル出力完了: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSV出力エラー: $($_.Exception.Message)" "Error"
+                                throw "CSV出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
                                 Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
                                 Write-GuiLog "ファイルパス: $csvPath" "Info"
                             }
-                            $htmlContent = New-EnhancedHtml -Title "Entra ID 条件付きアクセス分析レポート" -Data $conditionalAccessData -PrimaryColor "#6b46c1" -IconClass "fas fa-shield-check"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            # HTML出力（エラーハンドリング付き）
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Entra ID 条件付きアクセス分析レポート" -Data $conditionalAccessData -PrimaryColor "#6b46c1" -IconClass "fas fa-shield-check"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLファイル出力完了: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTML出力エラー: $($_.Exception.Message)" "Error"
+                                throw "HTML出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -7854,6 +8110,16 @@ Entra ID 条件付きアクセス分析が完了しました。
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                $Script:ToolRoot = $PSScriptRoot
+                                if (-not $Script:ToolRoot) {
+                                    $Script:ToolRoot = Get-Location
+                                }
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\EntraID\MFA"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -7861,15 +8127,34 @@ Entra ID 条件付きアクセス分析が完了しました。
                             $csvPath = Join-Path $reportDir "EntraIdMFA_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "EntraIdMFA_$timestamp.html"
                             
-                            $mfaData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルパスの生成に失敗しました"
+                            }
+                            
+                            # CSV出力（エラーハンドリング付き）
+                            try {
+                                $mfaData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVファイル出力完了: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSV出力エラー: $($_.Exception.Message)" "Error"
+                                throw "CSV出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
                                 Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
                                 Write-GuiLog "ファイルパス: $csvPath" "Info"
                             }
-                            $htmlContent = New-EnhancedHtml -Title "Entra ID MFA状況確認レポート" -Data $mfaData -PrimaryColor "#10b981" -IconClass "fas fa-mobile-alt"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            # HTML出力（エラーハンドリング付き）
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Entra ID MFA状況確認レポート" -Data $mfaData -PrimaryColor "#10b981" -IconClass "fas fa-mobile-alt"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLファイル出力完了: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTML出力エラー: $($_.Exception.Message)" "Error"
+                                throw "HTML出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
@@ -7975,6 +8260,16 @@ Entra ID MFA状況確認が完了しました。
                             
                             # レポート生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            
+                            # $Script:ToolRootのnullチェック
+                            if (-not $Script:ToolRoot) {
+                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                $Script:ToolRoot = $PSScriptRoot
+                                if (-not $Script:ToolRoot) {
+                                    $Script:ToolRoot = Get-Location
+                                }
+                            }
+                            
                             $reportDir = Join-Path $Script:ToolRoot "Reports\EntraID\AppRegistrations"
                             if (-not (Test-Path $reportDir)) {
                                 New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -7982,15 +8277,34 @@ Entra ID MFA状況確認が完了しました。
                             $csvPath = Join-Path $reportDir "EntraIdAppRegistrations_$timestamp.csv"
                             $htmlPath = Join-Path $reportDir "EntraIdAppRegistrations_$timestamp.html"
                             
-                            $appRegistrationData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                            # パスの有効性確認
+                            if (-not $csvPath -or -not $htmlPath) {
+                                throw "レポートファイルパスの生成に失敗しました"
+                            }
+                            
+                            # CSV出力（エラーハンドリング付き）
+                            try {
+                                $appRegistrationData | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+                                Write-GuiLog "CSVファイル出力完了: $csvPath" "Info"
+                            } catch {
+                                Write-GuiLog "CSV出力エラー: $($_.Exception.Message)" "Error"
+                                throw "CSV出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $csvPath -FileType "CSV"
                             } catch {
                                 Write-GuiLog "ファイル表示エラー: $($_.Exception.Message)" "Warning"
                                 Write-GuiLog "ファイルパス: $csvPath" "Info"
                             }
-                            $htmlContent = New-EnhancedHtml -Title "Entra ID アプリ登録監視レポート" -Data $appRegistrationData -PrimaryColor "#8b5cf6" -IconClass "fas fa-apps"
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            # HTML出力（エラーハンドリング付き）
+                            try {
+                                $htmlContent = New-EnhancedHtml -Title "Entra ID アプリ登録監視レポート" -Data $appRegistrationData -PrimaryColor "#8b5cf6" -IconClass "fas fa-apps"
+                                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                                Write-GuiLog "HTMLファイル出力完了: $htmlPath" "Info"
+                            } catch {
+                                Write-GuiLog "HTML出力エラー: $($_.Exception.Message)" "Error"
+                                throw "HTML出力に失敗しました: $($_.Exception.Message)"
+                            }
                             try {
                                 Show-OutputFile -FilePath $htmlPath -FileType "HTML"
                             } catch {
