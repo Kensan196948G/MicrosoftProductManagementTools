@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft Teams 利用状況分析 - 統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif; 
+            margin: 0; padding: 20px;
+            background: linear-gradient(135deg, #5b9bd5 0%, #4472c4 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px; margin: 0 auto;
+            background: white; border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #5b9bd5 0%, #4472c4 100%);
+            color: white; padding: 25px; text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 300; }
+        .warning-banner {
+            background: #fff3cd; color: #856404;
+            padding: 15px; text-align: center;
+            border-left: 5px solid #ffc107;
+        }
+        .warning-banner i { margin-right: 10px; }
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px; padding: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px; padding: 20px; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card .icon {
+            font-size: 36px; margin-bottom: 15px;
+            color: #5b9bd5;
+        }
+        .stat-card .value {
+            font-size: 24px; font-weight: bold;
+            color: #212529; margin-bottom: 5px;
+        }
+        .stat-card .label {
+            font-size: 14px; color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .stat-card .change {
+            font-size: 12px; padding: 5px 10px;
+            border-radius: 15px; background: #d4edda;
+            color: #155724; display: inline-block;
+        }
+        .content {
+            padding: 20px;
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+            background: white; margin-top: 20px;
+        }
+        th {
+            background: linear-gradient(135deg, #5b9bd5 0%, #4472c4 100%);
+            color: white; padding: 15px; text-align: left;
+        }
+        td {
+            padding: 12px; border-bottom: 1px solid #f1f3f4;
+        }
+        tr:nth-child(even) { background: #fafbfc; }
+        tr:hover { background: #e3f2fd; }
+        .status-normal { color: #28a745; font-weight: bold; }
+        .footer {
+            text-align: center; padding: 20px;
+            background: #f8f9fa; color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fab fa-microsoft"></i> Microsoft Teams 利用状況分析</h1>
+            <div>生成日時: 2025年06月17日 20:00:45</div>
+        </div>
+        
+        <div class="warning-banner">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>注意:</strong> このデータは管理者確認待ちのためのダミーデータです。実際のTeams APIアクセスが承認されるまではサンプル情報で表示されます。
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <div class="value">1,234</div>
+                <div class="label">総ユーザー数</div>
+                <div class="change">+45名</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-user-check"></i></div>
+                <div class="value">987</div>
+                <div class="label">アクティブユーザー</div>
+                <div class="change">+67名</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-comments"></i></div>
+                <div class="value">45,678</div>
+                <div class="label">月間メッセージ</div>
+                <div class="change">+8,234件</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-video"></i></div>
+                <div class="value">892</div>
+                <div class="label">月間会議数</div>
+                <div class="change">+123回</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <h3><i class="fas fa-chart-line"></i> 詳細統計</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>値</th>
+                        <th>前月比</th>
+                        <th>状態</th>
+                        <th>詳細</th>
+                    </tr>
+                </thead>
+                <tbody><tr><td>総ユーザー数</td><td>1,234名</td><td>+45名</td><td class='status-normal'>正常</td><td>アクティブなユーザー数が着実に増加</td></tr><tr><td>アクティブユーザー数</td><td>987名</td><td>+67名</td><td class='status-normal'>正常</td><td>過去30日間のアクティビティ</td></tr><tr><td>チーム数</td><td>145個</td><td>+12個</td><td class='status-normal'>正常</td><td>部署横断プロジェクトが増加傾向</td></tr><tr><td>チャネル数</td><td>678個</td><td>+89個</td><td class='status-normal'>正常</td><td>チーム内のコミュニケーションが活発化</td></tr><tr><td>月間メッセージ数</td><td>45,678件</td><td>+8,234件</td><td class='status-normal'>正常</td><td>チャット活用が高水準で推移</td></tr><tr><td>月間通話時間</td><td>2,345時間</td><td>+456時間</td><td class='status-normal'>正常</td><td>リモートワークの定着で通話需要が増加</td></tr><tr><td>月間会議数</td><td>892回</td><td>+123回</td><td class='status-normal'>正常</td><td>オンライン会議が新しいワークスタイルとして定着</td></tr>                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <i class="fas fa-info-circle"></i> Microsoft 365統合管理ツール - Teams利用状況分析（ダミーデータ）
+        </div>
+    </div>
+</body>
+</html>

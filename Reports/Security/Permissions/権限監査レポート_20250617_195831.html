@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>権限監査レポート - Microsoft 365統合管理ツール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #dc3545;
+            --primary-dark: #c82333;
+            --primary-light: rgba(220, 53, 69, 0.1);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .header-section {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .table thead {
+            background: var(--gradient);
+            color: white;
+        }
+        .table tbody tr:hover {
+            background-color: var(--primary-light);
+            transition: all 0.3s ease;
+        }
+        .risk-high { color: #dc3545; font-weight: bold; }
+        .risk-medium { color: #fd7e14; font-weight: bold; }
+        .risk-low { color: #28a745; font-weight: bold; }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .alert-security {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 5px solid #ffc107;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="container text-center">
+            <i class="fas fa-user-shield" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h1 class="display-4 fw-bold mb-3">権限監査レポート</h1>
+            <p class="lead mb-0">Microsoft 365 ユーザー・グループ権限の監査・分析レポート</p>
+            <div style="color: rgba(255,255,255,0.9); font-size: 0.9rem; margin-top: 10px;">
+                <i class="fas fa-clock"></i> 生成日時: 2025/06/17 19:58:31
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="alert-security">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>セキュリティ監査ポイント</h5>
+            <ul class="mb-0">
+                <li>高リスクユーザー・グループの権限見直しを推奨します</li>
+                <li>定期的な権限棚卸しでアクセス制御を適正化します</li>
+                <li>最小権限の原則に基づく権限付与を実施します</li>
+            </ul>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-transparent border-0 pt-4">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-table me-2" style="color: var(--primary-color);"></i>
+                            権限監査結果
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>種別</th>
+                                        <th>名前</th>
+                                        <th>プリンシパル</th>
+                                        <th>グループ数</th>
+                                        <th>ライセンス数</th>
+                                        <th>リスクレベル</th>
+                                        <th>最終確認</th>
+                                        <th>推奨アクション</th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr><td><strong>ユーザー</strong></td><td>田中太郎</td><td>tanaka@company.com</td><td>12</td><td>3</td><td class='risk-high'>高</td><td>2025-06-17</td><td>権限見直し要</td></tr><tr><td><strong>ユーザー</strong></td><td>佐藤花子</td><td>sato@company.com</td><td>4</td><td>2</td><td class='risk-low'>低</td><td>2025-06-17</td><td>定期確認</td></tr><tr><td><strong>グループ</strong></td><td>IT管理者</td><td>セキュリティ</td><td>-</td><td>-</td><td class='risk-high'>高</td><td>2025-06-17</td><td>メンバー見直し要</td></tr><tr><td><strong>グループ</strong></td><td>営業部</td><td>Microsoft 365</td><td>-</td><td>-</td><td class='risk-medium'>中</td><td>2025-06-17</td><td>定期確認</td></tr>                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer mt-4">
+            <i class="fas fa-shield-alt"></i> Microsoft 365統合管理ツール - 権限監査
+            <br><small>ISO/IEC 27001・27002 セキュリティ管理基準準拠</small>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

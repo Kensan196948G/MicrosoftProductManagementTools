@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>週次レポート - Microsoft 365統合管理ツール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #198754;
+            --primary-dark: #146c43;
+            --primary-light: rgba(25, 135, 84, 0.1);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .header-section {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(25, 135, 84, 0.3);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .table thead {
+            background: var(--gradient);
+            color: white;
+        }
+        .table tbody tr:hover {
+            background-color: var(--primary-light);
+            transition: all 0.3s ease;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="container text-center">
+            <i class="fas fa-calendar-week" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h1 class="display-4 fw-bold mb-3">週次レポート</h1>
+            <p class="lead mb-0">Microsoft 365 環境の週次監視・分析レポート</p>
+            <div style="color: rgba(255,255,255,0.9); font-size: 0.9rem; margin-top: 10px;">
+                <i class="fas fa-clock"></i> 生成日時: 2025/06/17 20:15:54
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-transparent border-0 pt-4">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2" style="color: var(--primary-color);"></i>
+                            週次動向分析
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>項目</th>
+                                        <th>今週</th>
+                                        <th>先週</th>
+                                        <th>変化</th>
+                                        <th>状態</th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr><td>新規ユーザー登録</td><td>23名</td><td>18名</td><td>+5名</td><td class='text-success fw-bold'>良好</td></tr><tr><td>MFA有効化</td><td>45名</td><td>32名</td><td>+13名</td><td class='text-success fw-bold'>良好</td></tr><tr><td>外部共有アクティビティ</td><td>156件</td><td>203件</td><td>-47件</td><td class='text-info fw-bold'>正常</td></tr><tr><td>グループレビュー実施</td><td>12グループ</td><td>8グループ</td><td>+4グループ</td><td class='text-success fw-bold'>良好</td></tr><tr><td>権限変更申請</td><td>34件</td><td>28件</td><td>+6件</td><td class='text-info fw-bold'>正常</td></tr><tr><td>セキュリティインシデント</td><td>2件</td><td>5件</td><td>-3件</td><td class='text-primary fw-bold'>改善</td></tr>                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer mt-4">
+            <i class="fas fa-chart-line"></i> Microsoft 365統合管理ツール - 週次レポート
+            <br><small>ISO/IEC 20000・27001・27002 準拠</small>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

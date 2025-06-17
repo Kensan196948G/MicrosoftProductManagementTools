@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月次レポート - Microsoft 365統合管理ツール</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #fd7e14;
+            --primary-dark: #e8590c;
+            --primary-light: rgba(253, 126, 20, 0.1);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .header-section {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(253, 126, 20, 0.3);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .table thead {
+            background: var(--gradient);
+            color: white;
+        }
+        .table tbody tr:hover {
+            background-color: var(--primary-light);
+            transition: all 0.3s ease;
+        }
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .summary-card .icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #212529;
+        }
+        .summary-card .label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="container text-center">
+            <i class="fas fa-calendar-alt" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <h1 class="display-4 fw-bold mb-3">月次レポート</h1>
+            <p class="lead mb-0">Microsoft 365 環境の月次運用・管理レポート</p>
+            <div style="color: rgba(255,255,255,0.9); font-size: 0.9rem; margin-top: 10px;">
+                <i class="fas fa-clock"></i> 生成日時: 2025/06/17 19:25:44
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <div class="value">87</div>
+                <div class="label">新規ライセンス</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="value">99.8%</div>
+                <div class="label">可用性</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="value">34</div>
+                <div class="label">解決済インシデント</div>
+            </div>
+            <div class="summary-card">
+                <div class="icon"><i class="fas fa-database"></i></div>
+                <div class="value">73.4%</div>
+                <div class="label">ストレージ利用率</div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-transparent border-0 pt-4">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-bar me-2" style="color: var(--primary-color);"></i>
+                            月次運用状況詳細
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>カテゴリ</th>
+                                        <th>項目</th>
+                                        <th>今月</th>
+                                        <th>先月</th>
+                                        <th>年間累計</th>
+                                        <th>状態</th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr><td><strong>ユーザー管理</strong></td><td>新規ライセンス付与</td><td>87名</td><td>64名</td><td>892名</td><td class='text-primary fw-bold'>順調</td></tr><tr><td><strong>セキュリティ</strong></td><td>権限昇格申請</td><td>23件</td><td>18件</td><td>267件</td><td class='text-info fw-bold'>正常</td></tr><tr><td><strong>コンプライアンス</strong></td><td>監査ログ保持</td><td>100%</td><td>100%</td><td>100%</td><td class='text-success fw-bold'>良好</td></tr><tr><td><strong>ストレージ</strong></td><td>平均利用率</td><td>73.4%</td><td>68.9%</td><td>71.2%</td><td class='text-warning fw-bold'>注意</td></tr><tr><td><strong>パフォーマンス</strong></td><td>可用性</td><td>99.8%</td><td>99.9%</td><td>99.7%</td><td class='text-success fw-bold'>良好</td></tr><tr><td><strong>インシデント</strong></td><td>解決済み件数</td><td>34件</td><td>28件</td><td>412件</td><td class='text-info fw-bold'>正常</td></tr>                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer mt-4">
+            <i class="fas fa-chart-bar"></i> Microsoft 365統合管理ツール - 月次レポート
+            <br><small>ISO/IEC 20000・27001・27002 準拠</small>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
