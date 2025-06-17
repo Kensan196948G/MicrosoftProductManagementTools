@@ -462,7 +462,7 @@ function Invoke-ErrorFixLoop {
         
         while ($attemptCount -lt $MaxRetryAttempts -and -not $fixed) {
             $attemptCount++
-            Write-TestLog "エラー修正試行 $attemptCount/$MaxRetryAttempts : $($test.TestName)" -Level "Info"
+            Write-TestLog "エラー修正試行 $attemptCount/${MaxRetryAttempts} : $($test.TestName)" -Level "Info"
             
             try {
                 switch ($test.TestName) {

@@ -32,7 +32,12 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(tree:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg 'Write.*\".*\\$\\w+[^}`].*[^\\\\]:' /mnt/d/MicrosoftProductManagementTools/Scripts/Common/*.psm1 -n)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"SecurityAnalysis\" Apps/GuiApp.ps1)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 10 -A 5 \"reportDir.*Reports\" Apps/GuiApp.ps1)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 5 -A 5 \"OneDriveExternalSharingAnalysis.*ErrorAction\" Apps/GuiApp.ps1)",
+      "Bash(/usr/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"OneDriveExternalSharingAnalysis\" Apps/GuiApp.ps1)"
     ],
     "deny": []
   }

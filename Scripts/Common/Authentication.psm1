@@ -21,7 +21,7 @@ function Invoke-GraphAPIWithRetry {
     do {
         try {
             $attempt++
-            Write-Log "API呼び出し試行 $attempt/$MaxRetries: $Operation" -Level "Info"
+            Write-Log "API呼び出し試行 $attempt/$MaxRetries - $Operation" -Level "Info"
             return & $ScriptBlock
         }
         catch {
@@ -31,7 +31,7 @@ function Invoke-GraphAPIWithRetry {
             if ($errorMessage -match "429|throttle|rate limit|TooManyRequests") {
                 if ($attempt -lt $MaxRetries) {
                     $delay = $BaseDelaySeconds * [Math]::Pow(2, $attempt)
-                    Write-Log "API制限検出。${delay}秒後にリトライします..." -Level "Warning"
+                    Write-Log "API制限検出。$delay 秒後にリトライします..." -Level "Warning"
                     Start-Sleep -Seconds $delay
                 }
                 else {
@@ -62,7 +62,7 @@ function Test-GraphConnection {
             Get-MgUser -Top 1 -Property Id -ErrorAction Stop
         } -MaxRetries 2 -Operation "接続テスト"
         
-        Write-Log "Microsoft Graph接続確認成功: テナント $($context.TenantId)" -Level "Info"
+        Write-Log "Microsoft Graph接続確認成功 - テナント $($context.TenantId)" -Level "Info"
         return $true
     }
     catch {

@@ -20,7 +20,7 @@ function Write-Log {
         [string]$Message,
         
         [Parameter(Mandatory = $false)]
-        [ValidateSet("Info", "Warning", "Error", "Debug")]
+        [ValidateSet("Info", "Warning", "Error", "Debug", "Success")]
         [string]$Level = "Info",
         
         [Parameter(Mandatory = $false)]
@@ -36,6 +36,7 @@ function Write-Log {
         "Warning" { Write-Host $logEntry -ForegroundColor Yellow }
         "Error" { Write-Host $logEntry -ForegroundColor Red }
         "Debug" { Write-Host $logEntry -ForegroundColor Cyan }
+        "Success" { Write-Host $logEntry -ForegroundColor Green }
     }
     
     # ファイル出力
