@@ -47,23 +47,158 @@ function New-HTMLReport {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>$Title</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { text-align: center; border-bottom: 2px solid #0078d4; padding-bottom: 20px; margin-bottom: 30px; }
-        .title { color: #0078d4; font-size: 28px; margin-bottom: 10px; }
-        .timestamp { color: #666; font-size: 14px; }
-        .section { margin-bottom: 30px; }
-        .section-title { color: #0078d4; font-size: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px; }
-        .summary { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
-        .alert { padding: 10px; border-radius: 4px; margin: 10px 0; }
-        .alert-danger { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .alert-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-        .alert-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #0078d4; color: white; font-weight: 600; }
-        tr:nth-child(even) { background: #f8f9fa; }
-        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0078d4, #00bcf2, #40e0d0);
+        }
+        .header { 
+            text-align: center; 
+            padding-bottom: 25px; 
+            margin-bottom: 35px; 
+            position: relative;
+        }
+        .title { 
+            color: #0078d4; 
+            font-size: 32px; 
+            margin-bottom: 10px; 
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .timestamp { 
+            color: #666; 
+            font-size: 14px; 
+            background: #f8f9fa;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            border: 1px solid #e9ecef;
+        }
+        .section { 
+            margin-bottom: 35px; 
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-title { 
+            color: white; 
+            font-size: 18px; 
+            padding: 15px 20px; 
+            margin: 0;
+            background: linear-gradient(135deg, #0078d4, #0056b3);
+            font-weight: 600;
+        }
+        .summary { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-left: 4px solid #0078d4;
+            margin: 0;
+        }
+        .summary p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .alert { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin: 15px 20px; 
+            border-left: 4px solid;
+            font-weight: 500;
+        }
+        .alert-danger { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+            color: #721c24; 
+        }
+        .alert-warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+            color: #856404; 
+        }
+        .alert-info { 
+            background: #d1ecf1; 
+            border-left-color: #17a2b8; 
+            color: #0c5460; 
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 0;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 14px;
+            margin: 0;
+        }
+        th, td { 
+            padding: 12px 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        th { 
+            background: linear-gradient(135deg, #0078d4, #0056b3); 
+            color: white; 
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:nth-child(even) { 
+            background: #f8f9fa; 
+        }
+        tr:hover {
+            background: #e3f2fd;
+            transition: background-color 0.2s ease;
+        }
+        .footer { 
+            text-align: center; 
+            color: #666; 
+            font-size: 12px; 
+            margin-top: 40px; 
+            border-top: 1px solid #e9ecef; 
+            padding-top: 20px; 
+            background: #f8f9fa;
+            margin-left: -30px;
+            margin-right: -30px;
+            margin-bottom: -30px;
+            padding-left: 30px;
+            padding-right: 30px;
+            padding-bottom: 30px;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            .title { font-size: 24px; }
+            th, td { padding: 8px 10px; font-size: 12px; }
+            .section-title { font-size: 16px; }
+        }
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
     </style>
 </head>
 <body>
@@ -104,7 +239,7 @@ function New-HTMLReport {
                 
                 # データテーブル表示
                 if ($section.Data -and $section.Data.Count -gt 0) {
-                    $htmlContent += "<table><thead><tr>"
+                    $htmlContent += "<div class='table-wrapper'><table><thead><tr>"
                     
                     # ヘッダー生成
                     $properties = $section.Data[0].PSObject.Properties.Name
@@ -119,11 +254,13 @@ function New-HTMLReport {
                         foreach ($prop in $properties) {
                             $value = $row.$prop
                             if ($null -eq $value) { $value = "" }
+                            # HTMLエスケープ処理
+                            $value = $value -replace "&", "&amp;" -replace "<", "&lt;" -replace ">", "&gt;" -replace '"', "&quot;"
                             $htmlContent += "<td>$value</td>"
                         }
                         $htmlContent += "</tr>"
                     }
-                    $htmlContent += "</tbody></table>"
+                    $htmlContent += "</tbody></table></div>"
                 }
                 
                 $htmlContent += "</div>"

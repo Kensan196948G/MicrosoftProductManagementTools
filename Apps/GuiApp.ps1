@@ -2452,33 +2452,83 @@ function New-MainForm {
                     "Daily" { 
                         Write-GuiLog "日次レポートを生成します..." "Info"
                         
-                        # サンプル日次レポートデータ
-                        $dailyData = @(
-                            [PSCustomObject]@{
-                                項目 = "ログイン失敗数"
-                                値 = "12件"
-                                前日比 = "+3件"
-                                状態 = "注意"
-                            },
-                            [PSCustomObject]@{
-                                項目 = "新規ユーザー"
-                                値 = "5名"
-                                前日比 = "+2名"
-                                状態 = "正常"
-                            },
-                            [PSCustomObject]@{
-                                項目 = "容量使用率"
-                                値 = "73.2%"
-                                前日比 = "+1.1%"
-                                状態 = "正常"
-                            },
-                            [PSCustomObject]@{
-                                項目 = "メール送信数"
-                                値 = "1,234件"
-                                前日比 = "-56件"
-                                状態 = "正常"
+                        # 実際のMicrosoft 365データを取得
+                        try {
+                            Write-GuiLog "実際のMicrosoft 365データを取得中..." "Info"
+                            
+                            # RealDataProviderモジュールをインポート
+                            $realDataModulePath = Join-Path $PSScriptRoot "..\Scripts\Common\RealDataProvider.psm1"
+                            if (Test-Path $realDataModulePath) {
+                                Import-Module $realDataModulePath -Force
+                                
+                                # 実際のデータ取得
+                                $realData = Get-RealDailyReportData -Days 1
+                                
+                                $dailyData = @(
+                                    [PSCustomObject]@{
+                                        項目 = "ログイン失敗数"
+                                        値 = $realData.ログイン失敗数
+                                        前日比 = "変動監視中"
+                                        状態 = if ($realData.ログイン失敗数 -match '(\d+)件' -and [int]$matches[1] -gt 10) { "注意" } else { "正常" }
+                                    },
+                                    [PSCustomObject]@{
+                                        項目 = "新規ユーザー"
+                                        値 = $realData.新規ユーザー
+                                        前日比 = "変動監視中"
+                                        状態 = "正常"
+                                    },
+                                    [PSCustomObject]@{
+                                        項目 = "容量使用率"
+                                        値 = $realData.容量使用率
+                                        前日比 = "変動監視中"
+                                        状態 = if ($realData.容量使用率 -match '(\d+\.?\d*)%' -and [double]$matches[1] -gt 80) { "注意" } else { "正常" }
+                                    },
+                                    [PSCustomObject]@{
+                                        項目 = "メール送信数"
+                                        値 = $realData.メール送信数
+                                        前日比 = "変動監視中"
+                                        状態 = "正常"
+                                    }
+                                )
+                                
+                                Write-GuiLog "実際のMicrosoft 365データ取得完了" "Info"
                             }
-                        )
+                            else {
+                                throw "RealDataProviderモジュールが見つかりません"
+                            }
+                        }
+                        catch {
+                            Write-GuiLog "実データ取得エラー: $($_.Exception.Message)" "Warning"
+                            Write-GuiLog "フォールバック: サンプルデータを使用します" "Warning"
+                            
+                            # フォールバック: サンプルデータ
+                            $dailyData = @(
+                                [PSCustomObject]@{
+                                    項目 = "ログイン失敗数"
+                                    値 = "データ取得エラー"
+                                    前日比 = "取得失敗"
+                                    状態 = "エラー"
+                                },
+                                [PSCustomObject]@{
+                                    項目 = "新規ユーザー"
+                                    値 = "データ取得エラー"
+                                    前日比 = "取得失敗"
+                                    状態 = "エラー"
+                                },
+                                [PSCustomObject]@{
+                                    項目 = "容量使用率"
+                                    値 = "データ取得エラー"
+                                    前日比 = "取得失敗"
+                                    状態 = "エラー"
+                                },
+                                [PSCustomObject]@{
+                                    項目 = "メール送信数"
+                                    値 = "データ取得エラー"
+                                    前日比 = "取得失敗"
+                                    状態 = "エラー"
+                                }
+                            )
+                        }
                         
                         # 簡素化された日次レポート出力
                         try {
