@@ -14,7 +14,7 @@ param(
     [int]$ValidityYears = 2,
     
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = "C:\Certificates"
+    [string]$OutputPath = ""
 )
 
 # 管理者権限確認
@@ -27,7 +27,12 @@ Write-Host "🔐 Exchange Online PowerShell用証明書を作成します" -Fore
 Write-Host "組織名: $OrganizationName" -ForegroundColor Yellow
 Write-Host "有効期間: $ValidityYears 年" -ForegroundColor Yellow
 
-# 出力ディレクトリ作成
+# 出力ディレクトリ設定と作成
+if ([string]::IsNullOrEmpty($OutputPath)) {
+    # 相対パスでプロジェクトのCertificatesディレクトリを使用
+    $OutputPath = Join-Path $PSScriptRoot "..\..\Certificates"
+}
+
 if (-not (Test-Path $OutputPath)) {
     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
     Write-Host "📁 証明書保存ディレクトリを作成: $OutputPath" -ForegroundColor Green

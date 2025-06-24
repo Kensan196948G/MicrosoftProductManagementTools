@@ -391,7 +391,7 @@ function Find-PowerShell7Path {
         "${env:ProgramFiles}\PowerShell\7\pwsh.exe",
         "${env:ProgramFiles(x86)}\PowerShell\7\pwsh.exe",
         "${env:LocalAppData}\Microsoft\powershell\pwsh.exe",
-        "C:\Program Files\PowerShell\7\pwsh.exe"
+        "pwsh.exe"
     )
     
     foreach ($path in $possiblePaths) {

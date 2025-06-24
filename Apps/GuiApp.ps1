@@ -123,6 +123,46 @@ function Global:Show-OutputFile {
 
 # グローバル変数
 $Script:ToolRoot = Split-Path $PSScriptRoot -Parent
+
+# ToolRoot確認関数
+function Global:Get-ToolRoot {
+    if (-not $Script:ToolRoot) {
+        $Script:ToolRoot = Split-Path $PSScriptRoot -Parent
+    }
+    if (-not $Script:ToolRoot) {
+        $Script:ToolRoot = Get-Location
+    }
+    return $Script:ToolRoot
+}
+
+# Microsoft 365自動接続関数
+function Global:Connect-M365IfNeeded {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$RequiredServices = @("MicrosoftGraph")
+    )
+    
+    try {
+        # モジュールが読み込まれているか確認
+        Import-RequiredModules
+        
+        # 自動接続を試行
+        $connectResult = Invoke-AutoConnectIfNeeded -RequiredServices $RequiredServices
+        
+        if ($connectResult.Success) {
+            Write-GuiLog "Microsoft 365接続成功: $($connectResult.Message)" "Info"
+            return $true
+        }
+        else {
+            Write-GuiLog "Microsoft 365接続失敗: $($connectResult.Message)" "Warning"
+            return $false
+        }
+    }
+    catch {
+        Write-GuiLog "Microsoft 365自動接続エラー: $($_.Exception.Message)" "Error"
+        return $false
+    }
+}
 $Script:Form = $null
 $Script:StatusLabel = $null
 $Script:LogTextBox = $null
@@ -189,16 +229,31 @@ function Global:Write-SafeGuiLog {
 # Test-GraphConnection関数もグローバル定義
 function Global:Test-GraphConnection {
     try {
+        # Microsoft.Graphモジュールが読み込まれているか確認
+        if (-not (Get-Module -Name Microsoft.Graph -ErrorAction SilentlyContinue)) {
+            try {
+                Import-Module Microsoft.Graph -Force -ErrorAction Stop
+                Write-GuiLog "Microsoft.Graphモジュールを読み込みました" "Info"
+            }
+            catch {
+                Write-GuiLog "Microsoft.Graphモジュールの読み込みに失敗: $($_.Exception.Message)" "Warning"
+                return $false
+            }
+        }
+        
         $context = Get-MgContext -ErrorAction SilentlyContinue
         if ($null -eq $context) {
+            Write-GuiLog "Microsoft Graph未接続" "Warning"
             return $false
         }
         
         # 実際のAPI呼び出しで接続テスト
         Get-MgUser -Top 1 -Property Id -ErrorAction Stop | Out-Null
+        Write-GuiLog "Microsoft Graph接続確認済み" "Info"
         return $true
     }
     catch {
+        Write-GuiLog "Microsoft Graph接続テストエラー: $($_.Exception.Message)" "Warning"
         return $false
     }
 }
@@ -214,6 +269,7 @@ function Import-RequiredModules {
             Import-Module "$Script:ToolRoot\Scripts\Common\Common.psm1" -Force -ErrorAction Stop
             Import-Module "$Script:ToolRoot\Scripts\Common\Logging.psm1" -Force -ErrorAction Stop
             Import-Module "$Script:ToolRoot\Scripts\Common\Authentication.psm1" -Force -ErrorAction Stop
+            Import-Module "$Script:ToolRoot\Scripts\Common\AutoConnect.psm1" -Force -ErrorAction Stop
             $Script:ModulesLoaded = $true
             Write-Host "必要なモジュールを読み込みました" -ForegroundColor Green
         }
@@ -3218,6 +3274,9 @@ function New-MainForm {
                     "License" { 
                         Write-GuiLog "ライセンス分析を開始します..." "Info"
                         
+                        # Microsoft 365自動接続を試行
+                        $connected = Connect-M365IfNeeded -RequiredServices @("MicrosoftGraph")
+                        
                         # 実際のMicrosoft Graph APIからライセンス情報を取得
                         try {
                             Write-GuiLog "ライセンス情報を取得中..." "Info"
@@ -3981,10 +4040,9 @@ function New-MainForm {
                             $csvPath = $null
                             $htmlPath = $null
                             
-                            # $Script:ToolRootのnullチェック
-                            if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
-                            } else {
+                            # ToolRoot確認と設定
+                            $toolRoot = Get-ToolRoot
+                            if ($toolRoot) {
                                 $reportDir = Join-Path $Script:ToolRoot "Reports\Analysis\Security"
                                 if (-not (Test-Path $reportDir)) {
                                     New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -4888,10 +4946,9 @@ function New-MainForm {
                             $csvPath = $null
                             $htmlPath = $null
                             
-                            # $Script:ToolRootのnullチェック
-                            if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
-                            } else {
+                            # ToolRoot確認と設定
+                            $toolRoot = Get-ToolRoot
+                            if ($toolRoot) {
                                 $reportDir = Join-Path $Script:ToolRoot "Reports\Analysis\Usage"
                                 if (-not (Test-Path $reportDir)) {
                                     New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5076,10 +5133,9 @@ function New-MainForm {
                             $csvPath = $null
                             $htmlPath = $null
                             
-                            # $Script:ToolRootのnullチェック
-                            if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
-                            } else {
+                            # ToolRoot確認と設定
+                            $toolRoot = Get-ToolRoot
+                            if ($toolRoot) {
                                 $reportDir = Join-Path $Script:ToolRoot "Reports\System\Performance"
                                 if (-not (Test-Path $reportDir)) {
                                     New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5268,10 +5324,9 @@ function New-MainForm {
                             $csvPath = $null
                             $htmlPath = $null
                             
-                            # $Script:ToolRootのnullチェック
-                            if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
-                            } else {
+                            # ToolRoot確認と設定
+                            $toolRoot = Get-ToolRoot
+                            if ($toolRoot) {
                                 $reportDir = Join-Path $Script:ToolRoot "Reports\System\Configuration"
                                 if (-not (Test-Path $reportDir)) {
                                     New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5365,7 +5420,7 @@ function New-MainForm {
                             
                             # $Script:ToolRootのnullチェック
                             if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。ログディレクトリを特定できません。" "Warning"
+                                Write-GuiLog "ログディレクトリを設定しました: $(Join-Path (Get-ToolRoot) 'Logs')" "Info"
                             } else {
                                 $logsPath = Join-Path $Script:ToolRoot "Logs"
                             }
@@ -5451,10 +5506,9 @@ function New-MainForm {
                             $csvPath = $null
                             $htmlPath = $null
                             
-                            # $Script:ToolRootのnullチェック
-                            if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。レポート生成をスキップします。" "Warning"
-                            } else {
+                            # ToolRoot確認と設定
+                            $toolRoot = Get-ToolRoot
+                            if ($toolRoot) {
                                 $reportDir = Join-Path $Script:ToolRoot "Reports\System\Logs"
                                 if (-not (Test-Path $reportDir)) {
                                     New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -5539,6 +5593,9 @@ function New-MainForm {
                     "ExchangeMailboxMonitor" {
                         Write-Host "Exchange メールボックス監視開始（API仕様書準拠）" -ForegroundColor Yellow
                         Write-GuiLog "Exchange Online メールボックス監視を開始します（API仕様書準拠）" "Info"
+                        
+                        # Microsoft 365自動接続を試行（Exchange Onlineも含む）
+                        $connected = Connect-M365IfNeeded -RequiredServices @("MicrosoftGraph", "ExchangeOnline")
                         
                         # Exchange監視モジュールの読み込み
                         try {
@@ -5841,7 +5898,7 @@ function New-MainForm {
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\MailFlow"
@@ -6030,7 +6087,7 @@ Exchange メールフロー分析が完了しました。
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\AntiSpam"
@@ -6222,7 +6279,7 @@ Exchange スパム対策分析が完了しました。
                             # レポートファイル名の生成
                             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             $reportDir = Join-Path $Script:ToolRoot "Reports\Exchange\Delivery"
@@ -6644,6 +6701,9 @@ Teams アプリ利用状況 (ダミーデータ)
                     }
                     "OneDriveStorage" {
                         Write-GuiLog "OneDrive ストレージ利用状況分析を開始します..." "Info"
+                        
+                        # Microsoft 365自動接続を試行
+                        $connected = Connect-M365IfNeeded -RequiredServices @("MicrosoftGraph")
                         
                         # 実際のMicrosoft Graph APIからOneDriveストレージ情報を取得
                         try {
@@ -7076,7 +7136,7 @@ Teams アプリ利用状況 (ダミーデータ)
                             
                             # $Script:ToolRootのnullチェック
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             
@@ -7256,7 +7316,7 @@ OneDrive 共有ファイル監視が完了しました。
                             
                             # $Script:ToolRootのnullチェック
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             
@@ -7438,7 +7498,7 @@ $(($errorTypes | ForEach-Object { "・$($_.Name): $($_.Count)件" }) -join "`n")
                             
                             # $Script:ToolRootのnullチェック
                             if ([string]::IsNullOrEmpty($Script:ToolRoot)) {
-                                Write-GuiLog "ToolRootが設定されていません。現在のディレクトリを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = Get-Location
                             }
                             
@@ -7530,6 +7590,9 @@ OneDrive 外部共有レポートが完了しました。
                     }
                     "EntraIdUserMonitor" {
                         Write-GuiLog "Entra ID ユーザー監視を開始します..." "Info"
+                        
+                        # Microsoft 365自動接続を試行
+                        $connected = Connect-M365IfNeeded -RequiredServices @("MicrosoftGraph")
                         
                         # 実際のMicrosoft Graph APIからEntra IDユーザー情報を取得
                         try {
@@ -7960,7 +8023,7 @@ OneDrive 外部共有レポートが完了しました。
                             
                             # $Script:ToolRootのnullチェック
                             if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = $PSScriptRoot
                                 if (-not $Script:ToolRoot) {
                                     $Script:ToolRoot = Get-Location
@@ -8108,7 +8171,7 @@ Entra ID サインインログ分析が完了しました。
                             
                             # $Script:ToolRootのnullチェック
                             if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = $PSScriptRoot
                                 if (-not $Script:ToolRoot) {
                                     $Script:ToolRoot = Get-Location
@@ -8253,7 +8316,7 @@ Entra ID 条件付きアクセス分析が完了しました。
                             
                             # $Script:ToolRootのnullチェック
                             if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = $PSScriptRoot
                                 if (-not $Script:ToolRoot) {
                                     $Script:ToolRoot = Get-Location
@@ -8403,7 +8466,7 @@ Entra ID MFA状況確認が完了しました。
                             
                             # $Script:ToolRootのnullチェック
                             if (-not $Script:ToolRoot) {
-                                Write-GuiLog "ToolRootが設定されていません。デフォルトパスを使用します" "Warning"
+                                Write-GuiLog "ToolRootを初期化しました: $(Get-ToolRoot)" "Info"
                                 $Script:ToolRoot = $PSScriptRoot
                                 if (-not $Script:ToolRoot) {
                                     $Script:ToolRoot = Get-Location
