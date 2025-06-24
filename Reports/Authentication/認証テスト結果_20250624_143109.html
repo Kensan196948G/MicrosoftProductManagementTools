@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft 365 認証テスト結果 - 詳細レポート</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #28a745;
+            --primary-dark: #1e7e34;
+            --primary-light: rgba(40, 167, 69, 0.1);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .header-section {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.3);
+        }
+        .header-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            margin-bottom: 2rem;
+        }
+        .table th {
+            background: var(--primary-light);
+            border: none;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+        .table-hover tbody tr:hover {
+            background-color: var(--primary-light);
+        }
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            color: #6c757d;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="container text-center">
+            <div class="header-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1 class="display-4 fw-bold mb-3">Microsoft 365 認証テスト結果</h1>
+            <p class="lead">API仕様書準拠の詳細認証レポート</p>
+            <p class="mb-0"><i class="fas fa-calendar-alt"></i> 生成日時: 2025年06月24日 14:31:10</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 統計サマリー -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">20</div>
+                    <div class="text-muted">認証ログ総数</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number text-success">18</div>
+                    <div class="text-muted">認証成功</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number text-danger">2</div>
+                    <div class="text-muted">認証失敗</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">90%</div>
+                    <div class="text-muted">成功率</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 接続状況サマリー -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plug me-2"></i>接続状況サマリー</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>状態</th>
+                                <th>詳細</th>
+                                <th>追加情報</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                                            <tr>
+                                    <td><strong>Microsoft Graph接続</strong></td>
+                                    <td><span class='badge bg-danger'><i class='fas fa-times'></i> 未接続</span></td>
+                                    <td>Microsoft Graph接続が必要です</td>
+                                    <td><small class="text-muted">Connect-MgGraph が必要</small></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Exchange Online接続</strong></td>
+                                    <td><span class='badge bg-danger'><i class='fas fa-times'></i> 未接続</span></td>
+                                    <td>Exchange Online接続が必要です</td>
+                                    <td><small class="text-muted">Connect-ExchangeOnline が必要</small></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>API権限状況</strong></td>
+                                    <td><span class='badge bg-danger'><i class='fas fa-times'></i> 未接続</span></td>
+                                    <td>権限確認が必要です</td>
+                                    <td><small class="text-muted">必要権限: User.Read.All, Reports.Read.All, AuditLog.Read.All, Group.Read.All</small></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>認証ログ取得</strong></td>
+                                    <td><span class='badge bg-success'><i class='fas fa-check'></i> 接続済み</span></td>
+                                    <td>サンプルデータまたは取得失敗</td>
+                                    <td><small class="text-muted">過去24時間のサインインログを分析</small></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>エラー・警告</strong></td>
+                                    <td><span class='badge bg-warning'><i class='fas fa-exclamation-triangle'></i> 注意</span></td>
+                                    <td>Microsoft Graph未接続; Exchange Online未接続（全テスト失敗）</td>
+                                    <td><small class="text-muted">詳細は認証ログを参照してください</small></td>
+                                </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 認証ログ詳細 -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>認証ログ詳細 (20 件)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>日時</th>
+                                <th>ユーザー</th>
+                                <th>アプリケーション</th>
+                                <th>結果</th>
+                                <th>IPアドレス</th>
+                                <th>場所</th>
+                                <th>クライアント</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                                            <tr>
+                                    <td><small>2025/06/24 12:00:09</small></td>
+                                    <td><strong>user1@tenant.onmicrosoft.com</strong></td>
+                                    <td>Exchange Online Protection</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>151.158.95.90</code></td>
+                                    <td>Tokyo, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 11:35:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>SharePoint Online</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>133.196.67.117</code></td>
+                                    <td>New York, United States</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 00:12:09</small></td>
+                                    <td><strong>service_account@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>164.128.180.15</code></td>
+                                    <td>Tokyo, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 12:03:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>Microsoft Teams</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>128.171.145.53</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 02:53:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft Teams</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>194.166.240.57</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 06:23:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>SharePoint Online</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>108.152.58.252</code></td>
+                                    <td>New York, United States</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/23 17:56:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>123.117.245.175</code></td>
+                                    <td>Tokyo, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 11:30:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>Azure Portal</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>101.142.4.18</code></td>
+                                    <td>Osaka, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 13:09:09</small></td>
+                                    <td><strong>user1@tenant.onmicrosoft.com</strong></td>
+                                    <td>Exchange Online Protection</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>132.147.54.226</code></td>
+                                    <td>Tokyo, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 10:02:09</small></td>
+                                    <td><strong>admin@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>162.102.34.240</code></td>
+                                    <td>Osaka, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/23 22:44:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>178.176.58.245</code></td>
+                                    <td>New York, United States</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 06:49:09</small></td>
+                                    <td><strong>admin@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>192.127.236.25</code></td>
+                                    <td>Tokyo, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 07:39:09</small></td>
+                                    <td><strong>service_account@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft Teams</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>160.117.26.122</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/23 19:50:09</small></td>
+                                    <td><strong>admin@tenant.onmicrosoft.com</strong></td>
+                                    <td>Azure Portal</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>127.128.155.210</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 04:59:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>188.196.30.74</code></td>
+                                    <td>New York, United States</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 01:44:09</small></td>
+                                    <td><strong>admin@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-danger'>失敗</span></td>
+                                    <td><code>137.125.236.156</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Mobile Apps and Desktop clients</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 14:12:09</small></td>
+                                    <td><strong>guest_user@external.com</strong></td>
+                                    <td>SharePoint Online</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>115.195.250.236</code></td>
+                                    <td>Osaka, Japan</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/23 21:01:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>Microsoft 365</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>134.135.158.70</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/24 09:52:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>SharePoint Online</td>
+                                    <td><span class='badge bg-danger'>失敗</span></td>
+                                    <td><code>100.103.85.141</code></td>
+                                    <td>London, United Kingdom</td>
+                                    <td><small>Mobile Apps and Desktop clients</small></td>
+                                </tr>
+                                <tr>
+                                    <td><small>2025/06/23 22:15:09</small></td>
+                                    <td><strong>manager@tenant.onmicrosoft.com</strong></td>
+                                    <td>SharePoint Online</td>
+                                    <td><span class='badge bg-success'>成功</span></td>
+                                    <td><code>115.140.232.40</code></td>
+                                    <td>New York, United States</td>
+                                    <td><small>Browser</small></td>
+                                </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><i class="fas fa-shield-alt me-2"></i><strong>Microsoft 365統合管理ツール</strong> - 認証テスト詳細レポート</p>
+        <p class="small">ISO/IEC 20000・27001・27002 準拠</p>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

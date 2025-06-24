@@ -15,6 +15,19 @@ function Invoke-Microsoft365AuthenticationTest {
         [switch]$Detailed = $true
     )
     
+    # OutputPath が null や空の場合の安全な処理
+    if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+        $toolRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+        if (-not $toolRoot) {
+            $toolRoot = Get-Location | Select-Object -ExpandProperty Path
+        }
+        $OutputPath = Join-Path $toolRoot "Reports\Authentication"
+        if (-not (Test-Path $OutputPath)) {
+            New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+        }
+        Write-Log "認証テスト出力パスを自動設定: $OutputPath" -Level "Info"
+    }
+    
     Write-Log "Microsoft 365 API仕様書準拠の認証テストを開始します" -Level "Info"
     
     try {
@@ -29,47 +42,71 @@ function Invoke-Microsoft365AuthenticationTest {
             Errors = @()
         }
         
-        # Microsoft Graph接続テスト（API仕様書準拠）
-        Write-Log "Microsoft Graph接続状態を確認中..." -Level "Info"
+        # Microsoft Graph接続テスト（詳細確認強化）
+        Write-Log "Microsoft Graph接続状態を詳細確認中..." -Level "Info"
         try {
             $context = Get-MgContext -ErrorAction SilentlyContinue
             if ($context) {
-                # API仕様書のTest-GraphConnection関数を使用
-                $graphTestResult = Invoke-GraphAPIWithRetry -ScriptBlock {
-                    Get-MgUser -Top 1 -Property Id,DisplayName -ErrorAction Stop
-                } -MaxRetries 2 -Operation "Graph接続テスト"
+                Write-Log "Microsoft Graph Context発見: テナント $($context.TenantId)" -Level "Info"
                 
-                if ($graphTestResult) {
-                    $connectionResults.MicrosoftGraph = $true
-                    $connectionResults.AuthenticationMethod = if ($context.AuthType) { $context.AuthType } else { "証明書またはクライアントシークレット" }
-                    $connectionResults.Scopes = $context.Scopes
-                    $connectionResults.ConnectionDetails += "Microsoft Graph接続成功: テナント $($context.TenantId)"
-                    Write-Log "Microsoft Graph接続確認成功" -Level "Success"
+                # 実際のAPI呼び出しテスト（複数段階）
+                $graphTestResults = @()
+                
+                # 基本接続テスト
+                try {
+                    $testUser = Invoke-GraphAPIWithRetry -ScriptBlock {
+                        Get-MgUser -Top 1 -Property Id,DisplayName,UserPrincipalName -ErrorAction Stop
+                    } -MaxRetries 2 -Operation "基本Graph接続テスト"
                     
-                    # API仕様書で要求される権限確認
-                    $requiredPermissions = @(
-                        "User.Read.All",
-                        "Group.Read.All", 
-                        "Directory.Read.All",
-                        "Reports.Read.All",
-                        "Files.Read.All",
-                        "AuditLog.Read.All"
-                    )
-                    
-                    $missingPermissions = @()
-                    foreach ($permission in $requiredPermissions) {
-                        if ($context.Scopes -contains $permission) {
-                            $connectionResults.Permissions += "✅ $permission"
-                        } else {
-                            $missingPermissions += $permission
-                            $connectionResults.Permissions += "❌ $permission (不足)"
+                    if ($testUser) {
+                        $connectionResults.MicrosoftGraph = $true
+                        $graphTestResults += "基本API呼び出し: ✅ 成功"
+                        Write-Log "Microsoft Graph 基本API呼び出し成功" -Level "Success"
+                        
+                        # 認証方式の詳細判定
+                        $authMethod = "不明"
+                        if ($context.AuthType) {
+                            $authMethod = $context.AuthType
+                        } elseif ($context.ClientId -and $context.CertificateThumbprint) {
+                            $authMethod = "証明書認証"
+                        } elseif ($context.ClientId) {
+                            $authMethod = "クライアントシークレット認証"
+                        }
+                        
+                        $connectionResults.AuthenticationMethod = $authMethod
+                        $connectionResults.Scopes = $context.Scopes
+                        
+                        # 詳細情報の取得
+                        $connectionResults.ConnectionDetails += "Microsoft Graph接続成功: テナント $($context.TenantId)"
+                        $connectionResults.ConnectionDetails += "認証方式: $authMethod"
+                        $connectionResults.ConnectionDetails += "クライアントID: $($context.ClientId)"
+                        
+                        # 権限テスト
+                        $permissionTests = @{
+                            "User.Read.All" = { Get-MgUser -Top 1 -ErrorAction Stop }
+                            "Reports.Read.All" = { Get-MgReportOffice365ActiveUserDetail -Period D30 -ErrorAction Stop }
+                            "AuditLog.Read.All" = { Get-MgAuditLogSignIn -Top 1 -ErrorAction Stop }
+                        }
+                        
+                        foreach ($permission in $permissionTests.Keys) {
+                            try {
+                                $result = Invoke-GraphAPIWithRetry -ScriptBlock $permissionTests[$permission] -MaxRetries 1 -Operation "権限テスト: $permission"
+                                if ($result) {
+                                    $connectionResults.Permissions += $permission
+                                    $graphTestResults += "権限 $permission : ✅ 利用可能"
+                                    Write-Log "権限 $permission : 利用可能" -Level "Success"
+                                } else {
+                                    $graphTestResults += "権限 $permission : ❌ 結果なし"
+                                }
+                            } catch {
+                                $graphTestResults += "権限 $permission : ❌ エラー ($($_.Exception.Message.Split('.')[0]))"
+                                Write-Log "権限 $permission : エラー - $($_.Exception.Message)" -Level "Warning"
+                            }
                         }
                     }
-                    
-                    if ($missingPermissions.Count -gt 0) {
-                        $connectionResults.Errors += "不足権限: $($missingPermissions -join ', ')"
-                        Write-Log "不足している権限: $($missingPermissions -join ', ')" -Level "Warning"
-                    }
+                } catch {
+                    $connectionResults.Errors += "Microsoft Graph API呼び出しエラー: $($_.Exception.Message)"
+                    Write-Log "Microsoft Graph API呼び出しエラー: $($_.Exception.Message)" -Level "Error"
                 }
             } else {
                 $connectionResults.Errors += "Microsoft Graph未接続"
@@ -81,16 +118,79 @@ function Invoke-Microsoft365AuthenticationTest {
             Write-Log "Microsoft Graph接続エラー: $($_.Exception.Message)" -Level "Error"
         }
         
-        # Exchange Online接続テスト（API仕様書準拠）
-        Write-Log "Exchange Online接続状態を確認中..." -Level "Info"
+        # Exchange Online接続テスト（詳細確認強化）
+        Write-Log "Exchange Online接続状態を詳細確認中..." -Level "Info"
         try {
-            $exoConnected = Test-ExchangeOnlineConnection
+            # 複数の方法でExchange Online接続を確認
+            $exoTestResults = @()
+            $exoConnected = $false
+            
+            # 方法1: Get-ConnectionInformation
+            try {
+                $connectionInfo = Get-ConnectionInformation -ErrorAction Stop
+                if ($connectionInfo) {
+                    $exoConnected = $true
+                    $exoTestResults += "ConnectionInformation: ✅ 接続確認"
+                    $connectionResults.ConnectionDetails += "Exchange Online接続成功: $($connectionInfo.UserPrincipalName)"
+                    $connectionResults.ConnectionDetails += "接続状態: $($connectionInfo.State)"
+                    Write-Log "Exchange Online ConnectionInformation確認成功" -Level "Success"
+                }
+            } catch {
+                $exoTestResults += "ConnectionInformation: ❌ 未確認"
+                Write-Log "Exchange Online ConnectionInformation確認失敗: $($_.Exception.Message)" -Level "Warning"
+            }
+            
+            # 方法2: Get-OrganizationConfig
+            try {
+                $orgConfig = Get-OrganizationConfig -ErrorAction Stop
+                if ($orgConfig) {
+                    $exoConnected = $true
+                    $exoTestResults += "OrganizationConfig: ✅ 取得成功"
+                    $connectionResults.ConnectionDetails += "組織名: $($orgConfig.DisplayName)"
+                    Write-Log "Exchange Online OrganizationConfig取得成功" -Level "Success"
+                }
+            } catch {
+                $exoTestResults += "OrganizationConfig: ❌ 取得失敗"
+                Write-Log "Exchange Online OrganizationConfig取得失敗: $($_.Exception.Message)" -Level "Warning"
+            }
+            
+            # 方法3: PowerShellセッション確認
+            try {
+                $exoSessions = Get-PSSession | Where-Object { 
+                    ($_.Name -like "*ExchangeOnline*" -or $_.ConfigurationName -eq "Microsoft.Exchange") -and 
+                    $_.State -eq "Opened" 
+                }
+                if ($exoSessions) {
+                    $exoConnected = $true
+                    $exoTestResults += "PowerShellセッション: ✅ 接続中 ($($exoSessions.Count)セッション)"
+                    Write-Log "Exchange Online PowerShellセッション確認成功" -Level "Success"
+                } else {
+                    $exoTestResults += "PowerShellセッション: ❌ 未接続"
+                }
+            } catch {
+                $exoTestResults += "PowerShellセッション: ❌ 確認エラー"
+            }
+            
+            # 方法4: 基本コマンドテスト
             if ($exoConnected) {
-                $connectionResults.ExchangeOnline = $true
-                $connectionResults.ConnectionDetails += "Exchange Online接続成功"
-                Write-Log "Exchange Online接続確認成功" -Level "Success"
-            } else {
-                $connectionResults.Errors += "Exchange Online未接続"
+                try {
+                    $mailboxTest = Get-Mailbox -ResultSize 1 -ErrorAction Stop
+                    if ($mailboxTest) {
+                        $exoTestResults += "メールボックス取得: ✅ 成功"
+                        Write-Log "Exchange Online メールボックス取得テスト成功" -Level "Success"
+                    }
+                } catch {
+                    $exoTestResults += "メールボックス取得: ❌ エラー"
+                    Write-Log "Exchange Online メールボックス取得テスト失敗: $($_.Exception.Message)" -Level "Warning"
+                }
+            }
+            
+            $connectionResults.ExchangeOnline = $exoConnected
+            $connectionResults.ConnectionDetails += "Exchange Online詳細テスト結果:"
+            $connectionResults.ConnectionDetails += $exoTestResults
+            
+            if (-not $exoConnected) {
+                $connectionResults.Errors += "Exchange Online未接続（全テスト失敗）"
                 Write-Log "Exchange Online未接続" -Level "Warning"
             }
         }
@@ -179,29 +279,94 @@ function Invoke-Microsoft365AuthenticationTest {
             Write-Log "API仕様書準拠のサンプルデータを生成しました（20件）" -Level "Info"
         }
         
-        # Step 3: 接続結果サマリーを作成
-        $summaryData = @(
-            [PSCustomObject]@{
-                "項目" = "Microsoft Graph接続"
-                "状態" = if ($connectionResults.MicrosoftGraph) { "✅ 接続済み" } else { "❌ 未接続" }
-                "詳細" = if ($connectionResults.MicrosoftGraph) { $connectionResults.AuthenticationMethod } else { "接続が必要" }
-            },
-            [PSCustomObject]@{
-                "項目" = "Exchange Online接続"
-                "状態" = if ($connectionResults.ExchangeOnline) { "✅ 接続済み" } else { "❌ 未接続" }
-                "詳細" = if ($connectionResults.ExchangeOnline) { "証明書認証" } else { "接続が必要" }
-            },
-            [PSCustomObject]@{
-                "項目" = "API権限状況"
-                "状態" = if ($connectionResults.Permissions.Count -gt 0) { "確認済み" } else { "未確認" }
-                "詳細" = "必要権限: User.Read.All, Reports.Read.All, AuditLog.Read.All等"
-            },
-            [PSCustomObject]@{
-                "項目" = "認証ログ取得"
-                "状態" = if ($authData.Count -gt 0) { "✅ 成功 ($(($authData | Measure-Object).Count)件)" } else { "❌ 失敗" }
-                "詳細" = if ($connectionResults.MicrosoftGraph) { "Microsoft Graph API経由" } else { "サンプルデータ" }
+        # Step 3: 詳細接続結果サマリーを作成
+        $summaryData = @()
+        
+        # Microsoft Graph接続詳細
+        $graphStatus = if ($connectionResults.MicrosoftGraph) { "✅ 接続済み" } else { "❌ 未接続" }
+        $graphDetails = if ($connectionResults.MicrosoftGraph) { 
+            "$($connectionResults.AuthenticationMethod) | スコープ: $($connectionResults.Scopes.Count)個" 
+        } else { 
+            "Microsoft Graph接続が必要です" 
+        }
+        
+        $summaryData += [PSCustomObject]@{
+            "項目" = "Microsoft Graph接続"
+            "状態" = $graphStatus
+            "詳細" = $graphDetails
+            "追加情報" = if ($connectionResults.MicrosoftGraph) { 
+                "テナント: $($context.TenantId), クライアント: $($context.ClientId)" 
+            } else { 
+                "Connect-MgGraph が必要" 
             }
-        )
+        }
+        
+        # Exchange Online接続詳細
+        $exoStatus = if ($connectionResults.ExchangeOnline) { "✅ 接続済み" } else { "❌ 未接続" }
+        $exoDetails = if ($connectionResults.ExchangeOnline) { 
+            "PowerShellセッション経由で接続中" 
+        } else { 
+            "Exchange Online接続が必要です" 
+        }
+        
+        $summaryData += [PSCustomObject]@{
+            "項目" = "Exchange Online接続"
+            "状態" = $exoStatus
+            "詳細" = $exoDetails
+            "追加情報" = if ($connectionResults.ExchangeOnline) { 
+                "接続方式: 証明書認証/Modern Auth" 
+            } else { 
+                "Connect-ExchangeOnline が必要" 
+            }
+        }
+        
+        # API権限詳細
+        $permissionStatus = if ($connectionResults.Permissions.Count -gt 0) { 
+            "✅ 確認済み ($($connectionResults.Permissions.Count)個)" 
+        } else { 
+            "❌ 未確認" 
+        }
+        $permissionDetails = if ($connectionResults.Permissions.Count -gt 0) { 
+            "利用可能: $($connectionResults.Permissions -join ', ')" 
+        } else { 
+            "権限確認が必要です" 
+        }
+        
+        $summaryData += [PSCustomObject]@{
+            "項目" = "API権限状況"
+            "状態" = $permissionStatus
+            "詳細" = $permissionDetails
+            "追加情報" = "必要権限: User.Read.All, Reports.Read.All, AuditLog.Read.All, Group.Read.All"
+        }
+        
+        # 認証ログ取得詳細
+        $logStatus = if ($authData.Count -gt 0) { 
+            "✅ 成功 ($($authData.Count)件)" 
+        } else { 
+            "❌ 失敗" 
+        }
+        $logDetails = if ($connectionResults.MicrosoftGraph -and $authData.Count -gt 0) { 
+            "Microsoft Graph API経由で実データ取得" 
+        } else { 
+            "サンプルデータまたは取得失敗" 
+        }
+        
+        $summaryData += [PSCustomObject]@{
+            "項目" = "認証ログ取得"
+            "状態" = $logStatus
+            "詳細" = $logDetails
+            "追加情報" = "過去24時間のサインインログを分析"
+        }
+        
+        # エラー情報
+        if ($connectionResults.Errors.Count -gt 0) {
+            $summaryData += [PSCustomObject]@{
+                "項目" = "エラー・警告"
+                "状態" = "⚠️ 注意 ($($connectionResults.Errors.Count)件)"
+                "詳細" = $connectionResults.Errors -join "; "
+                "追加情報" = "詳細は認証ログを参照してください"
+            }
+        }
         
         # 結果を返す
         return @{

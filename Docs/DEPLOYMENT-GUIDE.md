@@ -1,53 +1,80 @@
-# Microsoft製品運用管理ツール - 展開ガイド
+# 📦 Microsoft 365統合管理ツール - 企業展開ガイド
 
-## 🚀 別PCへの展開手順
+## 🚀 本格運用システムの企業展開手順
 
-このツールを別のPCに移動・展開する際の手順とベストプラクティスです。
+**本格運用中のシステム**を別のPCや企業環境に展開する際の手順とベストプラクティスです。
 
 ### 📋 前提条件
 
-- Windows 10/11 または Windows Server 2019+
-- PowerShell 5.1+ または PowerShell 7+
-- 管理者権限
-- インターネット接続
+- **OS**: Windows 10/11 または Windows Server 2019+
+- **PowerShell**: 5.1+ または PowerShell 7.5.1（推奨・自動インストール可能）
+- **権限**: 管理者権限（PowerShell自動インストール時）
+- **ネットワーク**: インターネット接続（Microsoft 365 API接続）
+- **認証**: Microsoft 365管理者権限（証明書ベース認証設定済み）
 
-### 📦 展開パッケージ内容
+### 📦 本格運用システム展開パッケージ
 
 ```
-MicrosoftProductManagementTools/
-├── Config/
-│   └── appsettings.json           # 設定ファイル（要設定）
-├── Certificates/
-│   ├── MiraiConstEXO.pfx         # 認証用証明書（重要）
-│   ├── MiraiConstEXO.cer         # Azure AD用証明書
-│   └── certificate-info.txt     # 証明書情報
-├── Scripts/                      # PowerShellスクリプト群
-├── Templates/                    # レポートテンプレート
-├── Reports/                      # 生成されるレポート格納先
-└── Logs/                        # ログファイル格納先
+Microsoft365ProductManagementTools/
+├── 🚀 run_launcher.ps1             # メインランチャー
+├── 📱 Apps/                        # GUI/CLIアプリケーション
+│   ├── GuiApp.ps1                  # GUI版（PowerShell 7専用）
+│   └── CliApp.ps1                  # CLI版（クロスバージョン）
+├── ⚙️ Config/                       # 設定ファイル群
+│   ├── appsettings.json            # Microsoft 365設定（要設定）
+│   └── launcher-config.json        # ランチャー設定
+├── 🔐 Certificates/                # 認証証明書（重要）
+│   ├── mycert.pfx                  # 証明書ファイル（実運用）
+│   ├── MiraiConstEXO.*            # Exchange証明書群
+│   └── certificate-info.txt       # 証明書情報
+├── 📦 Installers/                  # PowerShell 7.5.1インストーラー
+├── 📝 Scripts/                     # PowerShellスクリプト群
+│   ├── Common/                     # 共通機能モジュール
+│   ├── EntraID/                    # Entra ID管理
+│   ├── EXO/                        # Exchange Online管理
+│   └── UI/                         # ユーザーインターフェース
+├── 📊 Reports/                     # 生成レポート（運用データ有）
+│   ├── Daily/                      # 日次レポート
+│   ├── Weekly/                     # 週次レポート
+│   ├── Monthly/                    # 月次レポート
+│   └── Yearly/                     # 年次レポート
+├── 📋 Templates/                   # レポートテンプレート
+├── 📄 Logs/                        # ログファイル
+├── 📚 Docs/                        # ドキュメント群
+├── 🔗 Create-Shortcuts.ps1         # ショートカット作成
+└── ✅ Check-System.ps1              # システムチェック
 ```
 
-## 🔧 セットアップ手順
+## 🔧 本格運用システム展開手順
 
-### ステップ1: ファイルのコピー
+### ステップ1: システムパッケージ展開
 
 ```powershell
-# フォルダ全体を新しいPCにコピー
-# 例: C:\Tools\MicrosoftProductManagementTools\
+# 1. フォルダ全体を展開先にコピー
+# 推奨展開先: C:\Tools\Microsoft365ProductManagementTools\
+
+# 2. 基本ディレクトリ構造確認
+Test-Path "Microsoft365ProductManagementTools\run_launcher.ps1"
+Test-Path "Microsoft365ProductManagementTools\Apps\"
+Test-Path "Microsoft365ProductManagementTools\Config\"
 ```
 
-### ステップ2: PowerShellモジュールのインストール
+### ステップ2: PowerShell環境セットアップ
 
 ```powershell
-# 管理者権限でPowerShell実行
+# 実行ポリシー設定
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-# 必要なモジュールをインストール
+# PowerShell 7.5.1自動インストール（推奨）
+.\Download-PowerShell751.ps1
+
+# 必要モジュールの自動インストール（初回実行時に自動実行）
+# または手動インストール:
 Install-Module Microsoft.Graph -Force -AllowClobber -Scope CurrentUser
 Install-Module ExchangeOnlineManagement -Force -AllowClobber -Scope CurrentUser
 ```
 
-### ステップ3: 証明書の確認
+### ステップ3: 認証・証明書設定
 
 ```powershell
 # 証明書ファイルの存在確認

@@ -3,7 +3,7 @@
     "ApplicationName": "Microsoft 365統合管理ツール",
     "Version": "2.0.0",
     "DefaultMode": "auto",
-    "RequiredPowerShellVersion": "7.5.1",
+    "RequiredPowerShellVersion": "7.4.0",
     "SupportedPowerShellVersions": ["5.1", "7.0", "7.1", "7.2", "7.3", "7.4", "7.5"],
     "EnableAutoInstall": true,
     "RequireAdminForInstall": true
