@@ -17,11 +17,11 @@ function Invoke-Microsoft365AuthenticationTest {
     
     # OutputPath が null や空の場合の安全な処理
     if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-        $toolRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+        $toolRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
         if (-not $toolRoot) {
             $toolRoot = Get-Location | Select-Object -ExpandProperty Path
         }
-        $OutputPath = Join-Path $toolRoot "Reports\Authentication"
+        $OutputPath = Join-Path -Path $toolRoot -ChildPath "Reports\Authentication"
         if (-not (Test-Path $OutputPath)) {
             New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
         }

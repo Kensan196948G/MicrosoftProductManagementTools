@@ -109,7 +109,10 @@ Start-Process PowerShell -Verb RunAs
 #### 3. 設定確認
 ```powershell
 # 認証設定テスト
-.\test-auth-simple.ps1
+.\TestScripts\test-auth-simple.ps1
+
+# 統合機能テスト
+.\TestScripts\test-all-features.ps1
 
 # システムチェック
 .\Check-System.ps1
@@ -120,13 +123,17 @@ Start-Process PowerShell -Verb RunAs
 ```
 Microsoft365ProductManagementTools/
 ├── 🚀 run_launcher.ps1              # メインランチャー
-├── 🔍 test-auth-simple.ps1          # 認証テスト
 ├── ✅ Check-System.ps1               # システムチェック
 ├── 📦 Download-PowerShell751.ps1     # PowerShell自動ダウンロード
 ├── 🔗 Create-Shortcuts.ps1          # ショートカット作成
 ├── 📱 Apps/                         # GUI/CLIアプリケーション
 │   ├── GuiApp.ps1                   # GUI版 (PowerShell 7専用)
 │   └── CliApp.ps1                   # CLI版 (クロスバージョン)
+├── 🧪 TestScripts/                  # テストスクリプト群
+│   ├── test-auth.ps1                # 基本認証テスト
+│   ├── test-all-features.ps1        # 全機能統合テスト
+│   ├── test-graph-features.ps1      # Microsoft Graph機能テスト
+│   └── test-onedrive-gui.ps1        # OneDrive GUI機能テスト
 ├── ⚙️ Config/                       # 設定ファイル
 │   ├── appsettings.json             # Microsoft 365設定
 │   └── launcher-config.json         # ランチャー設定

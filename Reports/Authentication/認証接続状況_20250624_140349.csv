@@ -1,5 +1,0 @@
-﻿"項目","状態","詳細"
-"Microsoft Graph接続","❌ 未接続","接続が必要"
-"Exchange Online接続","❌ 未接続","接続が必要"
-"API権限状況","未確認","必要権限: User.Read.All, Reports.Read.All, AuditLog.Read.All等"
-"認証ログ取得","✅ 成功 (20件)","サンプルデータ"

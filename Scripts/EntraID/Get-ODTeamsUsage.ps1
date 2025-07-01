@@ -11,6 +11,121 @@ $CommonPath = Join-Path $PSScriptRoot "..\Common"
 Import-Module "$CommonPath\Logging.psm1" -Force -ErrorAction SilentlyContinue
 Import-Module "$CommonPath\ErrorHandling.psm1" -Force -ErrorAction SilentlyContinue
 
+function Generate-SampleOneDriveTeamsData {
+    <#
+    .SYNOPSIS
+    OneDrive・Teams使用状況のサンプルデータ生成
+    #>
+    
+    $sampleUsers = @(
+        @{Name="荒木 厚史"; Email="a-araki@mirai-const.co.jp"; Dept="営業部"},
+        @{Name="深澤 淳"; Email="a-fukazawa@mirai-const.co.jp"; Dept="技術部"},
+        @{Name="蛭川 愛志"; Email="a-hirukawa@mirai-const.co.jp"; Dept="管理部"},
+        @{Name="池田 彩夏"; Email="a-ikeda@mirai-const.co.jp"; Dept="営業部"},
+        @{Name="加治屋 茜"; Email="a-kajiya@mirai-const.co.jp"; Dept="企画部"}
+    )
+    
+    $data = @{
+        OneDriveUsage = @()
+        TeamsActivity = @()
+        Summary = @{}
+    }
+    
+    # OneDrive使用状況サンプル
+    foreach ($user in $sampleUsers) {
+        $usageGB = [math]::Round((Get-Random -Minimum 500 -Maximum 4500) / 1000, 2)
+        $quotaGB = if ((Get-Random -Minimum 1 -Maximum 10) -le 2) { 5 } else { 1 }
+        $usagePercent = [math]::Round(($usageGB / $quotaGB) * 100, 1)
+        
+        $data.OneDriveUsage += [PSCustomObject]@{
+            DisplayName = $user.Name
+            UserPrincipalName = $user.Email
+            Department = $user.Dept
+            StorageUsedGB = $usageGB
+            StorageQuotaGB = $quotaGB
+            UsagePercent = $usagePercent
+            FileCount = Get-Random -Minimum 200 -Maximum 2000
+            ShareCount = Get-Random -Minimum 0 -Maximum 50
+            LastActivityDate = (Get-Date).AddDays(-(Get-Random -Minimum 1 -Maximum 30))
+            Status = if ($usagePercent -ge 80) { "警告" } elseif ($usagePercent -ge 60) { "注意" } else { "正常" }
+        }
+    }
+    
+    # Teams活動サンプル
+    foreach ($user in $sampleUsers) {
+        $data.TeamsActivity += [PSCustomObject]@{
+            DisplayName = $user.Name
+            UserPrincipalName = $user.Email
+            Department = $user.Dept
+            TeamsMessageCount = Get-Random -Minimum 10 -Maximum 200
+            CallCount = Get-Random -Minimum 0 -Maximum 50
+            MeetingCount = Get-Random -Minimum 0 -Maximum 30
+            LastActivityDate = (Get-Date).AddDays(-(Get-Random -Minimum 1 -Maximum 7))
+            IsActive = (Get-Random -Minimum 1 -Maximum 10) -le 8
+        }
+    }
+    
+    # サマリー情報
+    $data.Summary = @{
+        TotalUsers = $sampleUsers.Count
+        OneDriveHighUsage = ($data.OneDriveUsage | Where-Object {$_.UsagePercent -ge 80}).Count
+        OneDriveWarning = ($data.OneDriveUsage | Where-Object {$_.UsagePercent -ge 60 -and $_.UsagePercent -lt 80}).Count
+        TeamsActiveUsers = ($data.TeamsActivity | Where-Object {$_.IsActive}).Count
+        AverageStorageUsage = [math]::Round(($data.OneDriveUsage | Measure-Object StorageUsedGB -Average).Average, 2)
+    }
+    
+    return $data
+}
+
+function Display-OneDriveTeamsReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Data,
+        
+        [Parameter(Mandatory = $false)]
+        [bool]$IsSample = $false
+    )
+    
+    if ($IsSample) {
+        Write-Host "📊 テストデータを使用したレポート" -ForegroundColor Yellow
+        Write-Host ""
+    }
+    
+    # OneDrive使用状況サマリー
+    Write-Host "💾 OneDrive使用状況サマリー" -ForegroundColor Cyan
+    Write-Host "  総ユーザー数: $($Data.Summary.TotalUsers)" -ForegroundColor White
+    Write-Host "  平均使用量: $($Data.Summary.AverageStorageUsage) GB" -ForegroundColor White
+    Write-Host "  ⚠️  警告レベル(80%以上): $($Data.Summary.OneDriveHighUsage) ユーザー" -ForegroundColor Yellow
+    Write-Host "  📋 注意レベル(60-79%): $($Data.Summary.OneDriveWarning) ユーザー" -ForegroundColor White
+    Write-Host ""
+    
+    # OneDrive使用率上位
+    Write-Host "📈 OneDrive使用率上位ユーザー" -ForegroundColor Cyan
+    $topUsers = $Data.OneDriveUsage | Sort-Object UsagePercent -Descending | Select-Object -First 5
+    foreach ($user in $topUsers) {
+        $statusColor = switch ($user.Status) {
+            "警告" { "Red" }
+            "注意" { "Yellow" }
+            default { "Green" }
+        }
+        Write-Host "  $($user.DisplayName)" -ForegroundColor White
+        Write-Host "    💾 $($user.StorageUsedGB)GB / $($user.StorageQuotaGB)GB ($($user.UsagePercent)%)" -ForegroundColor $statusColor
+        Write-Host "    📁 ファイル数: $($user.FileCount), 共有数: $($user.ShareCount)" -ForegroundColor Gray
+    }
+    Write-Host ""
+    
+    # Teams活動サマリー
+    Write-Host "👥 Teams活動サマリー" -ForegroundColor Cyan
+    Write-Host "  アクティブユーザー: $($Data.Summary.TeamsActiveUsers) / $($Data.Summary.TotalUsers)" -ForegroundColor White
+    
+    $activeUsers = $Data.TeamsActivity | Where-Object {$_.IsActive} | Sort-Object TeamsMessageCount -Descending | Select-Object -First 3
+    Write-Host "  📱 活発なユーザー:" -ForegroundColor White
+    foreach ($user in $activeUsers) {
+        Write-Host "    - $($user.DisplayName): メッセージ$($user.TeamsMessageCount)件, 通話$($user.CallCount)件, 会議$($user.MeetingCount)件" -ForegroundColor Gray
+    }
+    Write-Host ""
+}
+
 function Get-OneDriveTeamsUsageStats {
     <#
     .SYNOPSIS
@@ -35,8 +150,12 @@ function Get-OneDriveTeamsUsageStats {
         try {
             $context = Get-MgContext -ErrorAction SilentlyContinue
             if (-not $context) {
-                Write-Host "⚠️  Microsoft Graph未接続 - 認証が必要です" -ForegroundColor Yellow
-                Write-Host "   手動でConnect-MgGraphを実行してください" -ForegroundColor Gray
+                Write-Host "⚠️  Microsoft Graph未接続 - ダミーデータで処理を継続します" -ForegroundColor Yellow
+                Write-Host "   テストデータを生成しています..." -ForegroundColor Gray
+                
+                # ダミーデータ生成と表示
+                $sampleData = Generate-SampleOneDriveTeamsData
+                Display-OneDriveTeamsReport -Data $sampleData -IsSample $true
                 return
             }
             
@@ -45,7 +164,12 @@ function Get-OneDriveTeamsUsageStats {
             Write-Host ""
         }
         catch {
-            Write-Host "❌ Microsoft Graph接続エラー: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "❌ Microsoft Graph接続エラー - ダミーデータで処理を継続します" -ForegroundColor Yellow
+            Write-Host "   エラー詳細: $($_.Exception.Message)" -ForegroundColor Gray
+            
+            # ダミーデータ生成と表示
+            $sampleData = Generate-SampleOneDriveTeamsData
+            Display-OneDriveTeamsReport -Data $sampleData -IsSample $true
             return
         }
         

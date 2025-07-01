@@ -54,26 +54,52 @@ function Get-OneDriveUsageAnalysis {
                     Write-Host "🔐 証明書ベース認証でMicrosoft Graphに接続中..." -ForegroundColor Cyan
                     
                     try {
-                        # 証明書ファイルから証明書を読み込み
-                        $certPath = $graphConfig.CertificatePath
-                        $certPassword = ConvertTo-SecureString $graphConfig.CertificatePassword -AsPlainText -Force
-                        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, $certPassword)
-                        
-                        # TenantId取得
-                        $tenantId = if ($graphConfig.TenantId) { $graphConfig.TenantId } else { $graphConfig.ClientId }
-                        $clientId = if ($graphConfig.ClientId) { $graphConfig.ClientId } else { $graphConfig.AppId }
-                        
-                        Connect-MgGraph -ClientId $clientId -Certificate $cert -TenantId $tenantId -NoWelcome
-                        Write-Host "✅ Microsoft Graphに正常に接続しました" -ForegroundColor Green
+                        # ClientSecret認証を優先で試行
+                        if ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "") {
+                            Write-Host "🔑 ClientSecret認証でMicrosoft Graphに接続中..." -ForegroundColor Yellow
+                            $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
+                            $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
+                            
+                            $connectParams = @{
+                                TenantId = $graphConfig.TenantId
+                                ClientSecretCredential = $credential
+                            }
+                            Connect-MgGraph @connectParams
+                            Write-Host "✅ Microsoft Graph (ClientSecret) に正常に接続しました" -ForegroundColor Green
+                        }
+                        elseif ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
+                            Write-Host "📜 証明書認証でMicrosoft Graphに接続中..." -ForegroundColor Yellow
+                            # 証明書ファイルから証明書を読み込み
+                            $certPath = $graphConfig.CertificatePath
+                            $certPassword = ConvertTo-SecureString $graphConfig.CertificatePassword -AsPlainText -Force
+                            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, $certPassword)
+                            
+                            # TenantId取得
+                            $tenantId = if ($graphConfig.TenantId) { $graphConfig.TenantId } else { $graphConfig.ClientId }
+                            $clientId = if ($graphConfig.ClientId) { $graphConfig.ClientId } else { $graphConfig.AppId }
+                            
+                            # パラメーター重複エラー回避のため、ハッシュテーブルで接続
+                            $connectParams = @{
+                                ClientId = $clientId
+                                Certificate = $cert
+                                TenantId = $tenantId
+                            }
+                            Connect-MgGraph @connectParams
+                            Write-Host "✅ Microsoft Graph (証明書) に正常に接続しました" -ForegroundColor Green
+                        }
+                        else {
+                            throw "有効な認証情報が設定されていません（ClientSecretまたは証明書が必要）"
+                        }
                     }
                     catch {
                         Write-Host "❌ Microsoft Graph接続エラー: $($_.Exception.Message)" -ForegroundColor Red
-                        Write-Host "📊 テストデータを使用してサンプル分析を生成します..." -ForegroundColor Yellow
-                        # 接続失敗時はテストデータで処理を継続
+                        Write-Host "❌ 実データ取得ができないため、処理を停止します。認証設定を確認してください。" -ForegroundColor Red
+                        throw "Microsoft Graph認証失敗: $($_.Exception.Message)"
                     }
                 } else {
                     Write-Host "❌ 設定ファイルが見つかりません: $configPath" -ForegroundColor Red
-                    Write-Host "📊 テストデータを使用してサンプル分析を生成します..." -ForegroundColor Yellow
+                    Write-Host "❌ 設定ファイルが必要です。処理を停止します。" -ForegroundColor Red
+                    throw "設定ファイルが見つかりません: $configPath"
                 }
             } else {
                 Write-Host "✅ Microsoft Graphに接続済みです" -ForegroundColor Green
@@ -81,7 +107,8 @@ function Get-OneDriveUsageAnalysis {
         }
         catch {
             Write-Host "❌ Microsoft Graph接続確認でエラーが発生しました: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host "📊 テストデータを使用してサンプル分析を生成します..." -ForegroundColor Yellow
+            Write-Host "❌ 実データ取得ができないため、処理を停止します。" -ForegroundColor Red
+            throw "Microsoft Graph接続確認失敗: $($_.Exception.Message)"
         }
         
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -109,22 +136,17 @@ function Get-OneDriveUsageAnalysis {
             
             Write-Host "  ✅ $($users.Count)名のユーザー、$($drives.Count)個のドライブを取得" -ForegroundColor Green
             
-            # データが取得できない場合はテストデータで処理
+            # データが取得できない場合はエラー終了
             if ($users.Count -eq 0) {
-                Write-Host "  ⚠️ Microsoft Graphからデータを取得できませんでした。テストデータを生成します..." -ForegroundColor Yellow
-                $testData = Generate-TestOneDriveData
-                $users = $testData.Users
-                $drives = $testData.Drives
+                Write-Host "  ❌ Microsoft Graphからユーザーデータを取得できませんでした。" -ForegroundColor Red
+                Write-Host "  ❌ 実データが必要です。認証設定と権限を確認してください。" -ForegroundColor Red
+                throw "Microsoft Graphからユーザーデータを取得できませんでした。認証設定を確認してください。"
             }
         }
         catch {
             Write-Host "  ❌ 実データ取得エラー: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host "  📊 テストデータを使用してサンプル分析を生成します..." -ForegroundColor Yellow
-            
-            # テストデータ生成
-            $testData = Generate-TestOneDriveData
-            $users = $testData.Users
-            $drives = $testData.Drives
+            Write-Host "  ❌ 実データ取得ができないため、処理を停止します。" -ForegroundColor Red
+            throw "Microsoft Graph実データ取得失敗: $($_.Exception.Message)"
         }
         
         # OneDrive使用量分析実行

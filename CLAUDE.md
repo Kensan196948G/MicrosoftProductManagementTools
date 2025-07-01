@@ -22,6 +22,12 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
 - **Scripts/EXO/**: Exchange Online監視・分析
 - **Scripts/EntraID/**: Entra ID、Teams、OneDrive管理
 
+- **TestScripts/**: 開発・テスト用スクリプト群
+  - `test-auth.ps1`: 基本認証テスト
+  - `test-all-features.ps1`: 全機能統合テスト
+  - `test-graph-features.ps1`: Microsoft Graph機能テスト
+  - `test-onedrive-gui.ps1`: OneDrive GUI機能テスト
+
 ## 設定
 
 全設定は`Config/appsettings.json`で一元管理されています。主要セクション：
@@ -47,6 +53,18 @@ Scripts\Common\ScheduledReports.ps1 -ReportType "Yearly"   # 年次
 
 ### 認証設定
 認証は非対話型実行のために証明書ベースまたはクライアントシークレット方式を使用します。スクリプト実行前に`Config/appsettings.json`で資格情報を設定してください。
+
+### テスト実行
+```powershell
+# 基本認証テスト
+TestScripts\test-auth.ps1
+
+# 全機能統合テスト
+TestScripts\test-all-features.ps1
+
+# Microsoft Graph機能テスト
+TestScripts\test-graph-features.ps1
+```
 
 ## レポート構造
 

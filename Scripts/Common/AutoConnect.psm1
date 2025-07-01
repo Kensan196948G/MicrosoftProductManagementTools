@@ -27,8 +27,8 @@ function Connect-Microsoft365Auto {
         Write-Log "Microsoft 365自動接続を開始します" -Level "Info"
         
         # 設定ファイル読み込み
-        $toolRoot = if ($Script:ToolRoot) { $Script:ToolRoot } else { Split-Path $PSScriptRoot -Parent -Parent }
-        $configPath = Join-Path $toolRoot "Config\appsettings.json"
+        $toolRoot = if ($Script:ToolRoot) { $Script:ToolRoot } else { Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent }
+        $configPath = Join-Path -Path $toolRoot -ChildPath "Config\appsettings.json"
         
         if (-not (Test-Path $configPath)) {
             throw "設定ファイルが見つかりません: $configPath"

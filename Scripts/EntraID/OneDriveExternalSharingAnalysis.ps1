@@ -90,25 +90,25 @@ function Get-OneDriveExternalSharingAnalysis {
                         $graphConfig = if ($config.MicrosoftGraph) { $config.MicrosoftGraph } else { $config.EntraID }
                         
                         if ($graphConfig -and $graphConfig.ClientId -and $graphConfig.TenantId) {
-                            Write-Log "証明書ベース認証を試行中..." -Level "Info"
-                            
-                            # 証明書ベース認証
-                            if ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
-                                $certPassword = ConvertTo-SecureString $graphConfig.CertificatePassword -AsPlainText -Force
-                                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($graphConfig.CertificatePath, $certPassword)
-                                
-                                Connect-MgGraph -ClientId $graphConfig.ClientId -Certificate $cert -TenantId $graphConfig.TenantId -NoWelcome
-                                $authSuccess = $true
-                                Write-Log "証明書ベース認証成功" -Level "Info"
-                            }
-                            # クライアントシークレット認証
-                            elseif ($graphConfig.ClientSecret) {
+                            # クライアントシークレット認証を優先実行
+                            if ($graphConfig.ClientSecret) {
+                                Write-Log "クライアントシークレット認証を試行中..." -Level "Info"
                                 $clientSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
                                 $credential = New-Object System.Management.Automation.PSCredential($graphConfig.ClientId, $clientSecret)
                                 
                                 Connect-MgGraph -ClientSecretCredential $credential -TenantId $graphConfig.TenantId -NoWelcome
                                 $authSuccess = $true
                                 Write-Log "クライアントシークレット認証成功" -Level "Info"
+                            }
+                            # 証明書ベース認証（フォールバック）
+                            elseif ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
+                                Write-Log "証明書ベース認証を試行中..." -Level "Info"
+                                $certPassword = ConvertTo-SecureString $graphConfig.CertificatePassword -AsPlainText -Force
+                                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($graphConfig.CertificatePath, $certPassword)
+                                
+                                Connect-MgGraph -ClientId $graphConfig.ClientId -Certificate $cert -TenantId $graphConfig.TenantId -NoWelcome
+                                $authSuccess = $true
+                                Write-Log "証明書ベース認証成功" -Level "Info"
                             }
                         }
                     }

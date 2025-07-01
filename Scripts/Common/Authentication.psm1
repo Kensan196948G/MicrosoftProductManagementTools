@@ -208,8 +208,91 @@ function Connect-MicrosoftGraphService {
         
         $graphConfig = $Config.EntraID
         
-        # 認証方式の決定
-        if ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
+        # 認証方式の決定（ClientSecret認証を最優先）
+        if ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "" -and $graphConfig.ClientSecret -ne "YOUR-CLIENT-SECRET-HERE") {
+            # クライアントシークレット認証（API仕様書準拠・最優先）
+            Write-Log "🔑 ClientSecret認証でMicrosoft Graph に接続中..." -Level "Info"
+            Write-Log "認証情報: ClientId=$($graphConfig.ClientId), TenantId=$($graphConfig.TenantId)" -Level "Info"
+            
+            # API仕様書に基づくクライアントシークレット認証
+            try {
+                $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
+                $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
+                
+                $connectParams = @{
+                    TenantId = $graphConfig.TenantId
+                    ClientSecretCredential = $credential
+                    NoWelcome = $true
+                }
+                
+                # API仕様書のスコープ設定を考慮
+                if ($graphConfig.Scopes -and $graphConfig.Scopes.Count -gt 0) {
+                    Write-Log "要求スコープ: $($graphConfig.Scopes -join ', ')" -Level "Info"
+                    # 注意: Client Credentialフローではスコープは自動的に決定されます
+                }
+                
+                # リトライロジックを使用して接続
+                $connectionResult = Invoke-GraphAPIWithRetry -ScriptBlock {
+                    Connect-MgGraph @connectParams
+                } -MaxRetries 3 -Operation "Microsoft Graph クライアントシークレット認証"
+                
+                Write-Log "✅ Microsoft Graph ClientSecret認証接続成功" -Level "Info"
+                
+                # 権限確認
+                $context = Get-MgContext
+                if ($context) {
+                    Write-Log "取得された権限: $($context.Scopes -join ', ')" -Level "Info"
+                    
+                    # API仕様書で要求される権限の確認
+                    $requiredPermissions = @(
+                        "User.Read.All",
+                        "Group.Read.All", 
+                        "Directory.Read.All",
+                        "Reports.Read.All",
+                        "Files.Read.All"
+                    )
+                    
+                    $missingPermissions = @()
+                    foreach ($permission in $requiredPermissions) {
+                        if ($context.Scopes -notcontains $permission) {
+                            $missingPermissions += $permission
+                        }
+                    }
+                    
+                    if ($missingPermissions.Count -gt 0) {
+                        Write-Log "⚠️ 不足している権限があります: $($missingPermissions -join ', ')" -Level "Warning"
+                        Write-Log "Azure ADアプリケーションで以下の権限を追加してください:" -Level "Warning"
+                        foreach ($permission in $missingPermissions) {
+                            Write-Log "  - $permission" -Level "Warning"
+                        }
+                    }
+                    else {
+                        Write-Log "✅ 必要な権限がすべて付与されています" -Level "Info"
+                    }
+                }
+            }
+            catch {
+                Write-Log "❌ ClientSecret認証エラー: $($_.Exception.Message)" -Level "Error"
+                
+                # 一般的なエラーパターンに基づく詳細診断
+                $errorMessage = $_.Exception.Message
+                if ($errorMessage -match "AADSTS70011|invalid_client") {
+                    Write-Log "🔍 診断: ClientIdまたはClientSecretが無効です" -Level "Error"
+                    Write-Log "💡 対処法: Azure ADアプリケーションの設定を確認してください" -Level "Error"
+                }
+                elseif ($errorMessage -match "AADSTS50034|does not exist") {
+                    Write-Log "🔍 診断: テナントIDが無効です" -Level "Error"
+                    Write-Log "💡 対処法: TenantIdが正しく設定されているか確認してください" -Level "Error"
+                }
+                elseif ($errorMessage -match "AADSTS65001|consent") {
+                    Write-Log "🔍 診断: アプリケーションに対する管理者の同意が必要です" -Level "Error"
+                    Write-Log "💡 対処法: Azure ADでアプリケーションに管理者の同意を付与してください" -Level "Error"
+                }
+                
+                throw $_
+            }
+        }
+        elseif ($graphConfig.CertificatePath -and (Test-Path $graphConfig.CertificatePath)) {
             # ファイルベース証明書認証（ポータブル）
             Write-Log "ファイルベース証明書認証でMicrosoft Graph に接続中..." -Level "Info"
             
@@ -249,7 +332,11 @@ function Connect-MicrosoftGraphService {
                 }
                 catch {
                     $lastError = $_
-                    Write-Log "Microsoft Graph: パスワード '$password' での読み込み失敗: $($_.Exception.Message)" -Level "Warning"
+                    Write-Log "🔍 Microsoft Graph: パスワード '$password' での読み込み失敗: $($_.Exception.Message)" -Level "Warning"
+                    Write-Log "🔍 詳細エラー: $($_.Exception.GetType().FullName)" -Level "Warning"
+                    if ($_.Exception.InnerException) {
+                        Write-Log "🔍 内部エラー: $($_.Exception.InnerException.Message)" -Level "Warning"
+                    }
                     continue
                 }
             }
@@ -265,9 +352,18 @@ function Connect-MicrosoftGraphService {
                 NoWelcome = $true
             }
             
-            Connect-MgGraph @connectParams
-            
-            Write-Log "Microsoft Graph ファイルベース証明書認証接続成功" -Level "Info"
+            try {
+                Connect-MgGraph @connectParams
+                Write-Log "📜 Microsoft Graph ファイルベース証明書認証接続成功" -Level "Info"
+            }
+            catch {
+                Write-Log "❌ 証明書認証Connect-MgGraphエラー: $($_.Exception.Message)" -Level "Error"
+                Write-Log "🔍 エラータイプ: $($_.Exception.GetType().FullName)" -Level "Error"
+                if ($_.Exception.InnerException) {
+                    Write-Log "🔍 内部エラー: $($_.Exception.InnerException.Message)" -Level "Error"
+                }
+                throw $_
+            }
         }
         elseif ($graphConfig.CertificateThumbprint -and $graphConfig.CertificateThumbprint -ne "YOUR-CERTIFICATE-THUMBPRINT-HERE") {
             # Thumbprint証明書認証（ストア依存）
@@ -280,90 +376,17 @@ function Connect-MicrosoftGraphService {
                 NoWelcome = $true
             }
             
-            Connect-MgGraph @connectParams
-            
-            Write-Log "Microsoft Graph 証明書認証接続成功" -Level "Info"
-        }
-        elseif ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "" -and $graphConfig.ClientSecret -ne "YOUR-CLIENT-SECRET-HERE") {
-            # クライアントシークレット認証（API仕様書準拠）
-            Write-Log "クライアントシークレット認証でMicrosoft Graph に接続中..." -Level "Info"
-            Write-Log "認証情報: ClientId=$($graphConfig.ClientId), TenantId=$($graphConfig.TenantId)" -Level "Info"
-            
-            # API仕様書に基づくクライアントシークレット認証
             try {
-                $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
-                $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
-                
-                $connectParams = @{
-                    TenantId = $graphConfig.TenantId
-                    ClientSecretCredential = $credential
-                    NoWelcome = $true
-                }
-                
-                # API仕様書のスコープ設定を考慮
-                if ($graphConfig.Scopes -and $graphConfig.Scopes.Count -gt 0) {
-                    Write-Log "要求スコープ: $($graphConfig.Scopes -join ', ')" -Level "Info"
-                    # 注意: Client Credentialフローではスコープは自動的に決定されます
-                }
-                
-                # リトライロジックを使用して接続
-                $connectionResult = Invoke-GraphAPIWithRetry -ScriptBlock {
-                    Connect-MgGraph @connectParams
-                } -MaxRetries 3 -Operation "Microsoft Graph クライアントシークレット認証"
-                
-                Write-Log "Microsoft Graph クライアントシークレット認証接続成功" -Level "Info"
-                
-                # 権限確認
-                $context = Get-MgContext
-                if ($context) {
-                    Write-Log "取得された権限: $($context.Scopes -join ', ')" -Level "Info"
-                    
-                    # API仕様書で要求される権限の確認
-                    $requiredPermissions = @(
-                        "User.Read.All",
-                        "Group.Read.All", 
-                        "Directory.Read.All",
-                        "Reports.Read.All",
-                        "Files.Read.All"
-                    )
-                    
-                    $missingPermissions = @()
-                    foreach ($permission in $requiredPermissions) {
-                        if ($context.Scopes -notcontains $permission) {
-                            $missingPermissions += $permission
-                        }
-                    }
-                    
-                    if ($missingPermissions.Count -gt 0) {
-                        Write-Log "不足している権限があります: $($missingPermissions -join ', ')" -Level "Warning"
-                        Write-Log "Azure ADアプリケーションで以下の権限を追加してください:" -Level "Warning"
-                        foreach ($permission in $missingPermissions) {
-                            Write-Log "  - $permission" -Level "Warning"
-                        }
-                    }
-                    else {
-                        Write-Log "必要な権限がすべて付与されています" -Level "Info"
-                    }
-                }
+                Connect-MgGraph @connectParams
+                Write-Log "🏆 Microsoft Graph Thumbprint証明書認証接続成功" -Level "Info"
             }
             catch {
-                Write-Log "クライアントシークレット認証エラー: $($_.Exception.Message)" -Level "Error"
-                
-                # 一般的なエラーパターンに基づく詳細診断
-                $errorMessage = $_.Exception.Message
-                if ($errorMessage -match "AADSTS70011|invalid_client") {
-                    Write-Log "診断: ClientIdまたはClientSecretが無効です" -Level "Error"
-                    Write-Log "対処法: Azure ADアプリケーションの設定を確認してください" -Level "Error"
+                Write-Log "❌ Thumbprint証明書認証Connect-MgGraphエラー: $($_.Exception.Message)" -Level "Error"
+                Write-Log "🔍 エラータイプ: $($_.Exception.GetType().FullName)" -Level "Error"
+                Write-Log "🔍 使用したThumbprint: $($graphConfig.CertificateThumbprint)" -Level "Error"
+                if ($_.Exception.InnerException) {
+                    Write-Log "🔍 内部エラー: $($_.Exception.InnerException.Message)" -Level "Error"
                 }
-                elseif ($errorMessage -match "AADSTS50034|does not exist") {
-                    Write-Log "診断: テナントIDが無効です" -Level "Error"
-                    Write-Log "対処法: TenantIdが正しく設定されているか確認してください" -Level "Error"
-                }
-                elseif ($errorMessage -match "AADSTS65001|consent") {
-                    Write-Log "診断: アプリケーションに対する管理者の同意が必要です" -Level "Error"
-                    Write-Log "対処法: Azure ADでアプリケーションに管理者の同意を付与してください" -Level "Error"
-                }
-                
                 throw $_
             }
         }
@@ -372,20 +395,44 @@ function Connect-MicrosoftGraphService {
         }
         
         # 接続確認
-        $context = Get-MgContext
-        if ($context) {
-            Write-Log "Microsoft Graph 接続確認: テナント $($context.TenantId)" -Level "Info"
-            
-            # 必要なスコープ確認
-            $requiredScopes = $graphConfig.Scopes
-            if ($requiredScopes) {
-                Write-Log "要求スコープ: $($requiredScopes -join ', ')" -Level "Info"
+        try {
+            $context = Get-MgContext -ErrorAction Stop
+            if ($context) {
+                Write-Log "✅ Microsoft Graph 接続確認成功: テナント $($context.TenantId)" -Level "Info"
+                Write-Log "🔑 認証タイプ: $($context.AuthType)" -Level "Info"
+                Write-Log "👤 認証済みアカウント: $($context.Account)" -Level "Info"
+                
+                # 基本API接続テスト
+                try {
+                    $testUser = Get-MgUser -Top 1 -Property Id,DisplayName -ErrorAction Stop
+                    Write-Log "🧪 API接続テスト成功: $($testUser.Count) ユーザー取得" -Level "Info"
+                }
+                catch {
+                    Write-Log "⚠️ API接続テスト失敗: $($_.Exception.Message)" -Level "Warning"
+                    Write-Log "🔍 API権限が不足している可能性があります" -Level "Warning"
+                }
+                
+                # 必要なスコープ確認
+                $requiredScopes = $graphConfig.Scopes
+                if ($requiredScopes) {
+                    Write-Log "📋 要求スコープ: $($requiredScopes -join ', ')" -Level "Info"
+                    Write-Log "📋 実際のスコープ: $($context.Scopes -join ', ')" -Level "Info"
+                }
+                
+                return $true
             }
-            
-            return $true
+            else {
+                Write-Log "❌ Microsoft Graph コンテキストが取得できません" -Level "Error"
+                throw "Microsoft Graph 接続の確認に失敗しました: コンテキストなし"
+            }
         }
-        else {
-            throw "Microsoft Graph 接続の確認に失敗しました"
+        catch {
+            Write-Log "❌ Microsoft Graph 接続確認エラー: $($_.Exception.Message)" -Level "Error"
+            Write-Log "🔍 エラータイプ: $($_.Exception.GetType().FullName)" -Level "Error"
+            if ($_.Exception.InnerException) {
+                Write-Log "🔍 内部エラー: $($_.Exception.InnerException.Message)" -Level "Error"
+            }
+            throw "Microsoft Graph 接続の確認に失敗しました: $($_.Exception.Message)"
         }
     }
     catch {

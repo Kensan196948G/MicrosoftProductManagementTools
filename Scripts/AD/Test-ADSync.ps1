@@ -7,7 +7,7 @@
 param()
 
 # 共通モジュールのインポート
-$CommonPath = Join-Path $PSScriptRoot "..\Common"
+$CommonPath = Join-Path -Path $PSScriptRoot -ChildPath "..\Common"
 Import-Module "$CommonPath\Logging.psm1" -Force -ErrorAction SilentlyContinue
 Import-Module "$CommonPath\ErrorHandling.psm1" -Force -ErrorAction SilentlyContinue
 

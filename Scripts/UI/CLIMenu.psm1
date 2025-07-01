@@ -339,8 +339,8 @@ function Execute-MenuItem {
             & $Item.Action
         } elseif ($Item.ScriptPath) {
             # スクリプトファイル実行
-            $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $scriptFullPath = Join-Path $projectRoot $Item.ScriptPath
+            $projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+            $scriptFullPath = Join-Path -Path $projectRoot -ChildPath $Item.ScriptPath
             if (Test-Path $scriptFullPath) {
                 & $scriptFullPath
             } else {
@@ -526,8 +526,8 @@ function Execute-ScriptWithParams {
     )
     
     # プロジェクトルートディレクトリを取得
-    $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $fullPath = Join-Path $projectRoot $ScriptPath
+    $projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+    $fullPath = Join-Path -Path $projectRoot -ChildPath $ScriptPath
     
     if (Test-Path $fullPath) {
         try {

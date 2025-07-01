@@ -1,6 +1,0 @@
-﻿"項目","状態","詳細","追加情報"
-"Microsoft Graph接続","❌ 未接続","Microsoft Graph接続が必要です","Connect-MgGraph が必要"
-"Exchange Online接続","❌ 未接続","Exchange Online接続が必要です","Connect-ExchangeOnline が必要"
-"API権限状況","❌ 未確認","権限確認が必要です","必要権限: User.Read.All, Reports.Read.All, AuditLog.Read.All, Group.Read.All"
-"認証ログ取得","✅ 成功 (20件)","サンプルデータまたは取得失敗","過去24時間のサインインログを分析"
-"エラー・警告","⚠️ 注意 (2件)","Microsoft Graph未接続; Exchange Online未接続（全テスト失敗）","詳細は認証ログを参照してください"
