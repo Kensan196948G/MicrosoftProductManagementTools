@@ -7,7 +7,7 @@ try {
     # ClientSecret認証
     $clientId = "22e5d6e4-805f-4516-af09-ff09c7c224c4"
     $tenantId = "a7232f7a-a9e5-4f71-9372-dc8b1c6645ea"
-    $clientSecret = "ULG8Q~u2zTYsHLPQJak9yxh8obxZa4erSgGezaWZ"
+    $clientSecret = "YOUR_CLIENT_SECRET"
     
     Write-Host "Microsoft Graphに接続中..." -ForegroundColor Yellow
     $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force

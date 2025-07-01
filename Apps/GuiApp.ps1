@@ -7317,7 +7317,7 @@ Teams アプリ利用状況 (ダミーデータ)
                             # APIが利用できない場合（ユーザー情報すら取得できない場合）のみエラー処理
                             if (-not $graphConnected) {
                                 Write-GuiLog "❌ Microsoft Graph認証失敗のため、実データ取得ができません" "Error"
-                                Write-GuiLog "⚠️ 認証設定を確認してください（ClientSecret: ULG8Q~u2zTYsHLPQJak9yxh8obxZa4erSgGezaWZ）" "Warning"
+                                Write-GuiLog "⚠️ 認証設定を確認してください（ClientSecret: 設定を確認してください）" "Warning"
                                 [System.Windows.Forms.MessageBox]::Show(
                                     "Microsoft Graph認証に失敗しました。`n`n実データを取得するには、以下を確認してください：`n`n1. ClientSecret認証が正しく設定されているか`n2. Azure ADアプリケーションの権限が適切に付与されているか`n3. 管理者の同意が実行されているか",
                                     "認証エラー",
