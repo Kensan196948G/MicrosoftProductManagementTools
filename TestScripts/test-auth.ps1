@@ -1,11 +1,11 @@
 # Microsoft Graph認証テスト
-Import-Module ../Scripts/Common/Logging.psm1 -Force
-Import-Module ../Scripts/Common/ErrorHandling.psm1 -Force
-Import-Module ../Scripts/Common/Authentication.psm1 -Force
+Import-Module ./Scripts/Common/Logging.psm1 -Force
+Import-Module ./Scripts/Common/ErrorHandling.psm1 -Force
+Import-Module ./Scripts/Common/Authentication.psm1 -Force
 
 try {
     Write-Host "設定ファイルを読み込み中..." -ForegroundColor Yellow
-    $configText = Get-Content ../Config/appsettings.json -Raw
+    $configText = Get-Content ./Config/appsettings.json -Raw
     $config = $configText | ConvertFrom-Json
     
     Write-Host "ClientId: $($config.EntraID.ClientId)" -ForegroundColor Green

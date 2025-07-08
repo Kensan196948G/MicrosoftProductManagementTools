@@ -7,9 +7,11 @@ Config/appsettings.local.json
 Config/*.local.json
 Config/secrets.json
 
-# Certificate files (keep these local)
-Certificates/*.pfx
-Certificates/*.p12
+# Certificate files (keep these local) - ENTIRE FOLDER EXCLUDED
+Certificates/
+
+# Google Drive API configuration (contains sensitive credentials)
+Config/googledrive.json
 
 # Sensitive logs
 Logs/*.sensitive

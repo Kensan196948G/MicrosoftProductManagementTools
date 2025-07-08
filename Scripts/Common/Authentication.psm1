@@ -539,7 +539,6 @@ function Connect-ExchangeOnlineService {
                 AppId = $exoConfig.AppId
                 CertificateThumbprint = $exoConfig.CertificateThumbprint
                 ShowBanner = $false
-                ShowProgress = $false
             }
             
             # API仕様書準拠のExchange Online接続（リトライロジック付き）

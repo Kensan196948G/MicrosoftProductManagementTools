@@ -32,7 +32,7 @@ foreach ($certFile in $certFiles) {
                 
                 # パスワード付きで試行
                 try {
-                    $securePassword = ConvertTo-SecureString "armageddon2002" -AsPlainText -Force
+                    $securePassword = ConvertTo-SecureString "YOUR_CERTIFICATE_PASSWORD" -AsPlainText -Force
                     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certFile, $securePassword)
                     Write-Host "✅ パスワード付きで読み込み成功" -ForegroundColor Green
                 } catch {

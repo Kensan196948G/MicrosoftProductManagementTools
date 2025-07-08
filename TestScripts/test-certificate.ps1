@@ -2,7 +2,7 @@
 Write-Host "証明書ファイル検証を開始します..." -ForegroundColor Yellow
 
 $certPath = "./Certificates/mycert.pfx"
-$certPassword = "armageddon2002"
+$certPassword = "YOUR_CERTIFICATE_PASSWORD"
 
 # 1. ファイル存在確認
 Write-Host "`n=== ファイル存在確認 ===" -ForegroundColor Cyan
@@ -59,7 +59,7 @@ try {
 
 # 4. 異なるパスワードでのテスト
 Write-Host "`n=== 異なるパスワードテスト ===" -ForegroundColor Cyan
-$testPasswords = @("", "password", "123456", "armageddon2002")
+$testPasswords = @("", "password", "123456", "YOUR_CERTIFICATE_PASSWORD")
 foreach ($testPassword in $testPasswords) {
     try {
         if ([string]::IsNullOrEmpty($testPassword)) {

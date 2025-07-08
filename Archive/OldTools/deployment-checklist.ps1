@@ -71,7 +71,7 @@ Write-Host "`n=== 証明書ファイル確認 ===" -ForegroundColor Yellow
 
 try {
     # PFXファイル読み込みテスト（パスワード保護対応）
-    $securePassword = ConvertTo-SecureString "armageddon2002" -AsPlainText -Force
+    $securePassword = ConvertTo-SecureString "YOUR_CERTIFICATE_PASSWORD" -AsPlainText -Force
     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2("Certificates/mycert.pfx", $securePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
     
     Write-Host "✓ PFXファイル読み込み成功" -ForegroundColor Green

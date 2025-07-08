@@ -57,7 +57,7 @@ $certPath = "Certificates\mycert.pfx"
 if (Test-Path $certPath) {
     Write-Host "   ✅ 証明書ファイル: 存在" -ForegroundColor Green
     try {
-        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, "armageddon2002")
+        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, "YOUR_CERTIFICATE_PASSWORD")
         Write-Host "   ✅ 証明書読み込み: OK" -ForegroundColor Green
         Write-Host "   証明書情報: $($cert.Subject)" -ForegroundColor Cyan
     } catch {
