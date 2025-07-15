@@ -18,8 +18,10 @@ param(
 # スクリプトルートパス
 $Script:ToolRoot = "E:\MicrosoftProductManagementTools"
 
-# ログファイルパス
-$logPath = Join-Path $Script:ToolRoot "Logs\git-sync.log"
+# ログファイルパス（YYYYMMDDHHMM形式でローテーション）
+$timestamp = Get-Date -Format "yyyyMMddHHmm"
+$logPath = Join-Path $Script:ToolRoot "Logs\git-sync_$timestamp.log"
+$masterLogPath = Join-Path $Script:ToolRoot "Logs\git-sync.log"
 
 # ログディレクトリを作成
 $logDir = Split-Path $logPath -Parent
@@ -27,7 +29,17 @@ if (-not (Test-Path $logDir)) {
     New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 }
 
-# ログ出力関数
+# 古いログファイルのクリーンアップ（30日以上経過したファイルを削除）
+try {
+    $cutoffDate = (Get-Date).AddDays(-30)
+    Get-ChildItem -Path $logDir -Filter "git-sync_*.log" | Where-Object { 
+        $_.LastWriteTime -lt $cutoffDate 
+    } | Remove-Item -Force -ErrorAction SilentlyContinue
+} catch {
+    # クリーンアップエラーは無視
+}
+
+# ログ出力関数（タイムスタンプ付きローテーション対応）
 function Write-SyncLog {
     param(
         [string]$Message,
@@ -35,11 +47,14 @@ function Write-SyncLog {
         [string]$Level = "Info"
     )
     
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] $Message"
+    $logTimestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$logTimestamp] [$Level] $Message"
     
-    # ファイルとコンソールの両方に出力
-    Add-Content -Path $logPath -Value $logEntry
+    # タイムスタンプ付きログファイルに出力
+    Add-Content -Path $logPath -Value $logEntry -Encoding UTF8
+    
+    # マスターログファイルにも出力（後方互換性）
+    Add-Content -Path $masterLogPath -Value $logEntry -Encoding UTF8
     
     $color = switch ($Level) {
         "Success" { "Green" }
@@ -53,9 +68,13 @@ function Write-SyncLog {
 
 # メイン実行
 try {
-    Write-SyncLog "Git自動同期を開始します..." -Level "Info"
+    # セッション開始ログ
+    Write-SyncLog "=================================================" -Level "Info"
+    Write-SyncLog "Git自動同期セッション開始 [$timestamp]" -Level "Info"
+    Write-SyncLog "=================================================" -Level "Info"
     Write-SyncLog "リポジトリパス: $RepositoryPath" -Level "Info"
     Write-SyncLog "ブランチ: $Branch" -Level "Info"
+    Write-SyncLog "ログファイル: git-sync_$timestamp.log" -Level "Info"
     
     # 作業ディレクトリを変更
     Set-Location $RepositoryPath
@@ -80,5 +99,8 @@ catch {
     exit 1
 }
 finally {
-    Write-SyncLog "Git自動同期処理を終了します" -Level "Info"
+    $endTimestamp = Get-Date -Format "yyyyMMddHHmm"
+    Write-SyncLog "=================================================" -Level "Info"
+    Write-SyncLog "Git自動同期セッション終了 [$endTimestamp]" -Level "Info"
+    Write-SyncLog "=================================================" -Level "Info"
 }
