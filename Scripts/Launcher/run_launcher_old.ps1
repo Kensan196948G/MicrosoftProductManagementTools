@@ -30,24 +30,6 @@ param(
 )
 
 # ================================================================================
-# 🔧 実行ポリシー自動修正機能
-# ================================================================================
-if ((Get-ExecutionPolicy -Scope CurrentUser) -eq 'RemoteSigned' -or (Get-ExecutionPolicy -Scope CurrentUser) -eq 'Restricted') {
-    try {
-        Write-Host "🔧 実行ポリシーを自動調整中..." -ForegroundColor Yellow
-        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force
-        Write-Host "✅ 実行ポリシーを Bypass に設定しました" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "⚠️ 実行ポリシーの自動設定に失敗しました。管理者権限で以下のコマンドを実行してください:" -ForegroundColor Yellow
-        Write-Host "   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force" -ForegroundColor White
-        Write-Host "Enterキーを押してメニューに戻る..." -ForegroundColor Gray
-        Read-Host
-        exit 1
-    }
-}
-
-# ================================================================================
 # 🎨 カラー定義とアイコン
 # ================================================================================
 $Script:Colors = @{
@@ -85,8 +67,6 @@ $Script:Icons = @{
     Loading = "⏳"
     Running = "🔄"
     Complete = "✨"
-    Check = "✓"
-    Search = "🔍"
     
     # レポートアイコン
     Daily = "📅"
@@ -103,7 +83,7 @@ $Script:Icons = @{
     
     # その他
     Arrow = "➤"
-    Bullet = "•"
+    Check = "✓"
     Cross = "✗"
     Star = "⭐"
     Lightning = "⚡"
@@ -111,6 +91,7 @@ $Script:Icons = @{
     Key = "🔑"
     Lock = "🔒"
     Unlock = "🔓"
+    Search = "🔍"
     Chart = "📊"
     Document = "📄"
     Folder = "📁"
@@ -168,7 +149,7 @@ function Write-Separator {
     Write-ColorText $line -Color $Color
 }
 
-# プログレスバー表示（コンソールハンドルエラー対応強化版）
+# プログレスバー表示
 function Show-Progress {
     param(
         [string]$Activity,
@@ -176,52 +157,13 @@ function Show-Progress {
         [string]$Status = ""
     )
     
-    try {
-        # 基本的なチェック
-        if (-not $Host -or -not $Host.UI -or -not $Host.UI.RawUI) {
-            Write-Host "$($Script:Icons.Loading) $Activity - $PercentComplete% $Status" -ForegroundColor Cyan
-            return
-        }
-        
-        # コンソールハンドルとウィンドウサイズのチェック
-        $windowSize = $null
-        try {
-            $windowSize = $Host.UI.RawUI.WindowSize
-        } catch {
-            # ウィンドウサイズ取得でエラーが発生した場合
-            Write-Host "$($Script:Icons.Loading) $Activity - $PercentComplete% $Status" -ForegroundColor Cyan
-            return
-        }
-        
-        # 出力がリダイレクトされていない場合のみプログレスバーを表示
-        if (-not [Console]::IsOutputRedirected -and $windowSize -and $windowSize.Width -gt 0) {
-            $width = [Math]::Min(50, $windowSize.Width - 20)  # 安全なバー幅
-            $complete = [Math]::Floor($width * $PercentComplete / 100)
-            $remaining = $width - $complete
-            
-            $progressBar = "█" * $complete + "░" * $remaining
-            
-            # カーソル位置の変更を試行
-            try {
-                Write-Host "`r$($Script:Icons.Loading) $Activity [$progressBar] $PercentComplete% $Status" -NoNewline -ForegroundColor Cyan
-            } catch {
-                # カーソル位置変更でエラーが発生した場合は通常出力
-                Write-Host "$($Script:Icons.Loading) $Activity [$progressBar] $PercentComplete% $Status" -ForegroundColor Cyan
-            }
-        } else {
-            # コンソールハンドルが無効な場合のフォールバック
-            Write-Host "$($Script:Icons.Loading) $Activity - $PercentComplete% $Status" -ForegroundColor Cyan
-        }
-    }
-    catch {
-        # 全てのエラーケースでのシンプルな表示
-        try {
-            Write-Host "$($Script:Icons.Loading) $Activity - $PercentComplete% $Status" -ForegroundColor Cyan
-        } catch {
-            # 最後の手段：Write-Output使用
-            Write-Output "$($Script:Icons.Loading) $Activity - $PercentComplete% $Status"
-        }
-    }
+    $width = 50
+    $complete = [Math]::Floor($width * $PercentComplete / 100)
+    $remaining = $width - $complete
+    
+    $progressBar = "█" * $complete + "░" * $remaining
+    
+    Write-Host "`r$($Script:Icons.Loading) $Activity [$progressBar] $PercentComplete% $Status" -NoNewline -ForegroundColor Cyan
 }
 
 # ================================================================================
@@ -267,15 +209,7 @@ function Show-Header {
         [switch]$Minimal
     )
     
-    # 安全なクリア操作
-    try {
-        if ($Host.UI.RawUI.WindowSize.Width -gt 0) {
-            Clear-Host
-        }
-    } catch {
-        # Clear-Hostでエラーが発生した場合は改行で代用
-        Write-Host "`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n`n" -NoNewline
-    }
+    Clear-Host
     
     if (-not $Minimal) {
         Write-Separator -Character "═" -Color Cyan
@@ -336,124 +270,68 @@ function Show-MainMenu {
 }
 
 # ================================================================================
-# 🖥️ GUI起動（エラーハンドリング強化版）
+# 🖥️ GUI起動
 # ================================================================================
 function Start-GUIMode {
     Write-LauncherLog "GUIモード起動開始" -Level Info
     
-    try {
-        Show-Header -Minimal
-        Write-IconMessage $Script:Icons.GUI "GUI アプリケーションを起動しています..." -Color Cyan
-        Write-Host ""
-        
-        # 事前チェック
-        $guiPath = Join-Path $PSScriptRoot "Apps\GuiApp.ps1"
-        if (-not (Test-Path $guiPath)) {
-            throw "GUIアプリケーションが見つかりません: $guiPath"
-        }
-        
-        # PowerShellバージョンチェック
-        $psVersion = $PSVersionTable.PSVersion
-        Write-IconMessage $Script:Icons.Info "PowerShell バージョン: $psVersion" -Color Cyan
-        
-        # Windowsプラットフォームチェック
-        if ($PSVersionTable.Platform -and $PSVersionTable.Platform -ne "Win32NT") {
-            throw "GUIアプリケーションはWindows環境でのみ動作します。現在のプラットフォーム: $($PSVersionTable.Platform)"
-        }
-        
-        # アニメーション表示（エラーハンドリング付き）
-        $steps = @(
-            @{ Text = "環境チェック"; Icon = $Script:Icons.Search }
-            @{ Text = "モジュール読み込み"; Icon = $Script:Icons.Loading }
-            @{ Text = "GUI初期化"; Icon = $Script:Icons.Settings }
-            @{ Text = "起動準備完了"; Icon = $Script:Icons.Check }
-        )
-        
-        foreach ($step in $steps) {
-            try {
-                Write-IconMessage $step.Icon $step.Text -Color Yellow
-                Start-Sleep -Milliseconds 200  # 短縮して高速化
-            }
-            catch {
-                Write-IconMessage $Script:Icons.Warning "ステップ処理でエラーが発生しましたが継続します" -Color Yellow
-            }
-        }
-        
-        Write-Host ""
-        Write-IconMessage $Script:Icons.Rocket "起動中..." -Color Green
-        
-        # GUI起動の実行
-        Write-LauncherLog "新しいプロセスでGUI起動" -Level Info
-        
-        # 常に新しいプロセスで起動（コンソールハンドル問題を回避）
-        Write-IconMessage $Script:Icons.Info "新しいPowerShellプロセスでGUIを起動します..." -Color Cyan
-        
-        # PowerShellコマンドの選択
-        $psCommand = "pwsh"
-        if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
-            $psCommand = "powershell"
-            Write-IconMessage $Script:Icons.Warning "PowerShell 7が見つかりません。Windows PowerShellで起動します。" -Color Yellow
-        }
-        
-        # プロセス起動オプション
-        $startProcessArgs = @{
-            FilePath = $psCommand
-            ArgumentList = @("-sta", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$guiPath`"")
-            PassThru = $true
-            WindowStyle = "Normal"
-        }
-        
-        # プロセス起動
-        $process = Start-Process @startProcessArgs
-        
-        if ($process) {
-            Write-IconMessage $Script:Icons.Success "GUIプロセスが起動しました (PID: $($process.Id))" -Color Green
-            Write-LauncherLog "GUIプロセス起動完了: PID $($process.Id)" -Level Info
-            
-            # プロセスの健全性チェック
-            Start-Sleep -Milliseconds 1000
-            if (-not $process.HasExited) {
-                Write-IconMessage $Script:Icons.Success "GUIアプリケーションが正常に動作中です" -Color Green
-            } else {
-                Write-IconMessage $Script:Icons.Warning "GUIプロセスが予期せず終了しました。ログを確認してください。" -Color Yellow
-            }
-            
-            # プロセスの終了を待機しない（非同期起動）
-            Write-IconMessage $Script:Icons.Info "GUIアプリケーションが別プロセスで実行中です" -Color Cyan
-            
-        } else {
-            throw "GUIプロセスの起動に失敗しました"
-        }
-        
+    Show-Header -Minimal
+    Write-IconMessage $Script:Icons.GUI "GUI アプリケーションを起動しています..." -Color Cyan
+    Write-Host ""
+    
+    # アニメーション表示
+    $steps = @(
+        @{ Text = "環境チェック"; Icon = $Script:Icons.Search }
+        @{ Text = "モジュール読み込み"; Icon = $Script:Icons.Loading }
+        @{ Text = "GUI初期化"; Icon = $Script:Icons.Settings }
+        @{ Text = "起動準備完了"; Icon = $Script:Icons.Check }
+    )
+    
+    foreach ($step in $steps) {
+        Write-IconMessage $step.Icon $step.Text -Color Yellow
+        Start-Sleep -Milliseconds 500
     }
-    catch {
-        $errorMessage = $_.Exception.Message
-        Write-IconMessage $Script:Icons.Error "GUI起動エラー: $errorMessage" -Color Red
-        Write-LauncherLog "GUI起動エラー: $errorMessage" -Level Error
-        
-        # エラー時のトラブルシューティング提案
-        Write-Host ""
-        Write-IconMessage $Script:Icons.Info "トラブルシューティング:" -Color Cyan
-        Write-Host "  • PowerShell 7.0以上がインストールされているか確認してください" -ForegroundColor Gray
-        Write-Host "  • 実行ポリシーが適切に設定されているか確認してください" -ForegroundColor Gray
-        Write-Host "  • Windowsフォームアセンブリが利用可能か確認してください" -ForegroundColor Gray
-        Write-Host "  • CLIモードを試してみてください (オプション 2)" -ForegroundColor Gray
-        
-        # 詳細ログの提案
-        Write-Host ""
-        Write-IconMessage $Script:Icons.Info "詳細ログ: $Script:LogPath" -Color Cyan
+    
+    Write-Host ""
+    Write-IconMessage $Script:Icons.Rocket "起動中..." -Color Green
+    
+    $guiPath = Join-Path $PSScriptRoot "Apps\GuiApp.ps1"
+    
+    if (Test-Path $guiPath) {
+        try {
+            Write-LauncherLog "同じプロセスでGUI起動" -Level Info
+            
+            # 現在のプロセスがSTAモードか確認
+            if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
+                Write-IconMessage $Script:Icons.Warning "STAモードではありません。新しいPowerShellで起動します..." -Color Yellow
+                
+                # STAモードで新しいPowerShellを起動
+                if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+                    Start-Process pwsh -ArgumentList "-sta", "-NoProfile", "-File", "`"$guiPath`"" -Wait
+                } else {
+                    Start-Process powershell -ArgumentList "-sta", "-NoProfile", "-File", "`"$guiPath`"" -Wait
+                }
+            } else {
+                # 同じプロセスで実行
+                & $guiPath
+            }
+            
+            Write-IconMessage $Script:Icons.Success "GUIアプリケーションが正常に終了しました" -Color Green
+            Write-LauncherLog "GUIモード正常終了" -Level Info
+        }
+        catch {
+            Write-IconMessage $Script:Icons.Error "GUI起動エラー: $_" -Color Red
+            Write-LauncherLog "GUI起動エラー: $_" -Level Error
+        }
+    } else {
+        Write-IconMessage $Script:Icons.Error "GUIアプリケーションが見つかりません: $guiPath" -Color Red
+        Write-LauncherLog "GUIアプリケーション不在: $guiPath" -Level Error
     }
     
     if (-not $AutoExit) {
         Write-Host ""
         Write-ColorText "Enterキーを押してメニューに戻る..." -Color Gray
-        try {
-            Read-Host
-        }
-        catch {
-            # Read-Hostでエラーが発生した場合のフォールバック
-            Start-Sleep -Seconds 2
-        }
+        Read-Host
     }
 }
 
@@ -485,15 +363,7 @@ function Start-CLIMode {
     
     Write-Host ""
     Write-ColorText "選択してください [0-6]: " -Color Yellow -NoNewline
-    
-    # 安全なRead-Host実行
-    $choice = ""
-    try {
-        $choice = Read-Host
-    } catch {
-        Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-        return
-    }
+    $choice = Read-Host
     
     if ($choice -eq "0") {
         return
@@ -558,15 +428,7 @@ function Start-Setup {
     
     Write-Host ""
     Write-ColorText "選択してください [0-5]: " -Color Yellow -NoNewline
-    
-    # 安全なRead-Host実行
-    $choice = ""
-    try {
-        $choice = Read-Host
-    } catch {
-        Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-        return
-    }
+    $choice = Read-Host
     
     switch ($choice) {
         "1" { Start-QuickSetup }
@@ -639,15 +501,7 @@ function Start-TestMode {
     
     Write-Host ""
     Write-ColorText "選択してください [0-4]: " -Color Yellow -NoNewline
-    
-    # 安全なRead-Host実行
-    $choice = ""
-    try {
-        $choice = Read-Host
-    } catch {
-        Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-        return
-    }
+    $choice = Read-Host
     
     $selected = $testOptions | Where-Object { $_.Number -eq $choice }
     if ($selected -and $selected.Script) {
@@ -701,15 +555,7 @@ function Start-AdvancedMode {
     
     Write-Host ""
     Write-ColorText "選択してください [0-5]: " -Color Yellow -NoNewline
-    
-    # 安全なRead-Host実行
-    $choice = ""
-    try {
-        $choice = Read-Host
-    } catch {
-        Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-        return
-    }
+    $choice = Read-Host
     
     # TODO: 各機能の実装
     
@@ -758,12 +604,7 @@ function Show-Help {
     
     if (-not $AutoExit) {
         Write-ColorText "Enterキーを押してメニューに戻る..." -Color Gray
-        try {
-            Read-Host
-        } catch {
-            Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-            Start-Sleep -Seconds 2
-        }
+        Read-Host
     }
 }
 
@@ -794,17 +635,7 @@ function Main {
     # メインループ
     while ($true) {
         Show-MainMenu
-        
-        # 安全なRead-Host実行
-        $choice = ""
-        try {
-            $choice = Read-Host
-        } catch {
-            Write-LauncherLog "入力読み取りエラー: $($_.Exception.Message)" -Level Warning
-            # フォールバック：デフォルト動作
-            Start-Sleep -Seconds 2
-            continue
-        }
+        $choice = Read-Host
         
         switch ($choice) {
             "1" { Start-GUIMode }

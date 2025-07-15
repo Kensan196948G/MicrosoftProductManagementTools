@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライセンス使用状況レポート - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header .meta-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* コンテナ */
+        .container {
+            width: 95%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 2fr repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* サジェストボックス */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .suggestion-item.selected {
+            background-color: #e3f2fd;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown {
+            position: relative;
+        }
+        
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        /* フィルターボタン */
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        /* アクティブフィルター表示 */
+        .active-filters {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tag {
+            background: #e3f2fd;
+            color: #0078d4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-tag .remove {
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        
+        .filter-tag .remove:hover {
+            opacity: 1;
+        }
+        
+        /* データテーブル */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+        
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #e1e8ed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            font-size: 13px;
+        }
+        
+        td:hover {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
+            z-index: 1;
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        tbody tr.filtered-out {
+            display: none;
+        }
+        
+        /* ステータスバッジ */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* ページネーション */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e1e8ed;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #0078d4;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        
+        .page-info {
+            margin: 0 1rem;
+            color: #666;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .table-wrapper {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* アニメーション */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* ローディング */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                ライセンス使用状況レポート
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>生成日時: 2025年07月15日 16:00:18</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データ件数: <strong id="totalRecords">100</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-filter"></i>
+                        <span>表示中: <strong id="visibleRecords">100</strong> 件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <!-- 検索ボックス -->
+                <div class="search-container">
+                    <label for="searchInput">検索</label>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="search-box" 
+                           placeholder="検索キーワードを入力..."
+                           autocomplete="off">
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+                
+                <!-- ドロップダウンフィルター（動的に生成） -->
+                <div id="filterDropdowns"></div>
+                
+                <!-- フィルターアクション -->
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i>
+                        リセット
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF出力
+                    </button>
+                </div>
+            </div>
+            
+            <!-- アクティブフィルター -->
+            <div id="activeFilters" class="active-filters"></div>
+        </section>
+
+        <!-- データテーブル -->
+        <section class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">データ一覧</h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="toggleColumns()">
+                        <i class="fas fa-columns"></i>
+                        列の表示/非表示
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th>ライセンス種別</th>
+<th>総ライセンス数</th>
+<th>割当済み</th>
+<th>利用可能</th>
+<th>利用率</th>
+<th>月額コスト</th>
+<th>最終更新日</th>
+<th>次回更新日</th>
+<th>自動更新</th>
+<th>コスト最適化可能</th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td>Business Standard</td><td>222</td><td>190</td><td>32</td><td>85.6</td><td>2200</td><td>2025-07-09</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Business Standard</td><td>94</td><td>74</td><td>20</td><td>78.7</td><td>2200</td><td>2025-07-09</td><td>2025-11-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E3</td><td>135</td><td>109</td><td>26</td><td>80.7</td><td>4500</td><td>2025-07-09</td><td>2026-05-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>123</td><td>102</td><td>21</td><td>82.9</td><td>1400</td><td>2025-07-14</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>139</td><td>128</td><td>11</td><td>92.1</td><td>2200</td><td>2025-07-11</td><td>2025-11-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Business Premium</td><td>200</td><td>152</td><td>48</td><td>76</td><td>3300</td><td>2025-07-10</td><td>2025-09-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>203</td><td>168</td><td>35</td><td>82.8</td><td>6650</td><td>2025-07-10</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>207</td><td>190</td><td>17</td><td>91.8</td><td>4500</td><td>2025-07-10</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>213</td><td>177</td><td>36</td><td>83.1</td><td>6650</td><td>2025-07-14</td><td>2025-12-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>182</td><td>153</td><td>29</td><td>84.1</td><td>1400</td><td>2025-07-15</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>192</td><td>166</td><td>26</td><td>86.5</td><td>3300</td><td>2025-07-13</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>180</td><td>153</td><td>27</td><td>85</td><td>4500</td><td>2025-07-13</td><td>2026-03-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E3</td><td>167</td><td>126</td><td>41</td><td>75.4</td><td>4500</td><td>2025-07-11</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>102</td><td>68</td><td>34</td><td>66.7</td><td>4500</td><td>2025-07-15</td><td>2026-05-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>147</td><td>105</td><td>42</td><td>71.4</td><td>2200</td><td>2025-07-15</td><td>2026-06-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>232</td><td>198</td><td>34</td><td>85.3</td><td>1400</td><td>2025-07-09</td><td>2025-09-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>210</td><td>194</td><td>16</td><td>92.4</td><td>4500</td><td>2025-07-13</td><td>2025-11-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>165</td><td>134</td><td>31</td><td>81.2</td><td>2200</td><td>2025-07-10</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>141</td><td>116</td><td>25</td><td>82.3</td><td>3300</td><td>2025-07-12</td><td>2026-01-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Premium</td><td>113</td><td>96</td><td>17</td><td>85</td><td>3300</td><td>2025-07-14</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Standard</td><td>102</td><td>58</td><td>44</td><td>56.9</td><td>2200</td><td>2025-07-13</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>188</td><td>146</td><td>42</td><td>77.7</td><td>2200</td><td>2025-07-14</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>141</td><td>103</td><td>38</td><td>73</td><td>6650</td><td>2025-07-13</td><td>2025-11-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>167</td><td>143</td><td>24</td><td>85.6</td><td>3300</td><td>2025-07-14</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>72</td><td>55</td><td>17</td><td>76.4</td><td>1400</td><td>2025-07-13</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Office 365 E1</td><td>109</td><td>95</td><td>14</td><td>87.2</td><td>1400</td><td>2025-07-11</td><td>2026-05-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>174</td><td>149</td><td>25</td><td>85.6</td><td>3300</td><td>2025-07-11</td><td>2026-06-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>245</td><td>198</td><td>47</td><td>80.8</td><td>3300</td><td>2025-07-15</td><td>2026-05-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>150</td><td>104</td><td>46</td><td>69.3</td><td>1400</td><td>2025-07-11</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>208</td><td>165</td><td>43</td><td>79.3</td><td>6650</td><td>2025-07-10</td><td>2025-10-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>190</td><td>171</td><td>19</td><td>90</td><td>2200</td><td>2025-07-13</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>194</td><td>180</td><td>14</td><td>92.8</td><td>4500</td><td>2025-07-14</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>175</td><td>145</td><td>30</td><td>82.9</td><td>2200</td><td>2025-07-12</td><td>2026-05-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>178</td><td>166</td><td>12</td><td>93.3</td><td>3300</td><td>2025-07-14</td><td>2026-05-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>205</td><td>163</td><td>42</td><td>79.5</td><td>6650</td><td>2025-07-12</td><td>2025-12-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>88</td><td>64</td><td>24</td><td>72.7</td><td>4500</td><td>2025-07-10</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Office 365 E1</td><td>188</td><td>175</td><td>13</td><td>93.1</td><td>1400</td><td>2025-07-13</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>216</td><td>176</td><td>40</td><td>81.5</td><td>6650</td><td>2025-07-14</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>130</td><td>82</td><td>48</td><td>63.1</td><td>3300</td><td>2025-07-09</td><td>2025-10-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>210</td><td>196</td><td>14</td><td>93.3</td><td>6650</td><td>2025-07-09</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>156</td><td>110</td><td>46</td><td>70.5</td><td>6650</td><td>2025-07-15</td><td>2025-08-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>159</td><td>121</td><td>38</td><td>76.1</td><td>2200</td><td>2025-07-11</td><td>2025-11-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>201</td><td>172</td><td>29</td><td>85.6</td><td>6650</td><td>2025-07-15</td><td>2026-05-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E3</td><td>180</td><td>147</td><td>33</td><td>81.7</td><td>4500</td><td>2025-07-14</td><td>2026-06-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>135</td><td>87</td><td>48</td><td>64.4</td><td>3300</td><td>2025-07-14</td><td>2026-03-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>178</td><td>130</td><td>48</td><td>73</td><td>6650</td><td>2025-07-10</td><td>2026-02-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>137</td><td>103</td><td>34</td><td>75.2</td><td>1400</td><td>2025-07-13</td><td>2026-02-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>192</td><td>170</td><td>22</td><td>88.5</td><td>6650</td><td>2025-07-15</td><td>2025-09-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>188</td><td>178</td><td>10</td><td>94.7</td><td>6650</td><td>2025-07-14</td><td>2025-11-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>174</td><td>144</td><td>30</td><td>82.8</td><td>1400</td><td>2025-07-11</td><td>2025-09-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>93</td><td>50</td><td>43</td><td>53.8</td><td>2200</td><td>2025-07-14</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>182</td><td>154</td><td>28</td><td>84.6</td><td>6650</td><td>2025-07-11</td><td>2025-11-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>130</td><td>118</td><td>12</td><td>90.8</td><td>6650</td><td>2025-07-13</td><td>2026-01-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>201</td><td>159</td><td>42</td><td>79.1</td><td>3300</td><td>2025-07-14</td><td>2025-09-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Premium</td><td>175</td><td>130</td><td>45</td><td>74.3</td><td>3300</td><td>2025-07-14</td><td>2025-12-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>215</td><td>186</td><td>29</td><td>86.5</td><td>1400</td><td>2025-07-10</td><td>2025-12-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Premium</td><td>122</td><td>73</td><td>49</td><td>59.8</td><td>3300</td><td>2025-07-13</td><td>2025-12-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>96</td><td>69</td><td>27</td><td>71.9</td><td>3300</td><td>2025-07-14</td><td>2026-01-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>202</td><td>168</td><td>34</td><td>83.2</td><td>4500</td><td>2025-07-10</td><td>2025-10-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>90</td><td>51</td><td>39</td><td>56.7</td><td>4500</td><td>2025-07-14</td><td>2025-12-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Standard</td><td>191</td><td>166</td><td>25</td><td>86.9</td><td>2200</td><td>2025-07-09</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>130</td><td>112</td><td>18</td><td>86.2</td><td>1400</td><td>2025-07-10</td><td>2025-08-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>190</td><td>179</td><td>11</td><td>94.2</td><td>1400</td><td>2025-07-11</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>149</td><td>119</td><td>30</td><td>79.9</td><td>6650</td><td>2025-07-13</td><td>2026-03-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>105</td><td>83</td><td>22</td><td>79</td><td>3300</td><td>2025-07-09</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>219</td><td>176</td><td>43</td><td>80.4</td><td>4500</td><td>2025-07-12</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>223</td><td>188</td><td>35</td><td>84.3</td><td>6650</td><td>2025-07-13</td><td>2026-02-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>199</td><td>170</td><td>29</td><td>85.4</td><td>2200</td><td>2025-07-15</td><td>2026-02-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>116</td><td>84</td><td>32</td><td>72.4</td><td>1400</td><td>2025-07-15</td><td>2026-04-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>77</td><td>51</td><td>26</td><td>66.2</td><td>6650</td><td>2025-07-10</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>94</td><td>82</td><td>12</td><td>87.2</td><td>2200</td><td>2025-07-10</td><td>2025-11-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E3</td><td>216</td><td>194</td><td>22</td><td>89.8</td><td>4500</td><td>2025-07-11</td><td>2026-04-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>107</td><td>96</td><td>11</td><td>89.7</td><td>3300</td><td>2025-07-10</td><td>2025-11-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>159</td><td>130</td><td>29</td><td>81.8</td><td>6650</td><td>2025-07-13</td><td>2026-04-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>118</td><td>75</td><td>43</td><td>63.6</td><td>2200</td><td>2025-07-09</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>105</td><td>81</td><td>24</td><td>77.1</td><td>6650</td><td>2025-07-10</td><td>2025-08-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Office 365 E1</td><td>122</td><td>83</td><td>39</td><td>68</td><td>1400</td><td>2025-07-10</td><td>2026-06-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Premium</td><td>144</td><td>125</td><td>19</td><td>86.8</td><td>3300</td><td>2025-07-15</td><td>2025-11-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>191</td><td>176</td><td>15</td><td>92.1</td><td>2200</td><td>2025-07-15</td><td>2026-03-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>161</td><td>134</td><td>27</td><td>83.2</td><td>4500</td><td>2025-07-15</td><td>2026-01-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>110</td><td>93</td><td>17</td><td>84.5</td><td>6650</td><td>2025-07-13</td><td>2026-06-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>123</td><td>80</td><td>43</td><td>65</td><td>2200</td><td>2025-07-11</td><td>2025-10-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E3</td><td>206</td><td>158</td><td>48</td><td>76.7</td><td>4500</td><td>2025-07-12</td><td>2025-09-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>110</td><td>73</td><td>37</td><td>66.4</td><td>2200</td><td>2025-07-14</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Office 365 E1</td><td>146</td><td>130</td><td>16</td><td>89</td><td>1400</td><td>2025-07-09</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>101</td><td>54</td><td>47</td><td>53.5</td><td>4500</td><td>2025-07-09</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>227</td><td>184</td><td>43</td><td>81.1</td><td>4500</td><td>2025-07-15</td><td>2025-08-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Office 365 E1</td><td>113</td><td>88</td><td>25</td><td>77.9</td><td>1400</td><td>2025-07-14</td><td>2026-06-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Business Premium</td><td>105</td><td>71</td><td>34</td><td>67.6</td><td>3300</td><td>2025-07-10</td><td>2026-06-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>195</td><td>163</td><td>32</td><td>83.6</td><td>6650</td><td>2025-07-10</td><td>2026-01-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>196</td><td>172</td><td>24</td><td>87.8</td><td>6650</td><td>2025-07-15</td><td>2026-04-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>194</td><td>164</td><td>30</td><td>84.5</td><td>4500</td><td>2025-07-13</td><td>2026-04-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>91</td><td>67</td><td>24</td><td>73.6</td><td>4500</td><td>2025-07-12</td><td>2026-06-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Business Standard</td><td>140</td><td>106</td><td>34</td><td>75.7</td><td>2200</td><td>2025-07-10</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>81</td><td>67</td><td>14</td><td>82.7</td><td>6650</td><td>2025-07-09</td><td>2025-10-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E3</td><td>150</td><td>124</td><td>26</td><td>82.7</td><td>4500</td><td>2025-07-11</td><td>2026-06-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Microsoft 365 E5</td><td>200</td><td>173</td><td>27</td><td>86.5</td><td>6650</td><td>2025-07-11</td><td>2026-02-15</td><td><span class='badge badge-danger'>無効</span></td><td>不要</td></tr>
+<tr><td>Microsoft 365 E5</td><td>150</td><td>107</td><td>43</td><td>71.3</td><td>6650</td><td>2025-07-15</td><td>2026-03-15</td><td><span class='badge badge-danger'>無効</span></td><td>可能</td></tr>
+<tr><td>Business Standard</td><td>159</td><td>142</td><td>17</td><td>89.3</td><td>2200</td><td>2025-07-09</td><td>2026-05-15</td><td><span class='badge badge-success'>有効</span></td><td>可能</td></tr>
+<tr><td>Office 365 E1</td><td>210</td><td>165</td><td>45</td><td>78.6</td><td>1400</td><td>2025-07-14</td><td>2026-01-15</td><td><span class='badge badge-success'>有効</span></td><td>不要</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ページネーション -->
+            <div class="pagination" id="pagination"></div>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p>Microsoft 365統合管理ツール - 自動生成レポート</p>
+        <p>PowerShell 7.5.2 | Generated by v2.0</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="../../JavaScript/report-functions.js"></script>
+</body>
+</html>

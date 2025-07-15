@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teams アクティビティレポート - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header .meta-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* コンテナ */
+        .container {
+            width: 95%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 2fr repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* サジェストボックス */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .suggestion-item.selected {
+            background-color: #e3f2fd;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown {
+            position: relative;
+        }
+        
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        /* フィルターボタン */
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        /* アクティブフィルター表示 */
+        .active-filters {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tag {
+            background: #e3f2fd;
+            color: #0078d4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-tag .remove {
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        
+        .filter-tag .remove:hover {
+            opacity: 1;
+        }
+        
+        /* データテーブル */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+        
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #e1e8ed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            font-size: 13px;
+        }
+        
+        td:hover {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
+            z-index: 1;
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        tbody tr.filtered-out {
+            display: none;
+        }
+        
+        /* ステータスバッジ */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* ページネーション */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e1e8ed;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #0078d4;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        
+        .page-info {
+            margin: 0 1rem;
+            color: #666;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .table-wrapper {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* アニメーション */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* ローディング */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                Teams アクティビティレポート
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>生成日時: 2025年07月15日 16:00:19</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データ件数: <strong id="totalRecords">100</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-filter"></i>
+                        <span>表示中: <strong id="visibleRecords">100</strong> 件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <!-- 検索ボックス -->
+                <div class="search-container">
+                    <label for="searchInput">検索</label>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="search-box" 
+                           placeholder="検索キーワードを入力..."
+                           autocomplete="off">
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+                
+                <!-- ドロップダウンフィルター（動的に生成） -->
+                <div id="filterDropdowns"></div>
+                
+                <!-- フィルターアクション -->
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i>
+                        リセット
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF出力
+                    </button>
+                </div>
+            </div>
+            
+            <!-- アクティブフィルター -->
+            <div id="activeFilters" class="active-filters"></div>
+        </section>
+
+        <!-- データテーブル -->
+        <section class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">データ一覧</h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="toggleColumns()">
+                        <i class="fas fa-columns"></i>
+                        列の表示/非表示
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th>ユーザー名</th>
+<th>チーム参加数</th>
+<th>プライベートチャネル数</th>
+<th>チャットメッセージ数_週</th>
+<th>会議参加数_週</th>
+<th>会議主催数_週</th>
+<th>通話時間_分_週</th>
+<th>画面共有回数_週</th>
+<th>ファイル共有数_週</th>
+<th>最終アクティビティ</th>
+<th>デバイス</th>
+<th>アクティビティレベル</th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td>吉田昌子</td><td>16</td><td>8</td><td>446</td><td>16</td><td>6</td><td>257</td><td>8</td><td>16</td><td>2025-07-15 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>木村優子</td><td>9</td><td>3</td><td>84</td><td>7</td><td>1</td><td>26</td><td>9</td><td>17</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>吉田昌子</td><td>12</td><td>8</td><td>256</td><td>27</td><td>5</td><td>13</td><td>6</td><td>13</td><td>2025-07-10 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>松本由美</td><td>10</td><td>4</td><td>362</td><td>15</td><td>9</td><td>499</td><td>2</td><td>15</td><td>2025-07-11 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>鈴木花子</td><td>1</td><td>4</td><td>64</td><td>7</td><td>9</td><td>306</td><td>16</td><td>10</td><td>2025-07-10 16:00:19</td><td>Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>山田和也</td><td>16</td><td>2</td><td>42</td><td>15</td><td>1</td><td>541</td><td>16</td><td>33</td><td>2025-07-09 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>高橋美咲</td><td>13</td><td>9</td><td>429</td><td>8</td><td>8</td><td>221</td><td>1</td><td>38</td><td>2025-07-09 16:00:19</td><td>Desktop</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>渡辺健一</td><td>13</td><td>2</td><td>317</td><td>18</td><td>9</td><td>304</td><td>8</td><td>9</td><td>2025-07-12 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>松本由美</td><td>13</td><td>8</td><td>478</td><td>9</td><td>0</td><td>298</td><td>3</td><td>4</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>山田和也</td><td>11</td><td>6</td><td>249</td><td>8</td><td>8</td><td>590</td><td>10</td><td>18</td><td>2025-07-15 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>田中太郎</td><td>8</td><td>3</td><td>440</td><td>10</td><td>0</td><td>462</td><td>0</td><td>18</td><td>2025-07-14 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>吉田昌子</td><td>18</td><td>9</td><td>285</td><td>27</td><td>9</td><td>0</td><td>9</td><td>10</td><td>2025-07-11 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>鈴木花子</td><td>18</td><td>1</td><td>145</td><td>21</td><td>8</td><td>509</td><td>13</td><td>0</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>鈴木花子</td><td>6</td><td>8</td><td>166</td><td>28</td><td>6</td><td>53</td><td>2</td><td>18</td><td>2025-07-12 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>伊藤光子</td><td>4</td><td>0</td><td>67</td><td>12</td><td>6</td><td>413</td><td>14</td><td>13</td><td>2025-07-14 16:00:19</td><td>Desktop</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>高橋美咲</td><td>1</td><td>8</td><td>369</td><td>2</td><td>1</td><td>257</td><td>12</td><td>37</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>木村優子</td><td>18</td><td>7</td><td>492</td><td>11</td><td>0</td><td>127</td><td>19</td><td>27</td><td>2025-07-11 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山本健二</td><td>11</td><td>4</td><td>132</td><td>2</td><td>7</td><td>557</td><td>19</td><td>34</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>井上雅人</td><td>12</td><td>9</td><td>323</td><td>24</td><td>5</td><td>324</td><td>5</td><td>32</td><td>2025-07-13 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>渡辺健一</td><td>10</td><td>2</td><td>309</td><td>12</td><td>0</td><td>592</td><td>2</td><td>8</td><td>2025-07-10 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>松本由美</td><td>15</td><td>7</td><td>374</td><td>0</td><td>5</td><td>300</td><td>12</td><td>41</td><td>2025-07-15 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>山本健二</td><td>7</td><td>0</td><td>45</td><td>16</td><td>3</td><td>534</td><td>2</td><td>23</td><td>2025-07-11 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>井上雅人</td><td>15</td><td>4</td><td>328</td><td>1</td><td>4</td><td>515</td><td>14</td><td>10</td><td>2025-07-15 16:00:19</td><td>Desktop</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>伊藤光子</td><td>18</td><td>5</td><td>172</td><td>4</td><td>4</td><td>271</td><td>11</td><td>2</td><td>2025-07-09 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>小林秀樹</td><td>16</td><td>1</td><td>418</td><td>24</td><td>3</td><td>7</td><td>7</td><td>14</td><td>2025-07-10 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>高橋美咲</td><td>9</td><td>6</td><td>448</td><td>24</td><td>4</td><td>434</td><td>15</td><td>43</td><td>2025-07-09 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山田和也</td><td>7</td><td>1</td><td>463</td><td>13</td><td>4</td><td>56</td><td>10</td><td>11</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>井上雅人</td><td>4</td><td>6</td><td>400</td><td>24</td><td>4</td><td>198</td><td>8</td><td>24</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>吉田昌子</td><td>3</td><td>2</td><td>273</td><td>10</td><td>9</td><td>25</td><td>4</td><td>16</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>吉田昌子</td><td>2</td><td>0</td><td>178</td><td>22</td><td>8</td><td>225</td><td>1</td><td>5</td><td>2025-07-12 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>高橋美咲</td><td>16</td><td>2</td><td>187</td><td>18</td><td>2</td><td>27</td><td>10</td><td>44</td><td>2025-07-09 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山本健二</td><td>17</td><td>9</td><td>396</td><td>3</td><td>4</td><td>390</td><td>19</td><td>43</td><td>2025-07-14 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>木村優子</td><td>5</td><td>6</td><td>189</td><td>6</td><td>6</td><td>66</td><td>8</td><td>11</td><td>2025-07-14 16:00:19</td><td>Desktop</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>中村真理</td><td>18</td><td>9</td><td>87</td><td>5</td><td>0</td><td>280</td><td>18</td><td>26</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>小林秀樹</td><td>1</td><td>5</td><td>471</td><td>18</td><td>7</td><td>33</td><td>18</td><td>19</td><td>2025-07-15 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>井上雅人</td><td>2</td><td>5</td><td>390</td><td>14</td><td>4</td><td>107</td><td>9</td><td>44</td><td>2025-07-10 16:00:19</td><td>Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>伊藤光子</td><td>18</td><td>4</td><td>150</td><td>1</td><td>6</td><td>579</td><td>18</td><td>46</td><td>2025-07-14 16:00:19</td><td>Desktop</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>渡辺健一</td><td>6</td><td>6</td><td>416</td><td>14</td><td>6</td><td>399</td><td>2</td><td>13</td><td>2025-07-13 16:00:19</td><td>Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>松本由美</td><td>3</td><td>4</td><td>379</td><td>6</td><td>1</td><td>327</td><td>1</td><td>32</td><td>2025-07-14 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山本健二</td><td>16</td><td>6</td><td>321</td><td>13</td><td>6</td><td>15</td><td>18</td><td>21</td><td>2025-07-14 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>木村優子</td><td>11</td><td>1</td><td>156</td><td>17</td><td>2</td><td>303</td><td>19</td><td>26</td><td>2025-07-13 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>井上雅人</td><td>10</td><td>0</td><td>105</td><td>14</td><td>8</td><td>453</td><td>11</td><td>24</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>高橋美咲</td><td>8</td><td>1</td><td>182</td><td>7</td><td>4</td><td>524</td><td>6</td><td>25</td><td>2025-07-14 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>伊藤光子</td><td>2</td><td>7</td><td>491</td><td>17</td><td>2</td><td>578</td><td>0</td><td>8</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>加藤明美</td><td>18</td><td>7</td><td>242</td><td>26</td><td>6</td><td>116</td><td>2</td><td>39</td><td>2025-07-15 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>山本健二</td><td>1</td><td>4</td><td>141</td><td>20</td><td>8</td><td>574</td><td>19</td><td>37</td><td>2025-07-15 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>加藤明美</td><td>8</td><td>9</td><td>403</td><td>19</td><td>5</td><td>283</td><td>10</td><td>21</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>吉田昌子</td><td>2</td><td>9</td><td>410</td><td>10</td><td>3</td><td>207</td><td>19</td><td>7</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>高橋美咲</td><td>7</td><td>4</td><td>428</td><td>21</td><td>6</td><td>275</td><td>17</td><td>33</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>山田和也</td><td>2</td><td>7</td><td>386</td><td>22</td><td>6</td><td>492</td><td>1</td><td>40</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>小林秀樹</td><td>2</td><td>3</td><td>316</td><td>24</td><td>6</td><td>34</td><td>18</td><td>17</td><td>2025-07-15 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>鈴木花子</td><td>10</td><td>1</td><td>459</td><td>2</td><td>9</td><td>375</td><td>3</td><td>17</td><td>2025-07-10 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>井上雅人</td><td>5</td><td>9</td><td>50</td><td>26</td><td>2</td><td>538</td><td>4</td><td>4</td><td>2025-07-10 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>鈴木花子</td><td>18</td><td>3</td><td>57</td><td>14</td><td>6</td><td>341</td><td>9</td><td>17</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>中村真理</td><td>10</td><td>6</td><td>314</td><td>10</td><td>6</td><td>403</td><td>15</td><td>25</td><td>2025-07-11 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>田中太郎</td><td>4</td><td>7</td><td>159</td><td>27</td><td>8</td><td>282</td><td>17</td><td>3</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>高橋美咲</td><td>5</td><td>9</td><td>289</td><td>24</td><td>1</td><td>483</td><td>2</td><td>5</td><td>2025-07-14 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>山田和也</td><td>15</td><td>9</td><td>345</td><td>0</td><td>7</td><td>72</td><td>12</td><td>21</td><td>2025-07-09 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山田和也</td><td>15</td><td>6</td><td>447</td><td>2</td><td>5</td><td>147</td><td>5</td><td>17</td><td>2025-07-12 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>田中太郎</td><td>1</td><td>1</td><td>33</td><td>4</td><td>1</td><td>86</td><td>3</td><td>33</td><td>2025-07-13 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>田中太郎</td><td>16</td><td>1</td><td>295</td><td>8</td><td>2</td><td>596</td><td>14</td><td>35</td><td>2025-07-14 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山本健二</td><td>17</td><td>8</td><td>46</td><td>9</td><td>7</td><td>227</td><td>1</td><td>21</td><td>2025-07-10 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>渡辺健一</td><td>14</td><td>4</td><td>257</td><td>13</td><td>9</td><td>433</td><td>4</td><td>47</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>小林秀樹</td><td>7</td><td>7</td><td>128</td><td>9</td><td>0</td><td>338</td><td>19</td><td>7</td><td>2025-07-11 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>中村真理</td><td>5</td><td>2</td><td>215</td><td>11</td><td>8</td><td>197</td><td>4</td><td>44</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>木村優子</td><td>9</td><td>4</td><td>73</td><td>23</td><td>9</td><td>317</td><td>7</td><td>49</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>渡辺健一</td><td>6</td><td>4</td><td>151</td><td>12</td><td>9</td><td>359</td><td>0</td><td>28</td><td>2025-07-10 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>木村優子</td><td>9</td><td>5</td><td>187</td><td>10</td><td>9</td><td>24</td><td>4</td><td>48</td><td>2025-07-11 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>佐藤次郎</td><td>9</td><td>3</td><td>235</td><td>26</td><td>3</td><td>249</td><td>12</td><td>35</td><td>2025-07-13 16:00:19</td><td>Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>伊藤光子</td><td>8</td><td>6</td><td>43</td><td>20</td><td>8</td><td>332</td><td>3</td><td>10</td><td>2025-07-14 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>山田和也</td><td>13</td><td>4</td><td>301</td><td>1</td><td>1</td><td>140</td><td>1</td><td>36</td><td>2025-07-14 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>渡辺健一</td><td>12</td><td>2</td><td>99</td><td>10</td><td>8</td><td>337</td><td>11</td><td>46</td><td>2025-07-12 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>木村優子</td><td>9</td><td>5</td><td>456</td><td>28</td><td>9</td><td>146</td><td>14</td><td>33</td><td>2025-07-15 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>井上雅人</td><td>4</td><td>9</td><td>228</td><td>23</td><td>4</td><td>432</td><td>3</td><td>44</td><td>2025-07-09 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>田中太郎</td><td>14</td><td>1</td><td>53</td><td>4</td><td>9</td><td>116</td><td>2</td><td>20</td><td>2025-07-15 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>鈴木花子</td><td>16</td><td>1</td><td>250</td><td>25</td><td>0</td><td>276</td><td>14</td><td>49</td><td>2025-07-12 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>加藤明美</td><td>10</td><td>4</td><td>102</td><td>18</td><td>3</td><td>66</td><td>16</td><td>38</td><td>2025-07-14 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>山本健二</td><td>5</td><td>7</td><td>276</td><td>16</td><td>3</td><td>562</td><td>2</td><td>27</td><td>2025-07-10 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>吉田昌子</td><td>8</td><td>4</td><td>82</td><td>7</td><td>0</td><td>313</td><td>6</td><td>30</td><td>2025-07-14 16:00:19</td><td>Mobile</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>高橋美咲</td><td>1</td><td>1</td><td>219</td><td>8</td><td>6</td><td>203</td><td>5</td><td>26</td><td>2025-07-15 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>松本由美</td><td>16</td><td>7</td><td>96</td><td>24</td><td>5</td><td>169</td><td>16</td><td>19</td><td>2025-07-11 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>加藤明美</td><td>17</td><td>9</td><td>326</td><td>18</td><td>6</td><td>7</td><td>0</td><td>6</td><td>2025-07-14 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>鈴木花子</td><td>7</td><td>9</td><td>335</td><td>7</td><td>6</td><td>405</td><td>16</td><td>41</td><td>2025-07-14 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>田中太郎</td><td>11</td><td>9</td><td>140</td><td>0</td><td>0</td><td>199</td><td>17</td><td>15</td><td>2025-07-15 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>渡辺健一</td><td>17</td><td>4</td><td>85</td><td>15</td><td>8</td><td>397</td><td>18</td><td>27</td><td>2025-07-09 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>中村真理</td><td>19</td><td>9</td><td>73</td><td>23</td><td>6</td><td>582</td><td>7</td><td>15</td><td>2025-07-13 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>田中太郎</td><td>19</td><td>0</td><td>492</td><td>28</td><td>1</td><td>35</td><td>13</td><td>14</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>加藤明美</td><td>8</td><td>6</td><td>60</td><td>15</td><td>9</td><td>180</td><td>6</td><td>22</td><td>2025-07-11 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>井上雅人</td><td>6</td><td>3</td><td>83</td><td>8</td><td>5</td><td>502</td><td>16</td><td>11</td><td>2025-07-13 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>佐藤次郎</td><td>3</td><td>9</td><td>205</td><td>9</td><td>8</td><td>225</td><td>18</td><td>44</td><td>2025-07-12 16:00:19</td><td>Desktop</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>加藤明美</td><td>13</td><td>6</td><td>299</td><td>13</td><td>3</td><td>104</td><td>18</td><td>10</td><td>2025-07-13 16:00:19</td><td>Web</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>山本健二</td><td>10</td><td>7</td><td>393</td><td>3</td><td>4</td><td>189</td><td>14</td><td>26</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-danger'>高</span></td></tr>
+<tr><td>山田和也</td><td>11</td><td>7</td><td>233</td><td>27</td><td>1</td><td>349</td><td>7</td><td>35</td><td>2025-07-10 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-danger'>非アクティブ</span></td></tr>
+<tr><td>高橋美咲</td><td>15</td><td>6</td><td>490</td><td>7</td><td>2</td><td>458</td><td>5</td><td>42</td><td>2025-07-10 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>山本健二</td><td>4</td><td>0</td><td>420</td><td>3</td><td>2</td><td>59</td><td>4</td><td>42</td><td>2025-07-13 16:00:19</td><td>Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>鈴木花子</td><td>2</td><td>9</td><td>447</td><td>22</td><td>6</td><td>316</td><td>14</td><td>43</td><td>2025-07-11 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>山本健二</td><td>8</td><td>3</td><td>268</td><td>6</td><td>7</td><td>217</td><td>12</td><td>27</td><td>2025-07-14 16:00:19</td><td>Desktop/Mobile</td><td><span class='badge badge-success'>低</span></td></tr>
+<tr><td>山田和也</td><td>13</td><td>0</td><td>22</td><td>17</td><td>0</td><td>473</td><td>2</td><td>30</td><td>2025-07-12 16:00:19</td><td>Web</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>吉田昌子</td><td>7</td><td>2</td><td>470</td><td>1</td><td>5</td><td>216</td><td>3</td><td>44</td><td>2025-07-14 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+<tr><td>高橋美咲</td><td>14</td><td>1</td><td>405</td><td>18</td><td>6</td><td>357</td><td>17</td><td>28</td><td>2025-07-12 16:00:19</td><td>Mobile</td><td><span class='badge badge-warning'>中</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ページネーション -->
+            <div class="pagination" id="pagination"></div>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p>Microsoft 365統合管理ツール - 自動生成レポート</p>
+        <p>PowerShell 7.5.2 | Generated by v2.0</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="../../JavaScript/report-functions.js"></script>
+</body>
+</html>

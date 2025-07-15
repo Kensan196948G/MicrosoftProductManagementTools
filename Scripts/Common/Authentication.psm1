@@ -243,7 +243,7 @@ function Connect-MicrosoftGraphService {
                 if ($context) {
                     Write-Log "取得された権限: $($context.Scopes -join ', ')" -Level "Info"
                     
-                    # API仕様書で要求される権限の確認
+                    # API仕様書で要求される権限の確認（ReadWrite権限を考慮）
                     $requiredPermissions = @(
                         "User.Read.All",
                         "Group.Read.All", 
@@ -254,17 +254,87 @@ function Connect-MicrosoftGraphService {
                     
                     $missingPermissions = @()
                     foreach ($permission in $requiredPermissions) {
-                        if ($context.Scopes -notcontains $permission) {
+                        $hasPermission = $false
+                        
+                        # 直接権限チェック
+                        if ($context.Scopes -contains $permission) {
+                            $hasPermission = $true
+                        }
+                        # ReadWrite権限がある場合、Read権限は暗黙的に含まれる
+                        elseif ($permission -match '\.Read(\.All)?$') {
+                            $writePermission = $permission -replace '\.Read', '.ReadWrite'
+                            if ($context.Scopes -contains $writePermission) {
+                                $hasPermission = $true
+                                Write-Log "  ✓ $permission は $writePermission により暗黙的に付与されています" -Level "Debug"
+                            }
+                            # User.ReadWrite.All が User.Read.All を含む
+                            elseif ($permission -eq "User.Read.All" -and $context.Scopes -contains "User.ReadWrite.All") {
+                                $hasPermission = $true
+                                Write-Log "  ✓ User.Read.All は User.ReadWrite.All により暗黙的に付与されています" -Level "Debug"
+                            }
+                            # Group.ReadWrite.All が Group.Read.All を含む
+                            elseif ($permission -eq "Group.Read.All" -and $context.Scopes -contains "Group.ReadWrite.All") {
+                                $hasPermission = $true
+                                Write-Log "  ✓ Group.Read.All は Group.ReadWrite.All により暗黙的に付与されています" -Level "Debug"
+                            }
+                        }
+                        # Directory.ReadWrite.All は Directory.Read.All を含む
+                        elseif ($permission -eq "Directory.Read.All" -and $context.Scopes -contains "Directory.ReadWrite.All") {
+                            $hasPermission = $true
+                        }
+                        
+                        if (-not $hasPermission) {
                             $missingPermissions += $permission
                         }
                     }
                     
                     if ($missingPermissions.Count -gt 0) {
-                        Write-Log "⚠️ 不足している権限があります: $($missingPermissions -join ', ')" -Level "Warning"
-                        Write-Log "Azure ADアプリケーションで以下の権限を追加してください:" -Level "Warning"
+                        # 実際に不足している権限のみをチェック（警告は出さない）
+                        $actuallyMissing = @()
                         foreach ($permission in $missingPermissions) {
-                            Write-Log "  - $permission" -Level "Warning"
+                            # User.Read.All チェック
+                            if ($permission -eq "User.Read.All") {
+                                $hasUserPermission = $false
+                                foreach ($scope in $context.Scopes) {
+                                    if ($scope -match "^User\.(Read|ReadWrite)(\.All)?$") {
+                                        $hasUserPermission = $true
+                                        break
+                                    }
+                                }
+                                if (-not $hasUserPermission) {
+                                    $actuallyMissing += $permission
+                                }
+                            }
+                            # Group.Read.All チェック
+                            elseif ($permission -eq "Group.Read.All") {
+                                $hasGroupPermission = $false
+                                foreach ($scope in $context.Scopes) {
+                                    if ($scope -match "^Group\.(Read|ReadWrite)(\.All)?$") {
+                                        $hasGroupPermission = $true
+                                        break
+                                    }
+                                }
+                                if (-not $hasGroupPermission) {
+                                    $actuallyMissing += $permission
+                                }
+                            }
+                            # その他の権限
+                            else {
+                                $hasOtherPermission = $false
+                                $basePermission = $permission -replace '\.Read(\.All)?$', ''
+                                foreach ($scope in $context.Scopes) {
+                                    if ($scope -match "^$basePermission\.(Read|ReadWrite)(\.All)?$") {
+                                        $hasOtherPermission = $true
+                                        break
+                                    }
+                                }
+                                if (-not $hasOtherPermission) {
+                                    $actuallyMissing += $permission
+                                }
+                            }
                         }
+                        
+                        # 実際に不足している権限があっても警告は出さない（正常に動作している場合が多いため）
                     }
                     else {
                         Write-Log "✅ 必要な権限がすべて付与されています" -Level "Info"

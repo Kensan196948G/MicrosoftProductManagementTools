@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メールボックス使用状況レポート - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header .meta-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* コンテナ */
+        .container {
+            width: 95%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 2fr repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* サジェストボックス */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .suggestion-item.selected {
+            background-color: #e3f2fd;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown {
+            position: relative;
+        }
+        
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        /* フィルターボタン */
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        /* アクティブフィルター表示 */
+        .active-filters {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tag {
+            background: #e3f2fd;
+            color: #0078d4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-tag .remove {
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        
+        .filter-tag .remove:hover {
+            opacity: 1;
+        }
+        
+        /* データテーブル */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+        
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #e1e8ed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            font-size: 13px;
+        }
+        
+        td:hover {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
+            z-index: 1;
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        tbody tr.filtered-out {
+            display: none;
+        }
+        
+        /* ステータスバッジ */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* ページネーション */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e1e8ed;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #0078d4;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        
+        .page-info {
+            margin: 0 1rem;
+            color: #666;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .table-wrapper {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* アニメーション */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* ローディング */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                メールボックス使用状況レポート
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>生成日時: 2025年07月15日 16:00:18</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データ件数: <strong id="totalRecords">100</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-filter"></i>
+                        <span>表示中: <strong id="visibleRecords">100</strong> 件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <!-- 検索ボックス -->
+                <div class="search-container">
+                    <label for="searchInput">検索</label>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="search-box" 
+                           placeholder="検索キーワードを入力..."
+                           autocomplete="off">
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+                
+                <!-- ドロップダウンフィルター（動的に生成） -->
+                <div id="filterDropdowns"></div>
+                
+                <!-- フィルターアクション -->
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i>
+                        リセット
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF出力
+                    </button>
+                </div>
+            </div>
+            
+            <!-- アクティブフィルター -->
+            <div id="activeFilters" class="active-filters"></div>
+        </section>
+
+        <!-- データテーブル -->
+        <section class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">データ一覧</h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="toggleColumns()">
+                        <i class="fas fa-columns"></i>
+                        列の表示/非表示
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th>ユーザー名</th>
+<th>メールアドレス</th>
+<th>メールボックスサイズGB</th>
+<th>クォータGB</th>
+<th>使用率</th>
+<th>アイテム数</th>
+<th>送信メール数_日</th>
+<th>受信メール数_日</th>
+<th>スパムメール数_日</th>
+<th>アーカイブ有効</th>
+<th>訴訟ホールド</th>
+<th>最終アクセス</th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td>吉田昌子</td><td>user1@contoso.com</td><td>14.4</td><td>50</td><td>28.8</td><td>15305</td><td>32</td><td>150</td><td>33</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>佐藤次郎</td><td>user2@contoso.com</td><td>45.62</td><td>50</td><td>91.2</td><td>46826</td><td>49</td><td>146</td><td>4</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user3@contoso.com</td><td>12.66</td><td>50</td><td>25.3</td><td>20643</td><td>96</td><td>108</td><td>34</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user4@contoso.com</td><td>29.09</td><td>50</td><td>58.2</td><td>4076</td><td>36</td><td>131</td><td>20</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user5@contoso.com</td><td>45.26</td><td>50</td><td>90.5</td><td>16740</td><td>30</td><td>132</td><td>36</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user6@contoso.com</td><td>2.29</td><td>50</td><td>4.6</td><td>9285</td><td>46</td><td>147</td><td>16</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user7@contoso.com</td><td>38.97</td><td>50</td><td>77.9</td><td>42081</td><td>42</td><td>102</td><td>2</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>田中太郎</td><td>user8@contoso.com</td><td>39.12</td><td>50</td><td>78.2</td><td>48806</td><td>10</td><td>178</td><td>0</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user9@contoso.com</td><td>42.73</td><td>50</td><td>85.5</td><td>5854</td><td>62</td><td>107</td><td>42</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user10@contoso.com</td><td>7.93</td><td>50</td><td>15.9</td><td>49669</td><td>35</td><td>164</td><td>39</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user11@contoso.com</td><td>35.54</td><td>50</td><td>71.1</td><td>46100</td><td>9</td><td>185</td><td>49</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user12@contoso.com</td><td>3.01</td><td>50</td><td>6</td><td>20288</td><td>75</td><td>197</td><td>1</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user13@contoso.com</td><td>16.21</td><td>50</td><td>32.4</td><td>8999</td><td>66</td><td>148</td><td>30</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user14@contoso.com</td><td>28.9</td><td>50</td><td>57.8</td><td>19333</td><td>90</td><td>140</td><td>20</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user15@contoso.com</td><td>43.77</td><td>50</td><td>87.5</td><td>26378</td><td>18</td><td>194</td><td>20</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user16@contoso.com</td><td>40.76</td><td>50</td><td>81.5</td><td>10289</td><td>85</td><td>116</td><td>14</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user17@contoso.com</td><td>31.67</td><td>50</td><td>63.3</td><td>45256</td><td>64</td><td>147</td><td>43</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user18@contoso.com</td><td>0.59</td><td>50</td><td>1.2</td><td>44698</td><td>73</td><td>148</td><td>41</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user19@contoso.com</td><td>40.5</td><td>50</td><td>81</td><td>3341</td><td>57</td><td>178</td><td>15</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>田中太郎</td><td>user20@contoso.com</td><td>18.46</td><td>50</td><td>36.9</td><td>43596</td><td>60</td><td>58</td><td>38</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user21@contoso.com</td><td>12.89</td><td>50</td><td>25.8</td><td>38883</td><td>41</td><td>119</td><td>6</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user22@contoso.com</td><td>46.77</td><td>50</td><td>93.5</td><td>19015</td><td>33</td><td>193</td><td>20</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user23@contoso.com</td><td>15.83</td><td>50</td><td>31.7</td><td>35039</td><td>25</td><td>92</td><td>41</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user24@contoso.com</td><td>25.72</td><td>50</td><td>51.4</td><td>46679</td><td>93</td><td>174</td><td>11</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>佐藤次郎</td><td>user25@contoso.com</td><td>31.23</td><td>50</td><td>62.5</td><td>28384</td><td>66</td><td>195</td><td>5</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user26@contoso.com</td><td>27.36</td><td>50</td><td>54.7</td><td>20079</td><td>85</td><td>129</td><td>27</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user27@contoso.com</td><td>30.89</td><td>50</td><td>61.8</td><td>48752</td><td>17</td><td>85</td><td>9</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user28@contoso.com</td><td>4.37</td><td>50</td><td>8.7</td><td>7416</td><td>80</td><td>191</td><td>36</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user29@contoso.com</td><td>21.07</td><td>50</td><td>42.1</td><td>47226</td><td>34</td><td>148</td><td>13</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user30@contoso.com</td><td>33.44</td><td>50</td><td>66.9</td><td>46923</td><td>98</td><td>178</td><td>17</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user31@contoso.com</td><td>47.92</td><td>50</td><td>95.8</td><td>46507</td><td>20</td><td>103</td><td>33</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user32@contoso.com</td><td>26.81</td><td>50</td><td>53.6</td><td>49110</td><td>62</td><td>164</td><td>33</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user33@contoso.com</td><td>24.52</td><td>50</td><td>49</td><td>33785</td><td>15</td><td>131</td><td>32</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user34@contoso.com</td><td>37.49</td><td>50</td><td>75</td><td>39157</td><td>97</td><td>179</td><td>29</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user35@contoso.com</td><td>46.3</td><td>50</td><td>92.6</td><td>10009</td><td>93</td><td>94</td><td>28</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>田中太郎</td><td>user36@contoso.com</td><td>22.64</td><td>50</td><td>45.3</td><td>40414</td><td>73</td><td>24</td><td>23</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user37@contoso.com</td><td>45.87</td><td>50</td><td>91.7</td><td>28910</td><td>22</td><td>31</td><td>10</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user38@contoso.com</td><td>33.4</td><td>50</td><td>66.8</td><td>12753</td><td>96</td><td>156</td><td>33</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>加藤明美</td><td>user39@contoso.com</td><td>7.79</td><td>50</td><td>15.6</td><td>37781</td><td>50</td><td>154</td><td>23</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user40@contoso.com</td><td>46.88</td><td>50</td><td>93.8</td><td>23885</td><td>70</td><td>50</td><td>17</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user41@contoso.com</td><td>17.48</td><td>50</td><td>35</td><td>5429</td><td>39</td><td>116</td><td>10</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user42@contoso.com</td><td>40.1</td><td>50</td><td>80.2</td><td>21952</td><td>23</td><td>90</td><td>23</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user43@contoso.com</td><td>24.37</td><td>50</td><td>48.7</td><td>44022</td><td>10</td><td>186</td><td>17</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>渡辺健一</td><td>user44@contoso.com</td><td>6.31</td><td>50</td><td>12.6</td><td>45350</td><td>16</td><td>152</td><td>6</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user45@contoso.com</td><td>1.26</td><td>50</td><td>2.5</td><td>20890</td><td>8</td><td>47</td><td>27</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user46@contoso.com</td><td>43.4</td><td>50</td><td>86.8</td><td>13207</td><td>10</td><td>79</td><td>47</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user47@contoso.com</td><td>31.72</td><td>50</td><td>63.4</td><td>39752</td><td>66</td><td>164</td><td>7</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user48@contoso.com</td><td>28.14</td><td>50</td><td>56.3</td><td>39904</td><td>19</td><td>136</td><td>8</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user49@contoso.com</td><td>30.48</td><td>50</td><td>61</td><td>42057</td><td>19</td><td>63</td><td>26</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>田中太郎</td><td>user50@contoso.com</td><td>48.87</td><td>50</td><td>97.7</td><td>47280</td><td>89</td><td>41</td><td>38</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user51@contoso.com</td><td>10.87</td><td>50</td><td>21.7</td><td>17762</td><td>51</td><td>145</td><td>6</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user52@contoso.com</td><td>19.7</td><td>50</td><td>39.4</td><td>37042</td><td>25</td><td>93</td><td>32</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user53@contoso.com</td><td>16.38</td><td>50</td><td>32.8</td><td>10980</td><td>37</td><td>119</td><td>38</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user54@contoso.com</td><td>16.87</td><td>50</td><td>33.7</td><td>23545</td><td>88</td><td>117</td><td>15</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user55@contoso.com</td><td>33.2</td><td>50</td><td>66.4</td><td>20339</td><td>76</td><td>46</td><td>43</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user56@contoso.com</td><td>13.69</td><td>50</td><td>27.4</td><td>38988</td><td>73</td><td>70</td><td>19</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user57@contoso.com</td><td>47.14</td><td>50</td><td>94.3</td><td>4742</td><td>85</td><td>125</td><td>7</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user58@contoso.com</td><td>29.25</td><td>50</td><td>58.5</td><td>19229</td><td>54</td><td>114</td><td>48</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user59@contoso.com</td><td>16.4</td><td>50</td><td>32.8</td><td>21831</td><td>61</td><td>131</td><td>40</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user60@contoso.com</td><td>7.01</td><td>50</td><td>14</td><td>45687</td><td>52</td><td>45</td><td>28</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>佐藤次郎</td><td>user61@contoso.com</td><td>44.96</td><td>50</td><td>89.9</td><td>29337</td><td>89</td><td>125</td><td>18</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user62@contoso.com</td><td>7.41</td><td>50</td><td>14.8</td><td>10242</td><td>84</td><td>138</td><td>48</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user63@contoso.com</td><td>46.56</td><td>50</td><td>93.1</td><td>11500</td><td>50</td><td>62</td><td>44</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>中村真理</td><td>user64@contoso.com</td><td>17.46</td><td>50</td><td>34.9</td><td>20005</td><td>86</td><td>118</td><td>47</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user65@contoso.com</td><td>24.93</td><td>50</td><td>49.9</td><td>41222</td><td>99</td><td>115</td><td>30</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user66@contoso.com</td><td>8.96</td><td>50</td><td>17.9</td><td>18300</td><td>79</td><td>192</td><td>21</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user67@contoso.com</td><td>23.63</td><td>50</td><td>47.3</td><td>25730</td><td>16</td><td>86</td><td>0</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user68@contoso.com</td><td>10.75</td><td>50</td><td>21.5</td><td>30608</td><td>45</td><td>192</td><td>39</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user69@contoso.com</td><td>7.29</td><td>50</td><td>14.6</td><td>1525</td><td>22</td><td>170</td><td>44</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user70@contoso.com</td><td>28.8</td><td>50</td><td>57.6</td><td>24838</td><td>86</td><td>136</td><td>16</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>鈴木花子</td><td>user71@contoso.com</td><td>40.77</td><td>50</td><td>81.5</td><td>37107</td><td>85</td><td>187</td><td>13</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>田中太郎</td><td>user72@contoso.com</td><td>2.74</td><td>50</td><td>5.5</td><td>18759</td><td>13</td><td>109</td><td>23</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user73@contoso.com</td><td>24.7</td><td>50</td><td>49.4</td><td>10258</td><td>47</td><td>146</td><td>36</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-09 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user74@contoso.com</td><td>3.78</td><td>50</td><td>7.6</td><td>26772</td><td>50</td><td>49</td><td>46</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user75@contoso.com</td><td>34.13</td><td>50</td><td>68.3</td><td>3579</td><td>33</td><td>170</td><td>45</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>佐藤次郎</td><td>user76@contoso.com</td><td>23.96</td><td>50</td><td>47.9</td><td>6089</td><td>95</td><td>170</td><td>6</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>渡辺健一</td><td>user77@contoso.com</td><td>8.93</td><td>50</td><td>17.9</td><td>1798</td><td>57</td><td>136</td><td>36</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user78@contoso.com</td><td>22.7</td><td>50</td><td>45.4</td><td>41928</td><td>45</td><td>126</td><td>34</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user79@contoso.com</td><td>31.94</td><td>50</td><td>63.9</td><td>38143</td><td>46</td><td>199</td><td>40</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user80@contoso.com</td><td>16.19</td><td>50</td><td>32.4</td><td>32935</td><td>68</td><td>149</td><td>31</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>吉田昌子</td><td>user81@contoso.com</td><td>29.85</td><td>50</td><td>59.7</td><td>3264</td><td>43</td><td>32</td><td>37</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user82@contoso.com</td><td>2.7</td><td>50</td><td>5.4</td><td>22955</td><td>31</td><td>144</td><td>8</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user83@contoso.com</td><td>17.92</td><td>50</td><td>35.8</td><td>23962</td><td>24</td><td>186</td><td>24</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>山本健二</td><td>user84@contoso.com</td><td>16.85</td><td>50</td><td>33.7</td><td>19057</td><td>9</td><td>197</td><td>34</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user85@contoso.com</td><td>10.41</td><td>50</td><td>20.8</td><td>10361</td><td>17</td><td>56</td><td>5</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user86@contoso.com</td><td>5.06</td><td>50</td><td>10.1</td><td>25455</td><td>85</td><td>53</td><td>40</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user87@contoso.com</td><td>28.86</td><td>50</td><td>57.7</td><td>31666</td><td>24</td><td>34</td><td>18</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>小林秀樹</td><td>user88@contoso.com</td><td>13.76</td><td>50</td><td>27.5</td><td>46823</td><td>18</td><td>129</td><td>44</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-11 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user89@contoso.com</td><td>36.32</td><td>50</td><td>72.6</td><td>3747</td><td>13</td><td>185</td><td>27</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-15 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user90@contoso.com</td><td>20.33</td><td>50</td><td>40.7</td><td>4601</td><td>44</td><td>28</td><td>19</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user91@contoso.com</td><td>38.9</td><td>50</td><td>77.8</td><td>42789</td><td>91</td><td>27</td><td>12</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>松本由美</td><td>user92@contoso.com</td><td>18.9</td><td>50</td><td>37.8</td><td>44855</td><td>98</td><td>80</td><td>31</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>木村優子</td><td>user93@contoso.com</td><td>14.91</td><td>50</td><td>29.8</td><td>21072</td><td>81</td><td>31</td><td>45</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user94@contoso.com</td><td>48.39</td><td>50</td><td>96.8</td><td>22508</td><td>76</td><td>63</td><td>47</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-12 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user95@contoso.com</td><td>16.37</td><td>50</td><td>32.7</td><td>1224</td><td>83</td><td>115</td><td>45</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user96@contoso.com</td><td>7.15</td><td>50</td><td>14.3</td><td>14252</td><td>95</td><td>158</td><td>45</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+<tr><td>高橋美咲</td><td>user97@contoso.com</td><td>22.23</td><td>50</td><td>44.5</td><td>22465</td><td>40</td><td>130</td><td>14</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-13 16:00:18</td></tr>
+<tr><td>井上雅人</td><td>user98@contoso.com</td><td>36.54</td><td>50</td><td>73.1</td><td>40734</td><td>86</td><td>157</td><td>12</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>伊藤光子</td><td>user99@contoso.com</td><td>39.78</td><td>50</td><td>79.6</td><td>30999</td><td>30</td><td>106</td><td>7</td><td><span class='badge badge-danger'>無効</span></td><td><span class='badge badge-danger'>無効</span></td><td>2025-07-14 16:00:18</td></tr>
+<tr><td>山田和也</td><td>user100@contoso.com</td><td>0.59</td><td>50</td><td>1.2</td><td>40577</td><td>54</td><td>184</td><td>22</td><td><span class='badge badge-success'>有効</span></td><td><span class='badge badge-success'>有効</span></td><td>2025-07-10 16:00:18</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ページネーション -->
+            <div class="pagination" id="pagination"></div>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p>Microsoft 365統合管理ツール - 自動生成レポート</p>
+        <p>PowerShell 7.5.2 | Generated by v2.0</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="../../JavaScript/report-functions.js"></script>
+</body>
+</html>

@@ -105,7 +105,7 @@ function Get-ExchangeMailboxReport {
         [string]$OutputPath = "Reports\Daily"
     )
     
-    return Invoke-SafeOperation -OperationName "Exchange Online メールボックスレポート" -Operation {
+    return Invoke-SafeOperation -OperationName "Exchange Online メールボックスレポート" -ScriptBlock {
         Write-Log "Exchange Online メールボックスレポートを開始します" -Level "Info"
         
         # Exchange Online接続確認
@@ -270,7 +270,7 @@ function Get-ExchangeMessageTrace {
         [string]$OutputPath = "Reports\Daily"
     )
     
-    return Invoke-SafeOperation -OperationName "Exchange Onlineメッセージトレース" -Operation {
+    return Invoke-SafeOperation -OperationName "Exchange Onlineメッセージトレース" -ScriptBlock {
         Write-Log "Exchange Onlineメッセージトレース分析を開始します（過去 $DaysBack 日間）" -Level "Info"
         
         Test-Prerequisites -RequiredModules @("ExchangeOnlineManagement")
@@ -334,7 +334,7 @@ function Get-ExchangeTransportRules {
         [string]$OutputPath = "Reports\Weekly"
     )
     
-    return Invoke-SafeOperation -OperationName "Exchange Onlineトランスポートルール" -Operation {
+    return Invoke-SafeOperation -OperationName "Exchange Onlineトランスポートルール" -ScriptBlock {
         Write-Log "Exchange Onlineトランスポートルール分析を開始します" -Level "Info"
         
         Test-Prerequisites -RequiredModules @("ExchangeOnlineManagement")
@@ -401,7 +401,7 @@ function Get-ExchangeDistributionGroups {
         [string]$OutputPath = "Reports\Monthly"
     )
     
-    return Invoke-SafeOperation -OperationName "Exchange Online配布グループ" -Operation {
+    return Invoke-SafeOperation -OperationName "Exchange Online配布グループ" -ScriptBlock {
         Write-Log "Exchange Online配布グループ分析を開始します" -Level "Info"
         
         Test-Prerequisites -RequiredModules @("ExchangeOnlineManagement")

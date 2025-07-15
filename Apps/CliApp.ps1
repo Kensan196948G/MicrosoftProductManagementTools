@@ -21,7 +21,13 @@ param(
     
     [Parameter(Mandatory = $false, HelpMessage = "ログレベルを指定")]
     [ValidateSet("Debug", "Info", "Warning", "Error")]
-    [string]$LogLevel = "Info"
+    [string]$LogLevel = "Info",
+    
+    [Parameter(Mandatory = $false, HelpMessage = "PDF形式でレポートを出力")]
+    [switch]$EnablePDF = $false,
+    
+    [Parameter(Mandatory = $false, HelpMessage = "HTMLとPDFの両方を出力")]
+    [switch]$BothFormats = $false
 )
 
 # グローバル変数
@@ -233,7 +239,7 @@ function Invoke-AuthenticationTest {
     }
 }
 
-# レポート生成実行
+# レポート生成実行（PDF対応）
 function Invoke-ReportGeneration {
     param([string]$ReportType)
     
@@ -244,25 +250,142 @@ function Invoke-ReportGeneration {
             throw "設定が読み込まれていません"
         }
         
-        $reportScript = Join-Path $Script:ToolRoot "Scripts\Common\ScheduledReports.ps1"
-        if (Test-Path $reportScript) {
-            if ($Script:CompatibilityMode -eq "Full") {
-                & $reportScript -ReportType $ReportType
-            } else {
-                Write-CliLog "PowerShell 5.1ではレポート機能が制限されています" -Level Warning
-                Write-CliLog "基本的なレポート生成のみ実行します" -Level Info
-                # 簡易版のレポート生成ロジックをここに追加
+        # モジュールパスの設定
+        $modulePath = Join-Path $Script:ToolRoot "Scripts\Common"
+        
+        # 必要なモジュールをインポート
+        Import-Module "$modulePath\Common.psm1" -Force
+        Import-Module "$modulePath\ScheduledReports.ps1" -Force
+        
+        # PDF機能が有効な場合、PuppeteerPDFモジュールをインポート
+        if ($EnablePDF -or $BothFormats) {
+            try {
+                Import-Module "$modulePath\PuppeteerPDF.psm1" -Force
+                Write-CliLog "PDF生成モジュールを読み込みました" -Level Info
             }
-            
-            Write-CliLog "$ReportType レポートの生成が完了しました" -Level Success
-            return $true
-        } else {
-            throw "レポート生成スクリプトが見つかりません: $reportScript"
+            catch {
+                Write-CliLog "PDF生成モジュールの読み込みに失敗しました: $($_.Exception.Message)" -Level Warning
+                Write-CliLog "HTMLレポートのみ生成します" -Level Info
+                $global:EnablePDF = $false
+                $global:BothFormats = $false
+            }
         }
+        
+        if ($Script:CompatibilityMode -eq "Full") {
+            # 実際のレポート関数を呼び出し（PDF対応）
+            switch ($ReportType) {
+                "Daily" { 
+                    $result = Invoke-DailyReports
+                    if ($EnablePDF -or $BothFormats) {
+                        Invoke-PDFGeneration -ReportType $ReportType -ReportPaths $result
+                    }
+                }
+                "Weekly" { 
+                    $result = Invoke-WeeklyReports
+                    if ($EnablePDF -or $BothFormats) {
+                        Invoke-PDFGeneration -ReportType $ReportType -ReportPaths $result
+                    }
+                }
+                "Monthly" { 
+                    $result = Invoke-MonthlyReports
+                    if ($EnablePDF -or $BothFormats) {
+                        Invoke-PDFGeneration -ReportType $ReportType -ReportPaths $result
+                    }
+                }
+                "Yearly" { 
+                    $result = Invoke-YearlyReports
+                    if ($EnablePDF -or $BothFormats) {
+                        Invoke-PDFGeneration -ReportType $ReportType -ReportPaths $result
+                    }
+                }
+                default { throw "不明なレポートタイプ: $ReportType" }
+            }
+        } else {
+            Write-CliLog "PowerShell 5.1ではレポート機能が制限されています" -Level Warning
+            Write-CliLog "基本的なレポート生成のみ実行します" -Level Info
+            # 簡易版のレポート生成ロジックをここに追加
+        }
+            
+        Write-CliLog "$ReportType レポートの生成が完了しました" -Level Success
+        return $true
     }
     catch {
         Write-CliLog "$ReportType レポートの生成に失敗しました: $($_.Exception.Message)" -Level Error
         return $false
+    }
+}
+
+# PDF生成関数
+function Invoke-PDFGeneration {
+    param(
+        [string]$ReportType,
+        [object]$ReportPaths
+    )
+    
+    Write-CliLog "$ReportType レポートのPDF生成を開始します..." -Level Info
+    
+    try {
+        if (-not $ReportPaths) {
+            Write-CliLog "レポートパスが指定されていません" -Level Warning
+            return
+        }
+        
+        # 生成されたHTMLファイルを検索
+        $reportDir = Join-Path $Script:ToolRoot "Reports\$ReportType"
+        $htmlFiles = Get-ChildItem -Path $reportDir -Filter "*.html" -Recurse | Sort-Object LastWriteTime -Descending
+        
+        if ($htmlFiles.Count -eq 0) {
+            Write-CliLog "変換対象のHTMLファイルが見つかりません" -Level Warning
+            return
+        }
+        
+        $successCount = 0
+        $errorCount = 0
+        
+        foreach ($htmlFile in $htmlFiles | Select-Object -First 5) {
+            try {
+                $pdfPath = $htmlFile.FullName -replace "\.html$", ".pdf"
+                
+                Write-CliLog "PDF生成中: $($htmlFile.Name)" -Level Info
+                
+                # PDF生成設定
+                $pdfOptions = @{
+                    format = "A4"
+                    margin = @{
+                        top = "20mm"
+                        right = "15mm"
+                        bottom = "20mm"
+                        left = "15mm"
+                    }
+                    printBackground = $true
+                    preferCSSPageSize = $false
+                    displayHeaderFooter = $true
+                    timeout = 30000
+                    waitForNetworkIdle = $true
+                }
+                
+                $pdfResult = ConvertTo-PDFFromHTML -InputHtmlPath $htmlFile.FullName -OutputPdfPath $pdfPath -Options $pdfOptions
+                
+                if ($pdfResult.Success) {
+                    Write-CliLog "PDF生成完了: $($htmlFile.Name) -> $([System.IO.Path]::GetFileName($pdfPath))" -Level Success
+                    Write-CliLog "  ファイルサイズ: $($pdfResult.FileSize)" -Level Info
+                    Write-CliLog "  処理時間: $([math]::Round($pdfResult.ProcessingTime, 2))秒" -Level Info
+                    $successCount++
+                } else {
+                    Write-CliLog "PDF生成失敗: $($htmlFile.Name)" -Level Error
+                    $errorCount++
+                }
+            }
+            catch {
+                Write-CliLog "PDF生成エラー ($($htmlFile.Name)): $($_.Exception.Message)" -Level Error
+                $errorCount++
+            }
+        }
+        
+        Write-CliLog "PDF生成完了: 成功 $successCount 件、失敗 $errorCount 件" -Level Info
+    }
+    catch {
+        Write-CliLog "PDF生成処理でエラーが発生しました: $($_.Exception.Message)" -Level Error
     }
 }
 

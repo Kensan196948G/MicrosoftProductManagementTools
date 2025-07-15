@@ -7,6 +7,14 @@
 [CmdletBinding()]
 param()
 
+# STAモードチェック
+if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
+    Write-Host "警告: このスクリプトはSTAモードで実行する必要があります。" -ForegroundColor Yellow
+    Write-Host "再起動します..." -ForegroundColor Yellow
+    Start-Process pwsh -ArgumentList "-sta", "-File", $MyInvocation.MyCommand.Path -NoNewWindow -Wait
+    exit
+}
+
 # プラットフォーム検出とアセンブリ読み込み
 if ($IsLinux -or $IsMacOS) {
     Write-Host "エラー: このGUIアプリケーションはWindows環境でのみ動作します。" -ForegroundColor Red
@@ -36,6 +44,7 @@ function Initialize-WindowsForms {
     if (-not $Script:FormsConfigured) {
         try {
             [System.Windows.Forms.Application]::EnableVisualStyles()
+            [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
             $Script:FormsConfigured = $true
             Write-Host "Windows Forms設定完了" -ForegroundColor Green
         }
@@ -47,6 +56,10 @@ function Initialize-WindowsForms {
 
 # グローバル変数
 $Script:ToolRoot = Split-Path $PSScriptRoot -Parent
+
+# 共通モジュールをインポート
+$modulePath = Join-Path $Script:ToolRoot "Scripts\Common"
+Import-Module "$modulePath\GuiReportFunctions.psm1" -Force -ErrorAction SilentlyContinue
 
 # ダミーデータ生成機能（拡張版）
 function New-DummyData {
@@ -288,7 +301,7 @@ function New-DummyData {
     return $dummyData
 }
 
-# レポート出力関数（拡張版）
+# レポート出力関数（拡張版 - PDF対応）
 function Export-GuiReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -298,7 +311,10 @@ function Export-GuiReport {
         [string]$ReportName,
         
         [Parameter(Mandatory = $false)]
-        [string]$Action = "General"
+        [string]$Action = "General",
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$EnablePDF = $true
     )
     
     try {
@@ -336,22 +352,93 @@ function Export-GuiReport {
         $htmlContent = New-HTMLReport -Data $Data -ReportName $ReportName
         Set-Content -Path $htmlPath -Value $htmlContent -Encoding UTF8
         
+        # PDF生成（オプション）
+        $pdfPath = $null
+        $pdfGenerated = $false
+        
+        if ($EnablePDF) {
+            try {
+                # PuppeteerPDFモジュールの動的インポート
+                $pdfModulePath = Join-Path $Script:ToolRoot "Scripts\Common\PuppeteerPDF.psm1"
+                if (Test-Path $pdfModulePath) {
+                    Import-Module $pdfModulePath -Force -ErrorAction SilentlyContinue
+                    
+                    $pdfPath = Join-Path $fullReportDir "${ReportName}_${timestamp}.pdf"
+                    
+                    # PDF生成設定
+                    $pdfOptions = @{
+                        format = "A4"
+                        margin = @{
+                            top = "20mm"
+                            right = "15mm"
+                            bottom = "20mm"
+                            left = "15mm"
+                        }
+                        printBackground = $true
+                        preferCSSPageSize = $false
+                        displayHeaderFooter = $true
+                        timeout = 30000
+                        waitForNetworkIdle = $true
+                    }
+                    
+                    Write-Host "PDF生成を開始します..." -ForegroundColor Yellow
+                    $pdfResult = ConvertTo-PDFFromHTML -InputHtmlPath $htmlPath -OutputPdfPath $pdfPath -Options $pdfOptions
+                    
+                    if ($pdfResult.Success) {
+                        Write-Host "PDF生成が完了しました: $pdfPath" -ForegroundColor Green
+                        $pdfGenerated = $true
+                    } else {
+                        Write-Host "PDF生成に失敗しました" -ForegroundColor Red
+                        $pdfPath = $null
+                    }
+                } else {
+                    Write-Host "PuppeteerPDFモジュールが見つかりません。HTMLのみ生成します。" -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host "PDF生成でエラーが発生しました: $($_.Exception.Message)" -ForegroundColor Red
+                $pdfPath = $null
+            }
+        }
+        
         # ファイルを開く
         if (Test-Path $csvPath) {
-            Start-Process -FilePath $csvPath -UseShellExecute
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                Start-Process $csvPath
+            } else {
+                Start-Process -FilePath $csvPath -UseShellExecute
+            }
         }
         if (Test-Path $htmlPath) {
-            Start-Process -FilePath $htmlPath -UseShellExecute
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                Start-Process $htmlPath
+            } else {
+                Start-Process -FilePath $htmlPath -UseShellExecute
+            }
+        }
+        if ($pdfPath -and (Test-Path $pdfPath)) {
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                Start-Process $pdfPath
+            } else {
+                Start-Process -FilePath $pdfPath -UseShellExecute
+            }
         }
         
         # ポップアップ表示
-        $message = "$ReportName を生成しました！`n`nデータ件数: $($Data.Count) 件`n`nCSVファイル: $csvPath`nHTMLファイル: $htmlPath`n`nファイルが自動的に開かれます。"
+        $message = "$ReportName を生成しました！`n`nデータ件数: $($Data.Count) 件`n`nCSVファイル: $csvPath`nHTMLファイル: $htmlPath"
+        if ($pdfGenerated) {
+            $message += "`nPDFファイル: $pdfPath"
+        }
+        $message += "`n`nファイルが自動的に開かれます。"
+        
         [System.Windows.Forms.MessageBox]::Show($message, "レポート生成完了", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         
         return @{
             Success = $true
             CsvPath = $csvPath
             HtmlPath = $htmlPath
+            PdfPath = $pdfPath
+            PdfGenerated = $pdfGenerated
             DataCount = $Data.Count
         }
     }
@@ -491,145 +578,6 @@ function New-HTMLReport {
     return $htmlContent
 }
 
-# ボタンアクション実行関数（拡張版）
-function Invoke-ButtonAction {
-    param(
-        [string]$ButtonText, 
-        [string]$Action
-    )
-    
-    try {
-        Write-Host "ボタンアクション実行: $ButtonText ($Action)" -ForegroundColor Cyan
-        
-        switch ($Action) {
-            # 定期レポート
-            "Daily" {
-                $data = New-DummyData -DataType "Daily" -RecordCount 30
-                Export-GuiReport -Data $data -ReportName "日次レポート" -Action "Daily"
-            }
-            "Weekly" {
-                $data = New-DummyData -DataType "Weekly" -RecordCount 12
-                Export-GuiReport -Data $data -ReportName "週次レポート" -Action "Weekly"
-            }
-            "Monthly" {
-                $data = New-DummyData -DataType "Monthly" -RecordCount 12
-                Export-GuiReport -Data $data -ReportName "月次レポート" -Action "Monthly"
-            }
-            "Yearly" {
-                $data = New-DummyData -DataType "Yearly" -RecordCount 5
-                Export-GuiReport -Data $data -ReportName "年次レポート" -Action "Yearly"
-            }
-            
-            # 分析レポート
-            "License" {
-                $data = New-DummyData -DataType "License" -RecordCount 10
-                Export-GuiReport -Data $data -ReportName "ライセンス分析レポート" -Action "License"
-            }
-            "UsageAnalysis" {
-                $data = New-DummyData -DataType "UsageAnalysis" -RecordCount 15
-                Export-GuiReport -Data $data -ReportName "使用状況分析レポート" -Action "UsageAnalysis"
-            }
-            "PerformanceMonitor" {
-                $data = New-DummyData -DataType "PerformanceMonitor" -RecordCount 20
-                Export-GuiReport -Data $data -ReportName "パフォーマンス監視レポート" -Action "PerformanceMonitor"
-            }
-            "SecurityAnalysis" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
-                Export-GuiReport -Data $data -ReportName "セキュリティ分析レポート" -Action "SecurityAnalysis"
-            }
-            "PermissionAudit" {
-                $data = New-DummyData -DataType "PermissionAudit" -RecordCount 20
-                Export-GuiReport -Data $data -ReportName "権限監査レポート" -Action "PermissionAudit"
-            }
-            
-            # Entra ID 管理
-            "EntraIDUsers" {
-                $data = New-DummyData -DataType "EntraIDUsers" -RecordCount 50
-                Export-GuiReport -Data $data -ReportName "EntraIDユーザー一覧" -Action "EntraIDUsers"
-            }
-            "EntraIDMFA" {
-                $data = New-DummyData -DataType "EntraIDUsers" -RecordCount 30
-                Export-GuiReport -Data $data -ReportName "EntraID MFA状況" -Action "EntraIDUsers"
-            }
-            "ConditionalAccess" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 15
-                Export-GuiReport -Data $data -ReportName "条件付きアクセス設定" -Action "SecurityAnalysis"
-            }
-            "SignInLogs" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 100
-                Export-GuiReport -Data $data -ReportName "サインインログ分析" -Action "SecurityAnalysis"
-            }
-            
-            # Exchange Online 管理
-            "ExchangeMailbox" {
-                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 40
-                Export-GuiReport -Data $data -ReportName "Exchangeメールボックス分析" -Action "ExchangeMailbox"
-            }
-            "MailFlow" {
-                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 30
-                Export-GuiReport -Data $data -ReportName "メールフロー分析" -Action "ExchangeMailbox"
-            }
-            "AntiSpam" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
-                Export-GuiReport -Data $data -ReportName "スパム対策分析" -Action "SecurityAnalysis"
-            }
-            "MailDelivery" {
-                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 35
-                Export-GuiReport -Data $data -ReportName "メール配信分析" -Action "ExchangeMailbox"
-            }
-            
-            # Teams 管理
-            "TeamsUsage" {
-                $data = New-DummyData -DataType "TeamsUsage" -RecordCount 40
-                Export-GuiReport -Data $data -ReportName "Teams使用状況分析" -Action "TeamsUsage"
-            }
-            "TeamsConfig" {
-                $data = New-DummyData -DataType "TeamsUsage" -RecordCount 20
-                Export-GuiReport -Data $data -ReportName "Teams設定分析" -Action "TeamsUsage"
-            }
-            "MeetingQuality" {
-                $data = New-DummyData -DataType "PerformanceMonitor" -RecordCount 30
-                Export-GuiReport -Data $data -ReportName "会議品質分析" -Action "PerformanceMonitor"
-            }
-            "TeamsApps" {
-                $data = New-DummyData -DataType "UsageAnalysis" -RecordCount 15
-                Export-GuiReport -Data $data -ReportName "Teamsアプリ使用状況" -Action "UsageAnalysis"
-            }
-            
-            # OneDrive 管理
-            "OneDriveStorage" {
-                $data = New-DummyData -DataType "OneDriveStorage" -RecordCount 45
-                Export-GuiReport -Data $data -ReportName "OneDriveストレージ分析" -Action "OneDriveStorage"
-            }
-            "OneDriveSharing" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
-                Export-GuiReport -Data $data -ReportName "OneDrive共有分析" -Action "SecurityAnalysis"
-            }
-            "SyncErrors" {
-                $data = New-DummyData -DataType "OneDriveStorage" -RecordCount 20
-                Export-GuiReport -Data $data -ReportName "OneDrive同期エラー分析" -Action "OneDriveStorage"
-            }
-            "ExternalSharing" {
-                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 30
-                Export-GuiReport -Data $data -ReportName "外部共有分析" -Action "SecurityAnalysis"
-            }
-            
-            # テストとその他
-            "Test" {
-                $data = New-DummyData -DataType "default" -RecordCount 10
-                Export-GuiReport -Data $data -ReportName "テストレポート" -Action "General"
-            }
-            default {
-                [System.Windows.Forms.MessageBox]::Show("この機能は現在開発中です: $Action", "情報", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-            }
-        }
-    }
-    catch {
-        $errorMessage = "ボタンアクション実行エラー: $($_.Exception.Message)"
-        Write-Host $errorMessage -ForegroundColor Red
-        [System.Windows.Forms.MessageBox]::Show($errorMessage, "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-    }
-}
 
 # メインフォーム作成関数（拡張版）
 function New-MainForm {
@@ -642,12 +590,40 @@ function New-MainForm {
         $form.Size = New-Object System.Drawing.Size(1200, 800)
         $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
         $form.MinimumSize = New-Object System.Drawing.Size(1000, 700)
+        $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal
+        $form.ShowInTaskbar = $true
+        
+        # ウィンドウ操作を可能にする設定
+        $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+        $form.MaximizeBox = $true
+        $form.MinimizeBox = $true
+        $form.ControlBox = $true
+        $form.TopMost = $false
+        $form.ShowIcon = $true
+        $form.KeyPreview = $false
+        $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
+        $form.AutoScaleDimensions = New-Object System.Drawing.SizeF(96.0, 96.0)
+        $form.SizeGripStyle = [System.Windows.Forms.SizeGripStyle]::Auto
+        
+        # 移動可能にする設定
+        $form.AllowDrop = $false
+        $form.IsMdiContainer = $false
+        
+        # フォームの表示状態を確認
+        Write-Host "フォーム設定確認:" -ForegroundColor Cyan
+        Write-Host "  FormBorderStyle: $($form.FormBorderStyle)" -ForegroundColor Gray
+        Write-Host "  MaximizeBox: $($form.MaximizeBox)" -ForegroundColor Gray
+        Write-Host "  MinimizeBox: $($form.MinimizeBox)" -ForegroundColor Gray
+        Write-Host "  ControlBox: $($form.ControlBox)" -ForegroundColor Gray
+        Write-Host "  TopMost: $($form.TopMost)" -ForegroundColor Gray
+        Write-Host "  SizeGripStyle: $($form.SizeGripStyle)" -ForegroundColor Gray
         
         # メインパネル
         $mainPanel = New-Object System.Windows.Forms.Panel
         $mainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
         $mainPanel.BackColor = [System.Drawing.Color]::WhiteSmoke
         $mainPanel.AutoScroll = $true
+        $mainPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
         $form.Controls.Add($mainPanel)
         
         # ヘッダーラベル
@@ -675,13 +651,235 @@ function New-MainForm {
             
             $button = New-Object System.Windows.Forms.Button
             $button.Text = $Text
+            $button.Tag = $Action
             $button.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9, [System.Drawing.FontStyle]::Bold)
             $button.Size = New-Object System.Drawing.Size(170, 45)
             $button.Location = $Location
             $button.BackColor = [System.Drawing.Color]::LightBlue
             $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+            # イベントハンドラーをスクリプトレベルで定義
             $button.Add_Click({
-                Invoke-ButtonAction -ButtonText $Text -Action $Action
+                param($sender, $e)
+                
+                # フォームが破棄されているかチェック
+                if ($sender.IsDisposed -or $sender.FindForm().IsDisposed) {
+                    Write-Host "フォームは既に破棄されています" -ForegroundColor Yellow
+                    return
+                }
+                
+                $buttonText = $sender.Text
+                $actionValue = $sender.Tag
+                Write-Host "ボタンクリック検出: $buttonText (アクション: $actionValue)" -ForegroundColor Cyan
+                
+                try {
+                    # GuiReportFunctions.psm1の確実なインポート
+                    $guiModulePath = Join-Path $Script:ToolRoot "Scripts\Common\GuiReportFunctions.psm1"
+                    if (Test-Path $guiModulePath) {
+                        Import-Module $guiModulePath -Force -ErrorAction SilentlyContinue
+                        Write-Host "GuiReportFunctions.psm1 インポート完了" -ForegroundColor Green
+                    }
+                    
+                    Write-Host "ボタンアクション実行: $buttonText ($actionValue)" -ForegroundColor Cyan
+                    
+                    switch ($actionValue) {
+                        # 定期レポート
+                        "Daily" {
+                            Invoke-GuiReportGeneration -ReportType "Daily" -ReportName "日次レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "Daily" -RecordCount 30
+                                Export-GuiReport -Data $data -ReportName "日次レポート（サンプル）" -Action "Daily"
+                            }
+                        }
+                        "Weekly" {
+                            Invoke-GuiReportGeneration -ReportType "Weekly" -ReportName "週次レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "Weekly" -RecordCount 12
+                                Export-GuiReport -Data $data -ReportName "週次レポート（サンプル）" -Action "Weekly"
+                            }
+                        }
+                        "Monthly" {
+                            Invoke-GuiReportGeneration -ReportType "Monthly" -ReportName "月次レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "Monthly" -RecordCount 12
+                                Export-GuiReport -Data $data -ReportName "月次レポート（サンプル）" -Action "Monthly"
+                            }
+                        }
+                        "Yearly" {
+                            Invoke-GuiReportGeneration -ReportType "Yearly" -ReportName "年次レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "Yearly" -RecordCount 5
+                                Export-GuiReport -Data $data -ReportName "年次レポート（サンプル）" -Action "Yearly"
+                            }
+                        }
+                        
+                        # 分析レポート
+                        "License" {
+                            Invoke-GuiReportGeneration -ReportType "License" -ReportName "ライセンス分析レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "License" -RecordCount 10
+                                Export-GuiReport -Data $data -ReportName "ライセンス分析レポート（サンプル）" -Action "License"
+                            }
+                        }
+                        "UsageAnalysis" {
+                            Invoke-GuiReportGeneration -ReportType "Usage" -ReportName "使用状況分析レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "UsageAnalysis" -RecordCount 15
+                                Export-GuiReport -Data $data -ReportName "使用状況分析レポート（サンプル）" -Action "UsageAnalysis"
+                            }
+                        }
+                        "PerformanceMonitor" {
+                            Invoke-GuiReportGeneration -ReportType "Performance" -ReportName "パフォーマンス監視レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "PerformanceMonitor" -RecordCount 20
+                                Export-GuiReport -Data $data -ReportName "パフォーマンス監視レポート（サンプル）" -Action "PerformanceMonitor"
+                            }
+                        }
+                        "SecurityAnalysis" {
+                            Invoke-GuiReportGeneration -ReportType "Security" -ReportName "セキュリティ分析レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
+                                Export-GuiReport -Data $data -ReportName "セキュリティ分析レポート（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        "PermissionAudit" {
+                            Invoke-GuiReportGeneration -ReportType "Permissions" -ReportName "権限監査レポート" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "PermissionAudit" -RecordCount 20
+                                Export-GuiReport -Data $data -ReportName "権限監査レポート（サンプル）" -Action "PermissionAudit"
+                            }
+                        }
+                        
+                        # Entra ID管理
+                        "EntraIDUsers" {
+                            Invoke-GuiReportGeneration -ReportType "EntraIDUsers" -ReportName "Entra IDユーザー一覧" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "EntraIDUsers" -RecordCount 50
+                                Export-GuiReport -Data $data -ReportName "Entra IDユーザー一覧（サンプル）" -Action "EntraIDUsers"
+                            }
+                        }
+                        "EntraIDMFA" {
+                            Invoke-GuiReportGeneration -ReportType "EntraIDMFA" -ReportName "Entra ID MFA状況" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "EntraIDUsers" -RecordCount 30
+                                Export-GuiReport -Data $data -ReportName "Entra ID MFA状況（サンプル）" -Action "EntraIDUsers"
+                            }
+                        }
+                        "ConditionalAccess" {
+                            Invoke-GuiReportGeneration -ReportType "ConditionalAccess" -ReportName "条件付きアクセス設定" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 15
+                                Export-GuiReport -Data $data -ReportName "条件付きアクセス設定（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        "SignInLogs" {
+                            Invoke-GuiReportGeneration -ReportType "SignInLogs" -ReportName "サインインログ分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 100
+                                Export-GuiReport -Data $data -ReportName "サインインログ分析（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        
+                        # Exchange Online管理
+                        "ExchangeMailbox" {
+                            Invoke-GuiReportGeneration -ReportType "ExchangeMailbox" -ReportName "Exchangeメールボックス分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 40
+                                Export-GuiReport -Data $data -ReportName "Exchangeメールボックス分析（サンプル）" -Action "ExchangeMailbox"
+                            }
+                        }
+                        "MailFlow" {
+                            Invoke-GuiReportGeneration -ReportType "MailFlow" -ReportName "メールフロー分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 30
+                                Export-GuiReport -Data $data -ReportName "メールフロー分析（サンプル）" -Action "ExchangeMailbox"
+                            }
+                        }
+                        "AntiSpam" {
+                            Invoke-GuiReportGeneration -ReportType "AntiSpam" -ReportName "スパム対策分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
+                                Export-GuiReport -Data $data -ReportName "スパム対策分析（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        "MailDelivery" {
+                            Invoke-GuiReportGeneration -ReportType "MailDelivery" -ReportName "メール配信分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "ExchangeMailbox" -RecordCount 35
+                                Export-GuiReport -Data $data -ReportName "メール配信分析（サンプル）" -Action "ExchangeMailbox"
+                            }
+                        }
+                        
+                        # Teams管理
+                        "TeamsUsage" {
+                            Invoke-GuiReportGeneration -ReportType "TeamsUsage" -ReportName "Teams使用状況" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "TeamsUsage" -RecordCount 40
+                                Export-GuiReport -Data $data -ReportName "Teams使用状況分析" -Action "TeamsUsage"
+                            }
+                        }
+                        "TeamsConfig" {
+                            Invoke-GuiReportGeneration -ReportType "TeamsConfig" -ReportName "Teams設定分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "TeamsUsage" -RecordCount 20
+                                Export-GuiReport -Data $data -ReportName "Teams設定分析" -Action "TeamsUsage"
+                            }
+                        }
+                        "MeetingQuality" {
+                            Invoke-GuiReportGeneration -ReportType "MeetingQuality" -ReportName "会議品質分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "PerformanceMonitor" -RecordCount 30
+                                Export-GuiReport -Data $data -ReportName "会議品質分析" -Action "PerformanceMonitor"
+                            }
+                        }
+                        "TeamsApps" {
+                            Invoke-GuiReportGeneration -ReportType "TeamsApps" -ReportName "Teamsアプリ分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "UsageAnalysis" -RecordCount 15
+                                Export-GuiReport -Data $data -ReportName "Teamsアプリ使用状況" -Action "UsageAnalysis"
+                            }
+                        }
+                        
+                        # OneDrive管理
+                        "OneDriveStorage" {
+                            Invoke-GuiReportGeneration -ReportType "OneDriveStorage" -ReportName "OneDriveストレージ分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "OneDriveStorage" -RecordCount 45
+                                Export-GuiReport -Data $data -ReportName "OneDriveストレージ分析（サンプル）" -Action "OneDriveStorage"
+                            }
+                        }
+                        "OneDriveSharing" {
+                            Invoke-GuiReportGeneration -ReportType "OneDriveSharing" -ReportName "OneDrive共有分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 25
+                                Export-GuiReport -Data $data -ReportName "OneDrive共有分析（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        "SyncErrors" {
+                            Invoke-GuiReportGeneration -ReportType "SyncErrors" -ReportName "OneDrive同期エラー分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "OneDriveStorage" -RecordCount 20
+                                Export-GuiReport -Data $data -ReportName "OneDrive同期エラー分析（サンプル）" -Action "OneDriveStorage"
+                            }
+                        }
+                        "ExternalSharing" {
+                            Invoke-GuiReportGeneration -ReportType "ExternalSharing" -ReportName "外部共有分析" -FallbackDataGenerator {
+                                $data = New-DummyData -DataType "SecurityAnalysis" -RecordCount 30
+                                Export-GuiReport -Data $data -ReportName "外部共有分析（サンプル）" -Action "SecurityAnalysis"
+                            }
+                        }
+                        
+                        # その他のアクション
+                        "Test" {
+                            $data = New-DummyData -DataType "default" -RecordCount 10
+                            Export-GuiReport -Data $data -ReportName "テストレポート" -Action "General"
+                        }
+                        
+                        default {
+                            Write-Host "予期しないアクション: $actionValue" -ForegroundColor Red
+                            [System.Windows.Forms.MessageBox]::Show(
+                                "この機能は現在開発中です: $actionValue", 
+                                "情報", 
+                                [System.Windows.Forms.MessageBoxButtons]::OK, 
+                                [System.Windows.Forms.MessageBoxIcon]::Information
+                            )
+                        }
+                    }
+                }
+                catch {
+                    if ($_.Exception -is [System.ObjectDisposedException]) {
+                        Write-Host "オブジェクトは既に破棄されています" -ForegroundColor Yellow
+                        return
+                    }
+                    
+                    $errorMessage = "ボタンアクション実行エラー: $($_.Exception.Message)"
+                    Write-Host $errorMessage -ForegroundColor Red
+                    
+                    # フォームがまだ有効な場合のみメッセージボックスを表示
+                    try {
+                        if (-not $sender.IsDisposed -and -not $sender.FindForm().IsDisposed) {
+                            [System.Windows.Forms.MessageBox]::Show($errorMessage, "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                        }
+                    }
+                    catch {
+                        Write-Host "メッセージボックス表示エラー: $($_.Exception.Message)" -ForegroundColor Yellow
+                    }
+                }
             })
             
             return $button
@@ -790,6 +988,7 @@ function New-MainForm {
         $exitButton.Location = New-Object System.Drawing.Point(500, $currentY)
         $exitButton.BackColor = [System.Drawing.Color]::LightCoral
         $exitButton.Add_Click({
+            Write-Host "終了ボタンがクリックされました" -ForegroundColor Yellow
             $form.Close()
         })
         $mainPanel.Controls.Add($exitButton)
@@ -804,7 +1003,13 @@ function New-MainForm {
         $statusLabel.ForeColor = [System.Drawing.Color]::Gray
         $mainPanel.Controls.Add($statusLabel)
         
+        # フォームサイズを明示的に再設定
+        $form.Size = New-Object System.Drawing.Size(1200, 800)
+        $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal
+        
         Write-Host "拡張版メインフォーム作成完了" -ForegroundColor Green
+        Write-Host "フォームサイズ: $($form.Width)x$($form.Height)" -ForegroundColor Cyan
+        Write-Host "コントロール数: $($form.Controls.Count)" -ForegroundColor Cyan
         return $form
         
     }
@@ -846,12 +1051,116 @@ function Main {
             exit 1
         }
         
+        
         # フォーム作成
         $form = New-MainForm
         if ($form) {
             Write-Host "拡張版フォーム作成成功、アプリケーション実行開始" -ForegroundColor Green
-            # PowerShell 7.5.1対応: フォームを明示的にFormオブジェクトとして型キャスト
-            [System.Windows.Forms.Application]::Run([System.Windows.Forms.Form]$form)
+            
+            # フォームのプロパティを再設定
+            $form.TopMost = $false
+            $form.ShowInTaskbar = $true
+            $form.MinimumSize = New-Object System.Drawing.Size(800, 600)
+            $form.AllowDrop = $false
+            $form.IsMdiContainer = $false
+            
+            # フォームのLoadイベントを追加
+            $form.Add_Load({
+                Write-Host "フォームがロードされました" -ForegroundColor Green
+                $sender = $args[0]
+                Write-Host "フォーム名: $($sender.Text)" -ForegroundColor Cyan
+                Write-Host "フォーム表示状態: $($sender.Visible)" -ForegroundColor Cyan
+                Write-Host "フォーム移動可能: $($sender.FormBorderStyle)" -ForegroundColor Cyan
+                Write-Host "フォーム最小化可能: $($sender.MinimizeBox)" -ForegroundColor Cyan
+                Write-Host "フォーム最大化可能: $($sender.MaximizeBox)" -ForegroundColor Cyan
+                Write-Host "フォーム制御ボックス: $($sender.ControlBox)" -ForegroundColor Cyan
+                
+                # Load時にウィンドウ操作設定を再度強制設定
+                Write-Host "Load時にウィンドウ操作設定を強制設定..." -ForegroundColor Yellow
+                $sender.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+                $sender.MaximizeBox = $true
+                $sender.MinimizeBox = $true
+                $sender.ControlBox = $true
+                $sender.TopMost = $false
+                $sender.SizeGripStyle = [System.Windows.Forms.SizeGripStyle]::Auto
+                
+                # フォームの位置を明示的に設定
+                $sender.Location = New-Object System.Drawing.Point(100, 100)
+                $sender.BringToFront()
+                
+                # 設定後の確認
+                Write-Host "Load時設定後の確認:" -ForegroundColor Cyan
+                Write-Host "  FormBorderStyle: $($sender.FormBorderStyle)" -ForegroundColor Gray
+                Write-Host "  MaximizeBox: $($sender.MaximizeBox)" -ForegroundColor Gray
+                Write-Host "  MinimizeBox: $($sender.MinimizeBox)" -ForegroundColor Gray
+                Write-Host "  ControlBox: $($sender.ControlBox)" -ForegroundColor Gray
+                Write-Host "  TopMost: $($sender.TopMost)" -ForegroundColor Gray
+                Write-Host "  SizeGripStyle: $($sender.SizeGripStyle)" -ForegroundColor Gray
+            })
+            
+            # フォームの終了イベントハンドラーを追加
+            $form.Add_FormClosing({
+                param($sender, $e)
+                Write-Host "フォームが閉じられようとしています..." -ForegroundColor Yellow
+                Write-Host "終了理由: $($e.CloseReason)" -ForegroundColor Cyan
+                
+                # 全てのタイマーやバックグラウンドタスクを停止
+                [System.Windows.Forms.Application]::DoEvents()
+                
+                # リソースのクリーンアップ
+                $sender.Controls.Clear()
+            })
+            
+            $form.Add_FormClosed({
+                Write-Host "フォームが閉じられました" -ForegroundColor Green
+                Write-Host "ランチャーメニューに戻ります..." -ForegroundColor Yellow
+                
+                # アプリケーションの終了処理（PowerShellプロセスは終了しない）
+                [System.Windows.Forms.Application]::Exit()
+            })
+            
+            try {
+                Write-Host "アプリケーションループを開始します..." -ForegroundColor Yellow
+                Write-Host "現在のスレッドのApartmentState: $([System.Threading.Thread]::CurrentThread.ApartmentState)" -ForegroundColor Cyan
+                
+                # フォームを明示的に前面に表示
+                $form.Show()
+                $form.Activate()
+                $form.Focus()
+                
+                # 表示後にウィンドウ操作設定を再確認・強制設定
+                Write-Host "表示後のフォーム設定を再確認・強制設定..." -ForegroundColor Yellow
+                $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+                $form.MaximizeBox = $true
+                $form.MinimizeBox = $true
+                $form.ControlBox = $true
+                $form.TopMost = $false
+                $form.SizeGripStyle = [System.Windows.Forms.SizeGripStyle]::Auto
+                
+                # 確認ログ
+                Write-Host "再設定後の確認:" -ForegroundColor Cyan
+                Write-Host "  FormBorderStyle: $($form.FormBorderStyle)" -ForegroundColor Gray
+                Write-Host "  MaximizeBox: $($form.MaximizeBox)" -ForegroundColor Gray
+                Write-Host "  MinimizeBox: $($form.MinimizeBox)" -ForegroundColor Gray
+                Write-Host "  ControlBox: $($form.ControlBox)" -ForegroundColor Gray
+                Write-Host "  TopMost: $($form.TopMost)" -ForegroundColor Gray
+                Write-Host "  SizeGripStyle: $($form.SizeGripStyle)" -ForegroundColor Gray
+                
+                # フォームの再描画を強制
+                $form.Refresh()
+                [System.Windows.Forms.Application]::DoEvents()
+                
+                # アプリケーションのメインループを実行（フォームを渡す）
+                [System.Windows.Forms.Application]::Run($form)
+                Write-Host "アプリケーションループが終了しました" -ForegroundColor Yellow
+            }
+            catch {
+                if ($_.Exception -is [System.ObjectDisposedException]) {
+                    Write-Host "フォームは既に破棄されています（正常終了）" -ForegroundColor Yellow
+                } else {
+                    throw
+                }
+            }
         } else {
             Write-Host "エラー: 拡張版フォーム作成に失敗しました" -ForegroundColor Red
             exit 1

@@ -196,8 +196,180 @@ function New-HTMLReport {
             .section-title { font-size: 16px; }
         }
         @media print {
-            body { background: white; }
-            .container { box-shadow: none; }
+            /* PDF/印刷専用設定 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body { 
+                background: white !important; 
+                font-size: 10pt !important;
+                line-height: 1.4 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .container { 
+                box-shadow: none !important; 
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 10mm !important;
+                border-radius: 0 !important;
+            }
+            
+            .container::before {
+                display: none !important;
+            }
+            
+            .header {
+                page-break-after: avoid !important;
+                margin-bottom: 5mm !important;
+                padding-bottom: 5mm !important;
+            }
+            
+            .title {
+                font-size: 18pt !important;
+                margin-bottom: 3mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .timestamp {
+                font-size: 9pt !important;
+                background: #f8f9fa !important;
+                padding: 2mm 4mm !important;
+                border: 1px solid #e9ecef !important;
+                border-radius: 3mm !important;
+            }
+            
+            .section {
+                page-break-inside: avoid !important;
+                margin-bottom: 5mm !important;
+                box-shadow: none !important;
+            }
+            
+            .section-title {
+                background: linear-gradient(135deg, #0078d4, #0056b3) !important;
+                color: white !important;
+                font-size: 12pt !important;
+                padding: 3mm 5mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .summary {
+                background: #f8f9fa !important;
+                padding: 3mm !important;
+                border-left: 2mm solid #0078d4 !important;
+                font-size: 9pt !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .alert {
+                padding: 3mm !important;
+                margin: 3mm 5mm !important;
+                border-left: 2mm solid !important;
+                font-size: 9pt !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .alert-danger {
+                background: #f8d7da !important;
+                border-left-color: #dc3545 !important;
+                color: #721c24 !important;
+            }
+            
+            .alert-warning {
+                background: #fff3cd !important;
+                border-left-color: #ffc107 !important;
+                color: #856404 !important;
+            }
+            
+            .alert-info {
+                background: #d1ecf1 !important;
+                border-left-color: #17a2b8 !important;
+                color: #0c5460 !important;
+            }
+            
+            .table-wrapper {
+                overflow: visible !important;
+                margin: 0 !important;
+            }
+            
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 8pt !important;
+                margin: 0 !important;
+                page-break-inside: auto !important;
+            }
+            
+            th {
+                background: linear-gradient(135deg, #0078d4, #0056b3) !important;
+                color: white !important;
+                font-weight: bold !important;
+                font-size: 8pt !important;
+                padding: 2mm 3mm !important;
+                text-align: left !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            
+            td {
+                padding: 2mm 3mm !important;
+                border: 1px solid #ddd !important;
+                font-size: 8pt !important;
+                page-break-inside: avoid !important;
+                word-wrap: break-word !important;
+                max-width: 40mm !important;
+            }
+            
+            tbody tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+            }
+            
+            tbody tr:nth-child(even) {
+                background: #f8f9fa !important;
+            }
+            
+            .footer {
+                page-break-before: avoid !important;
+                font-size: 8pt !important;
+                color: #666 !important;
+                border-top: 1px solid #e9ecef !important;
+                padding-top: 3mm !important;
+                margin-top: 5mm !important;
+                text-align: center !important;
+            }
+            
+            /* 改ページ制御 */
+            .page-break {
+                page-break-before: always !important;
+            }
+            
+            .no-break {
+                page-break-inside: avoid !important;
+            }
+            
+            /* 孤立行・寡婦行の制御 */
+            p {
+                orphans: 2 !important;
+                widows: 2 !important;
+            }
+            
+            /* テーブルのヘッダー・フッター表示 */
+            thead {
+                display: table-header-group !important;
+            }
+            
+            tfoot {
+                display: table-footer-group !important;
+            }
+            
+            tbody {
+                display: table-row-group !important;
+            }
         }
     </style>
 </head>
@@ -375,6 +547,134 @@ function New-SummaryStatistics {
     }
     catch {
         Write-Log "統計サマリー生成エラー: $($_.Exception.Message)" -Level "Error"
+        throw $_
+    }
+}
+
+function New-EnhancedHTMLReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName,
+        
+        [Parameter(Mandatory = $true)]
+        [array]$Data,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Description = "",
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$CustomSettings = @{}
+    )
+    
+    try {
+        # テンプレートファイルを読み込み
+        $templatePath = Join-Path $PSScriptRoot "..\..\Templates\HTML\report-template.html"
+        $jsPath = Join-Path $PSScriptRoot "..\..\Templates\JavaScript\report-functions.js"
+        
+        if (-not (Test-Path $templatePath)) {
+            Write-Log "HTMLテンプレートファイルが見つかりません: $templatePath" -Level "Warning"
+            # フォールバック: 従来のHTML生成を使用
+            return New-HTMLReport -Title $ReportName -DataSections @(@{Title = $ReportName; Data = $Data}) -OutputPath $OutputPath
+        }
+        
+        # テンプレートを読み込み
+        $htmlTemplate = Get-Content $templatePath -Raw -Encoding UTF8
+        
+        # データをHTMLテーブル形式に変換
+        $tableHeaders = ""
+        $tableData = ""
+        
+        if ($Data -and $Data.Count -gt 0) {
+            # ヘッダー生成
+            $properties = $Data[0].PSObject.Properties.Name
+            $tableHeaders = "<tr>"
+            foreach ($prop in $properties) {
+                $tableHeaders += "<th>$([System.Web.HttpUtility]::HtmlEncode($prop))</th>"
+            }
+            $tableHeaders += "</tr>"
+            
+            # データ行生成（最初の1000行のみ、残りはJavaScriptで制御）
+            $displayData = $Data | Select-Object -First 1000
+            foreach ($row in $displayData) {
+                $tableData += "<tr>"
+                foreach ($prop in $properties) {
+                    $value = $row.$prop
+                    if ($null -eq $value) { $value = "" }
+                    
+                    # 長いコンテンツの検出
+                    $cellClass = ""
+                    if ($value.ToString().Length -gt 50) {
+                        $cellClass = " class='long-content'"
+                    }
+                    
+                    # HTMLエスケープ
+                    $escapedValue = [System.Web.HttpUtility]::HtmlEncode($value.ToString())
+                    
+                    # バッジスタイルの適用
+                    if ($value -match "^(成功|OK|有効|アクティブ)$") {
+                        $escapedValue = "<span class='badge badge-success'>$escapedValue</span>"
+                    }
+                    elseif ($value -match "^(警告|注意|期限切れ間近)$") {
+                        $escapedValue = "<span class='badge badge-warning'>$escapedValue</span>"
+                    }
+                    elseif ($value -match "^(エラー|失敗|無効|非アクティブ)$") {
+                        $escapedValue = "<span class='badge badge-danger'>$escapedValue</span>"
+                    }
+                    elseif ($value -match "^(情報|その他)$") {
+                        $escapedValue = "<span class='badge badge-info'>$escapedValue</span>"
+                    }
+                    
+                    $tableData += "<td$cellClass>$escapedValue</td>"
+                }
+                $tableData += "</tr>"
+            }
+        }
+        else {
+            $tableHeaders = "<tr><th>データがありません</th></tr>"
+            $tableData = "<tr><td>表示するデータがありません</td></tr>"
+        }
+        
+        # プレースホルダーを置換
+        $timestamp = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
+        $totalRecords = $Data.Count
+        
+        # JavaScriptパスを相対パスに変換
+        $outputDir = Split-Path $OutputPath -Parent
+        $jsRelativePath = Join-Path "..\..\Templates\JavaScript" "report-functions.js"
+        
+        $htmlContent = $htmlTemplate -replace "{{REPORT_NAME}}", $ReportName
+        $htmlContent = $htmlContent -replace "{{GENERATED_DATE}}", $timestamp
+        $htmlContent = $htmlContent -replace "{{TOTAL_RECORDS}}", $totalRecords
+        $htmlContent = $htmlContent -replace "{{TABLE_HEADERS}}", $tableHeaders
+        $htmlContent = $htmlContent -replace "{{TABLE_DATA}}", $tableData
+        $htmlContent = $htmlContent -replace "{{PS_VERSION}}", $PSVersionTable.PSVersion.ToString()
+        $htmlContent = $htmlContent -replace "{{TOOL_VERSION}}", "Microsoft 365管理ツール v1.0"
+        $htmlContent = $htmlContent -replace "{{JS_PATH}}", $jsRelativePath
+        
+        # 出力ディレクトリを作成
+        $outputDir = Split-Path $OutputPath -Parent
+        if (-not (Test-Path $outputDir)) {
+            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
+        }
+        
+        # HTMLファイルを出力
+        $htmlContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+        
+        # JavaScriptファイルを出力先にコピー
+        $jsOutputPath = Join-Path $outputDir "report-functions.js"
+        if (Test-Path $jsPath) {
+            Copy-Item $jsPath $jsOutputPath -Force
+        }
+        
+        Write-Log "拡張HTMLレポートを生成しました: $OutputPath (件数: $totalRecords)" -Level "Info"
+        
+        return $OutputPath
+    }
+    catch {
+        Write-Log "拡張HTMLレポート生成エラー: $($_.Exception.Message)" -Level "Error"
         return @()
     }
 }
@@ -418,4 +718,4 @@ function Export-ReportsToArchive {
 }
 
 # エクスポート関数
-Export-ModuleMember -Function New-ReportDirectory, New-HTMLReport, New-CSVReport, New-SummaryStatistics, Export-ReportsToArchive
+Export-ModuleMember -Function New-ReportDirectory, New-HTMLReport, New-CSVReport, New-SummaryStatistics, Export-ReportsToArchive, New-EnhancedHTMLReport

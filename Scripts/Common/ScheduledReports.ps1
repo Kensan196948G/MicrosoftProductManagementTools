@@ -5,34 +5,66 @@
 # ================================================================================
 
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Daily", "Weekly", "Monthly", "Yearly")]
-    [string]$ReportType
+    [string]$ReportType = "Daily"
 )
 
 Import-Module "$PSScriptRoot\Logging.psm1" -Force
 Import-Module "$PSScriptRoot\ErrorHandling.psm1" -Force
 Import-Module "$PSScriptRoot\Common.psm1" -Force
 Import-Module "$PSScriptRoot\ReportGenerator.psm1" -Force
+Import-Module "$PSScriptRoot\DailyReportData.psm1" -Force
 
 function Invoke-DailyReports {
     Write-Log "日次レポートを開始します" -Level "Info"
     
     $results = @{}
+    $useRealData = $true
     
     try {
+        # 実データ取得を試行
+        try {
+            Write-Log "Microsoft 365実データ取得を開始" -Level "Info"
+            $realData = Get-DailyReportRealData -ForceRealData:$false
+            
+            if ($realData -and $realData.DataSource -eq "Microsoft365API") {
+                Write-Log "実データ取得成功 - ソース: $($realData.DataSource)" -Level "Info"
+                
+                # 実データを結果にマッピング
+                $results.UserActivity = $realData.UserActivity
+                $results.EXOCapacity = $realData.MailboxCapacity
+                $results.SecurityAlerts = $realData.SecurityAlerts
+                $results.MFAStatus = $realData.MFAStatus
+                $results.Summary = $realData.Summary
+                
+                $useRealData = $true
+            }
+            else {
+                Write-Log "実データ取得失敗またはサンプルデータ使用" -Level "Warning"
+                $useRealData = $false
+            }
+        }
+        catch {
+            Write-Log "実データ取得エラー: $($_.Exception.Message)" -Level "Warning"
+            $useRealData = $false
+        }
+        
+        # 実データ取得に失敗した場合は既存のロジックを使用
+        if (-not $useRealData) {
+            Write-Log "フォールバック: 既存のデータ取得ロジックを使用" -Level "Info"
         # AD ログイン履歴
         . "$PSScriptRoot\..\AD\UserManagement.ps1"
         $results.ADLoginHistory = Get-ADLoginHistory
         
         # Exchange Online 容量監視
         . "$PSScriptRoot\..\EXO\MailboxManagement.ps1"
-        $results.EXOCapacity = Get-EXOMailboxCapacityReport
-        $results.EXOAttachment = Get-AttachmentAnalysisNEW
+        $results.EXOCapacity = Get-ExchangeMailboxReport
+        # $results.EXOAttachment = Get-AttachmentAnalysisNEW # TODO: 実装確認が必要
         
         # Exchange Online 配送レポート
-        . "$PSScriptRoot\..\EXO\SecurityAnalysis.ps1"
-        $results.EXODelivery = Get-EXOMailDeliveryReport
+        . "$PSScriptRoot\..\EXO\MailDeliveryAnalysis.ps1"
+        $results.EXODelivery = Get-ExchangeMessageTrace
         
         # Entra ID サインイン分析
         . "$PSScriptRoot\..\EntraID\UserSecurityManagement.ps1"
@@ -44,11 +76,49 @@ function Invoke-DailyReports {
             $results.EntraIDSignIn = $null
         }
         
+        }
+        
         # 日次HTMLレポート生成
         $reportSections = @()
         
-        # ADログイン履歴セクション
-        if ($results.ADLoginHistory) {
+        # データソース情報を追加
+        if ($results.Summary -and $results.Summary.DataSource) {
+            $dataSummary = New-SummaryStatistics -Data @([PSCustomObject]@{}) -CountFields @{}
+            $dataSummary = @(
+                @{ Label = "データソース"; Value = $results.Summary.DataSource; Risk = "低" },
+                @{ Label = "レポート生成日時"; Value = $results.Summary.ReportDate; Risk = "低" }
+            )
+            
+            $reportSections += @{
+                Title = "レポート情報"
+                Summary = $dataSummary
+                Data = @()
+            }
+        }
+        
+        # ユーザーアクティビティセクション（ADログイン履歴の代替）
+        if ($results.UserActivity) {
+            $activitySummary = New-SummaryStatistics -Data $results.UserActivity -CountFields @{
+                "総ユーザー数" = @{ Type = "Count"; Risk = "低" }
+                "アクティブユーザー" = @{ Type = "Count"; Filter = {$_.Status -eq "アクティブ"}; Risk = "低" }
+                "非アクティブユーザー" = @{ Type = "Count"; Filter = {$_.Status -eq "非アクティブ"}; Risk = "高" }
+            }
+            
+            $alerts = @()
+            $inactiveCount = ($results.UserActivity | Where-Object { $_.Status -eq "非アクティブ" }).Count
+            if ($inactiveCount -gt 10) {
+                $alerts += @{ Type = "Warning"; Message = "非アクティブユーザーが${inactiveCount}名検出されました。" }
+            }
+            
+            $reportSections += @{
+                Title = "ユーザーアクティビティ状況"
+                Summary = $activitySummary
+                Alerts = $alerts
+                Data = $results.UserActivity | Select-Object -First 50
+            }
+        }
+        # ADログイン履歴セクション（フォールバック用）
+        elseif ($results.ADLoginHistory) {
             $adSummary = New-SummaryStatistics -Data $results.ADLoginHistory -CountFields @{
                 "総ログイン試行" = @{ Type = "Count"; Risk = "低" }
                 "失敗ログイン" = @{ Type = "Count"; Filter = {$_.Result -eq "失敗"}; Risk = "中" }
@@ -112,8 +182,52 @@ function Invoke-DailyReports {
             }
         }
         
-        # Entra IDサインイン分析セクション
-        if ($results.EntraIDSignIn -and $results.EntraIDSignIn.AllSignIns) {
+        # セキュリティアラートセクション
+        if ($results.SecurityAlerts) {
+            $securitySummary = New-SummaryStatistics -Data $results.SecurityAlerts -CountFields @{
+                "総アラート数" = @{ Type = "Count"; Risk = "中" }
+                "高リスクアラート" = @{ Type = "Count"; Filter = {$_.Severity -eq "高"}; Risk = "高" }
+                "未対応アラート" = @{ Type = "Count"; Filter = {$_.Status -eq "未対応"}; Risk = "高" }
+            }
+            
+            $alerts = @()
+            $highRiskCount = ($results.SecurityAlerts | Where-Object { $_.Severity -eq "高" }).Count
+            if ($highRiskCount -gt 0) {
+                $alerts += @{ Type = "Danger"; Message = "高リスクのセキュリティアラートが${highRiskCount}件検出されました。" }
+            }
+            
+            $reportSections += @{
+                Title = "セキュリティアラート"
+                Summary = $securitySummary
+                Alerts = $alerts
+                Data = $results.SecurityAlerts | Select-Object -First 30
+            }
+        }
+        
+        # MFA状況セクション
+        if ($results.MFAStatus) {
+            $mfaSummary = New-SummaryStatistics -Data $results.MFAStatus -CountFields @{
+                "総ユーザー数" = @{ Type = "Count"; Risk = "低" }
+                "MFA設定済み" = @{ Type = "Count"; Filter = {$_.HasMFA -eq $true}; Risk = "低" }
+                "MFA未設定" = @{ Type = "Count"; Filter = {$_.HasMFA -eq $false}; Risk = "高" }
+            }
+            
+            $alerts = @()
+            $noMFACount = ($results.MFAStatus | Where-Object { $_.HasMFA -eq $false }).Count
+            if ($noMFACount -gt 0) {
+                $alerts += @{ Type = "Danger"; Message = "MFA未設定のユーザーが${noMFACount}名います。" }
+            }
+            
+            $reportSections += @{
+                Title = "多要素認証（MFA）状況"
+                Summary = $mfaSummary
+                Alerts = $alerts
+                Data = $results.MFAStatus | Where-Object { $_.HasMFA -eq $false } | Select-Object -First 50
+            }
+        }
+        
+        # Entra IDサインイン分析セクション（フォールバック用）
+        elseif ($results.EntraIDSignIn -and $results.EntraIDSignIn.AllSignIns) {
             $signInSummary = New-SummaryStatistics -Data $results.EntraIDSignIn.AllSignIns -CountFields @{
                 "総サインイン数" = @{ Type = "Count"; Risk = "低" }
                 "失敗サインイン" = @{ Type = "Count"; Filter = {$_.Status -ne 0}; Risk = "中" }
@@ -155,7 +269,7 @@ function Invoke-WeeklyReports {
         
         # Exchange Online 転送ルール・スパム分析
         . "$PSScriptRoot\..\EXO\MailboxManagement.ps1"
-        $results.EXOForwarding = Get-EXOForwardingRules
+        $results.EXOForwarding = Get-ExchangeTransportRules
         
         . "$PSScriptRoot\..\EXO\SecurityAnalysis.ps1"
         $results.EXOSpamPhishing = Get-EXOSpamPhishingAnalysis
@@ -166,7 +280,7 @@ function Invoke-WeeklyReports {
         
         # OneDrive 外部共有
         . "$PSScriptRoot\..\EntraID\TeamsOneDriveManagement.ps1"
-        $results.OneDriveSharing = Get-OneDriveSharingReport
+        $results.OneDriveSharing = Get-OneDriveReport
         
         # 週次HTMLレポート生成
         $reportSections = @()
@@ -247,7 +361,7 @@ function Invoke-MonthlyReports {
         
         # Exchange Online 配布グループ・会議室
         . "$PSScriptRoot\..\EXO\MailboxManagement.ps1"
-        $results.EXODistributionGroups = Get-EXODistributionGroupReport
+        $results.EXODistributionGroups = Get-ExchangeDistributionGroups
         
         . "$PSScriptRoot\..\EXO\SecurityAnalysis.ps1"
         $results.EXORoomResources = Get-EXORoomResourceReport
@@ -260,8 +374,8 @@ function Invoke-MonthlyReports {
         # Teams・OneDrive
         . "$PSScriptRoot\..\EntraID\TeamsOneDriveManagement.ps1"
         $results.TeamsReport = Get-TeamsReport
-        $results.OneDriveUsage = Get-OneDriveUsageReport
-        $results.M365Utilization = Get-M365LicenseUtilizationReport
+        $results.OneDriveUsage = Get-OneDriveReport
+        # $results.M365Utilization = Get-M365LicenseUtilizationReport # TODO: 実装確認が必要
         
         # 月次HTMLレポート生成
         $reportSections = @()

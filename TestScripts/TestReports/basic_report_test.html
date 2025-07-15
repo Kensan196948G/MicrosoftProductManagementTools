@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基本HTMLレポートテスト</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0078d4, #00bcf2, #40e0d0);
+        }
+        .header { 
+            text-align: center; 
+            padding-bottom: 25px; 
+            margin-bottom: 35px; 
+            position: relative;
+        }
+        .title { 
+            color: #0078d4; 
+            font-size: 32px; 
+            margin-bottom: 10px; 
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .timestamp { 
+            color: #666; 
+            font-size: 14px; 
+            background: #f8f9fa;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            border: 1px solid #e9ecef;
+        }
+        .section { 
+            margin-bottom: 35px; 
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section-title { 
+            color: white; 
+            font-size: 18px; 
+            padding: 15px 20px; 
+            margin: 0;
+            background: linear-gradient(135deg, #0078d4, #0056b3);
+            font-weight: 600;
+        }
+        .summary { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-left: 4px solid #0078d4;
+            margin: 0;
+        }
+        .summary p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .alert { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin: 15px 20px; 
+            border-left: 4px solid;
+            font-weight: 500;
+        }
+        .alert-danger { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+            color: #721c24; 
+        }
+        .alert-warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+            color: #856404; 
+        }
+        .alert-info { 
+            background: #d1ecf1; 
+            border-left-color: #17a2b8; 
+            color: #0c5460; 
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 0;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 14px;
+            margin: 0;
+        }
+        th, td { 
+            padding: 12px 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        th { 
+            background: linear-gradient(135deg, #0078d4, #0056b3); 
+            color: white; 
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:nth-child(even) { 
+            background: #f8f9fa; 
+        }
+        tr:hover {
+            background: #e3f2fd;
+            transition: background-color 0.2s ease;
+        }
+        .footer { 
+            text-align: center; 
+            color: #666; 
+            font-size: 12px; 
+            margin-top: 40px; 
+            border-top: 1px solid #e9ecef; 
+            padding-top: 20px; 
+            background: #f8f9fa;
+            margin-left: -30px;
+            margin-right: -30px;
+            margin-bottom: -30px;
+            padding-left: 30px;
+            padding-right: 30px;
+            padding-bottom: 30px;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            .title { font-size: 24px; }
+            th, td { padding: 8px 10px; font-size: 12px; }
+            .section-title { font-size: 16px; }
+        }
+        @media print {
+            /* PDF/印刷専用設定 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body { 
+                background: white !important; 
+                font-size: 10pt !important;
+                line-height: 1.4 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .container { 
+                box-shadow: none !important; 
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 10mm !important;
+                border-radius: 0 !important;
+            }
+            
+            .container::before {
+                display: none !important;
+            }
+            
+            .header {
+                page-break-after: avoid !important;
+                margin-bottom: 5mm !important;
+                padding-bottom: 5mm !important;
+            }
+            
+            .title {
+                font-size: 18pt !important;
+                margin-bottom: 3mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .timestamp {
+                font-size: 9pt !important;
+                background: #f8f9fa !important;
+                padding: 2mm 4mm !important;
+                border: 1px solid #e9ecef !important;
+                border-radius: 3mm !important;
+            }
+            
+            .section {
+                page-break-inside: avoid !important;
+                margin-bottom: 5mm !important;
+                box-shadow: none !important;
+            }
+            
+            .section-title {
+                background: linear-gradient(135deg, #0078d4, #0056b3) !important;
+                color: white !important;
+                font-size: 12pt !important;
+                padding: 3mm 5mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .summary {
+                background: #f8f9fa !important;
+                padding: 3mm !important;
+                border-left: 2mm solid #0078d4 !important;
+                font-size: 9pt !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .alert {
+                padding: 3mm !important;
+                margin: 3mm 5mm !important;
+                border-left: 2mm solid !important;
+                font-size: 9pt !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .alert-danger {
+                background: #f8d7da !important;
+                border-left-color: #dc3545 !important;
+                color: #721c24 !important;
+            }
+            
+            .alert-warning {
+                background: #fff3cd !important;
+                border-left-color: #ffc107 !important;
+                color: #856404 !important;
+            }
+            
+            .alert-info {
+                background: #d1ecf1 !important;
+                border-left-color: #17a2b8 !important;
+                color: #0c5460 !important;
+            }
+            
+            .table-wrapper {
+                overflow: visible !important;
+                margin: 0 !important;
+            }
+            
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 8pt !important;
+                margin: 0 !important;
+                page-break-inside: auto !important;
+            }
+            
+            th {
+                background: linear-gradient(135deg, #0078d4, #0056b3) !important;
+                color: white !important;
+                font-weight: bold !important;
+                font-size: 8pt !important;
+                padding: 2mm 3mm !important;
+                text-align: left !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            
+            td {
+                padding: 2mm 3mm !important;
+                border: 1px solid #ddd !important;
+                font-size: 8pt !important;
+                page-break-inside: avoid !important;
+                word-wrap: break-word !important;
+                max-width: 40mm !important;
+            }
+            
+            tbody tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+            }
+            
+            tbody tr:nth-child(even) {
+                background: #f8f9fa !important;
+            }
+            
+            .footer {
+                page-break-before: avoid !important;
+                font-size: 8pt !important;
+                color: #666 !important;
+                border-top: 1px solid #e9ecef !important;
+                padding-top: 3mm !important;
+                margin-top: 5mm !important;
+                text-align: center !important;
+            }
+            
+            /* 改ページ制御 */
+            .page-break {
+                page-break-before: always !important;
+            }
+            
+            .no-break {
+                page-break-inside: avoid !important;
+            }
+            
+            /* 孤立行・寡婦行の制御 */
+            p {
+                orphans: 2 !important;
+                widows: 2 !important;
+            }
+            
+            /* テーブルのヘッダー・フッター表示 */
+            thead {
+                display: table-header-group !important;
+            }
+            
+            tfoot {
+                display: table-footer-group !important;
+            }
+            
+            tbody {
+                display: table-row-group !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">基本HTMLレポートテスト</div>
+            <div class="timestamp">生成日時: 2025年07月15日 20:48:58</div>
+        </div><div class='section'><div class='section-title'>ユーザー管理レポート</div><div class='table-wrapper'><table><thead><tr><th>ID</th><th>ユーザー名</th><th>部署</th><th>ライセンス</th><th>最終ログイン</th><th>MFA状態</th><th>ステータス</th><th>容量使用率</th><th>リスクレベル</th><th>最終更新</th><th>コメント</th></tr></thead><tbody><tr><td>1</td><td>user1@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/14</td><td>無効</td><td>非アクティブ</td><td>1%</td><td>中</td><td>2025/07/15 19:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>2</td><td>user2@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/13</td><td>未設定</td><td>停止中</td><td>2%</td><td>高</td><td>2025/07/15 18:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>3</td><td>user3@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/07/12</td><td>有効</td><td>アクティブ</td><td>3%</td><td>低</td><td>2025/07/15 17:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>4</td><td>user4@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/07/11</td><td>無効</td><td>非アクティブ</td><td>4%</td><td>中</td><td>2025/07/15 16:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>5</td><td>user5@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/07/10</td><td>未設定</td><td>停止中</td><td>5%</td><td>高</td><td>2025/07/15 15:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>6</td><td>user6@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/07/09</td><td>有効</td><td>アクティブ</td><td>6%</td><td>低</td><td>2025/07/15 14:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>7</td><td>user7@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/07/08</td><td>無効</td><td>非アクティブ</td><td>7%</td><td>中</td><td>2025/07/15 13:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>8</td><td>user8@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/07/07</td><td>未設定</td><td>停止中</td><td>8%</td><td>高</td><td>2025/07/15 12:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>9</td><td>user9@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/07/06</td><td>有効</td><td>アクティブ</td><td>9%</td><td>低</td><td>2025/07/15 11:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>10</td><td>user10@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/07/05</td><td>無効</td><td>非アクティブ</td><td>10%</td><td>中</td><td>2025/07/15 10:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>11</td><td>user11@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/07/04</td><td>未設定</td><td>停止中</td><td>11%</td><td>高</td><td>2025/07/15 09:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>12</td><td>user12@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/07/03</td><td>有効</td><td>アクティブ</td><td>12%</td><td>低</td><td>2025/07/15 08:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>13</td><td>user13@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/02</td><td>無効</td><td>非アクティブ</td><td>13%</td><td>中</td><td>2025/07/15 07:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>14</td><td>user14@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/01</td><td>未設定</td><td>停止中</td><td>14%</td><td>高</td><td>2025/07/15 06:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>15</td><td>user15@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/06/30</td><td>有効</td><td>アクティブ</td><td>15%</td><td>低</td><td>2025/07/15 05:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>16</td><td>user16@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/06/29</td><td>無効</td><td>非アクティブ</td><td>16%</td><td>中</td><td>2025/07/15 04:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>17</td><td>user17@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/06/28</td><td>未設定</td><td>停止中</td><td>17%</td><td>高</td><td>2025/07/15 03:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>18</td><td>user18@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/06/27</td><td>有効</td><td>アクティブ</td><td>18%</td><td>低</td><td>2025/07/15 02:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>19</td><td>user19@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/06/26</td><td>無効</td><td>非アクティブ</td><td>19%</td><td>中</td><td>2025/07/15 01:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>20</td><td>user20@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/06/25</td><td>未設定</td><td>停止中</td><td>20%</td><td>高</td><td>2025/07/15 00:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>21</td><td>user21@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/06/24</td><td>有効</td><td>アクティブ</td><td>21%</td><td>低</td><td>2025/07/14 23:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>22</td><td>user22@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/06/23</td><td>無効</td><td>非アクティブ</td><td>22%</td><td>中</td><td>2025/07/14 22:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>23</td><td>user23@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/06/22</td><td>未設定</td><td>停止中</td><td>23%</td><td>高</td><td>2025/07/14 21:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>24</td><td>user24@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/06/21</td><td>有効</td><td>アクティブ</td><td>24%</td><td>低</td><td>2025/07/15 20:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>25</td><td>user25@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/06/20</td><td>無効</td><td>非アクティブ</td><td>25%</td><td>中</td><td>2025/07/15 19:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>26</td><td>user26@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/06/19</td><td>未設定</td><td>停止中</td><td>26%</td><td>高</td><td>2025/07/15 18:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>27</td><td>user27@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/06/18</td><td>有効</td><td>アクティブ</td><td>27%</td><td>低</td><td>2025/07/15 17:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>28</td><td>user28@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/06/17</td><td>無効</td><td>非アクティブ</td><td>28%</td><td>中</td><td>2025/07/15 16:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>29</td><td>user29@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/06/16</td><td>未設定</td><td>停止中</td><td>29%</td><td>高</td><td>2025/07/15 15:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>30</td><td>user30@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/07/15</td><td>有効</td><td>アクティブ</td><td>30%</td><td>低</td><td>2025/07/15 14:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>31</td><td>user31@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/07/14</td><td>無効</td><td>非アクティブ</td><td>31%</td><td>中</td><td>2025/07/15 13:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>32</td><td>user32@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/07/13</td><td>未設定</td><td>停止中</td><td>32%</td><td>高</td><td>2025/07/15 12:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>33</td><td>user33@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/07/12</td><td>有効</td><td>アクティブ</td><td>33%</td><td>低</td><td>2025/07/15 11:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>34</td><td>user34@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/07/11</td><td>無効</td><td>非アクティブ</td><td>34%</td><td>中</td><td>2025/07/15 10:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>35</td><td>user35@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/07/10</td><td>未設定</td><td>停止中</td><td>35%</td><td>高</td><td>2025/07/15 09:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>36</td><td>user36@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/07/09</td><td>有効</td><td>アクティブ</td><td>36%</td><td>低</td><td>2025/07/15 08:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>37</td><td>user37@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/08</td><td>無効</td><td>非アクティブ</td><td>37%</td><td>中</td><td>2025/07/15 07:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>38</td><td>user38@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/07</td><td>未設定</td><td>停止中</td><td>38%</td><td>高</td><td>2025/07/15 06:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>39</td><td>user39@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/07/06</td><td>有効</td><td>アクティブ</td><td>39%</td><td>低</td><td>2025/07/15 05:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>40</td><td>user40@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/07/05</td><td>無効</td><td>非アクティブ</td><td>40%</td><td>中</td><td>2025/07/15 04:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>41</td><td>user41@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/07/04</td><td>未設定</td><td>停止中</td><td>41%</td><td>高</td><td>2025/07/15 03:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>42</td><td>user42@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/07/03</td><td>有効</td><td>アクティブ</td><td>42%</td><td>低</td><td>2025/07/15 02:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>43</td><td>user43@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/07/02</td><td>無効</td><td>非アクティブ</td><td>43%</td><td>中</td><td>2025/07/15 01:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>44</td><td>user44@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/07/01</td><td>未設定</td><td>停止中</td><td>44%</td><td>高</td><td>2025/07/15 00:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>45</td><td>user45@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/06/30</td><td>有効</td><td>アクティブ</td><td>45%</td><td>低</td><td>2025/07/14 23:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>46</td><td>user46@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/06/29</td><td>無効</td><td>非アクティブ</td><td>46%</td><td>中</td><td>2025/07/14 22:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>47</td><td>user47@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/06/28</td><td>未設定</td><td>停止中</td><td>47%</td><td>高</td><td>2025/07/14 21:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>48</td><td>user48@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/06/27</td><td>有効</td><td>アクティブ</td><td>48%</td><td>低</td><td>2025/07/15 20:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>49</td><td>user49@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/06/26</td><td>無効</td><td>非アクティブ</td><td>49%</td><td>中</td><td>2025/07/15 19:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>50</td><td>user50@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/06/25</td><td>未設定</td><td>停止中</td><td>50%</td><td>高</td><td>2025/07/15 18:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>51</td><td>user51@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/06/24</td><td>有効</td><td>アクティブ</td><td>51%</td><td>低</td><td>2025/07/15 17:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>52</td><td>user52@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/06/23</td><td>無効</td><td>非アクティブ</td><td>52%</td><td>中</td><td>2025/07/15 16:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>53</td><td>user53@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/06/22</td><td>未設定</td><td>停止中</td><td>53%</td><td>高</td><td>2025/07/15 15:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>54</td><td>user54@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/06/21</td><td>有効</td><td>アクティブ</td><td>54%</td><td>低</td><td>2025/07/15 14:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>55</td><td>user55@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/06/20</td><td>無効</td><td>非アクティブ</td><td>55%</td><td>中</td><td>2025/07/15 13:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>56</td><td>user56@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/06/19</td><td>未設定</td><td>停止中</td><td>56%</td><td>高</td><td>2025/07/15 12:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>57</td><td>user57@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/06/18</td><td>有効</td><td>アクティブ</td><td>57%</td><td>低</td><td>2025/07/15 11:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>58</td><td>user58@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/06/17</td><td>無効</td><td>非アクティブ</td><td>58%</td><td>中</td><td>2025/07/15 10:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>59</td><td>user59@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/06/16</td><td>未設定</td><td>停止中</td><td>59%</td><td>高</td><td>2025/07/15 09:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>60</td><td>user60@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/07/15</td><td>有効</td><td>アクティブ</td><td>60%</td><td>低</td><td>2025/07/15 08:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>61</td><td>user61@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/14</td><td>無効</td><td>非アクティブ</td><td>61%</td><td>中</td><td>2025/07/15 07:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>62</td><td>user62@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/13</td><td>未設定</td><td>停止中</td><td>62%</td><td>高</td><td>2025/07/15 06:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>63</td><td>user63@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/07/12</td><td>有効</td><td>アクティブ</td><td>63%</td><td>低</td><td>2025/07/15 05:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>64</td><td>user64@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/07/11</td><td>無効</td><td>非アクティブ</td><td>64%</td><td>中</td><td>2025/07/15 04:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>65</td><td>user65@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/07/10</td><td>未設定</td><td>停止中</td><td>65%</td><td>高</td><td>2025/07/15 03:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>66</td><td>user66@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/07/09</td><td>有効</td><td>アクティブ</td><td>66%</td><td>低</td><td>2025/07/15 02:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>67</td><td>user67@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/07/08</td><td>無効</td><td>非アクティブ</td><td>67%</td><td>中</td><td>2025/07/15 01:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>68</td><td>user68@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/07/07</td><td>未設定</td><td>停止中</td><td>68%</td><td>高</td><td>2025/07/15 00:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>69</td><td>user69@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/07/06</td><td>有効</td><td>アクティブ</td><td>69%</td><td>低</td><td>2025/07/14 23:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>70</td><td>user70@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/07/05</td><td>無効</td><td>非アクティブ</td><td>70%</td><td>中</td><td>2025/07/14 22:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>71</td><td>user71@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/07/04</td><td>未設定</td><td>停止中</td><td>71%</td><td>高</td><td>2025/07/14 21:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>72</td><td>user72@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/07/03</td><td>有効</td><td>アクティブ</td><td>72%</td><td>低</td><td>2025/07/15 20:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>73</td><td>user73@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/02</td><td>無効</td><td>非アクティブ</td><td>73%</td><td>中</td><td>2025/07/15 19:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>74</td><td>user74@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/01</td><td>未設定</td><td>停止中</td><td>74%</td><td>高</td><td>2025/07/15 18:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>75</td><td>user75@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/06/30</td><td>有効</td><td>アクティブ</td><td>75%</td><td>低</td><td>2025/07/15 17:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>76</td><td>user76@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/06/29</td><td>無効</td><td>非アクティブ</td><td>76%</td><td>中</td><td>2025/07/15 16:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>77</td><td>user77@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/06/28</td><td>未設定</td><td>停止中</td><td>77%</td><td>高</td><td>2025/07/15 15:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>78</td><td>user78@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/06/27</td><td>有効</td><td>アクティブ</td><td>78%</td><td>低</td><td>2025/07/15 14:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>79</td><td>user79@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/06/26</td><td>無効</td><td>非アクティブ</td><td>79%</td><td>中</td><td>2025/07/15 13:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>80</td><td>user80@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/06/25</td><td>未設定</td><td>停止中</td><td>80%</td><td>高</td><td>2025/07/15 12:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>81</td><td>user81@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/06/24</td><td>有効</td><td>アクティブ</td><td>81%</td><td>低</td><td>2025/07/15 11:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>82</td><td>user82@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/06/23</td><td>無効</td><td>非アクティブ</td><td>82%</td><td>中</td><td>2025/07/15 10:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>83</td><td>user83@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/06/22</td><td>未設定</td><td>停止中</td><td>83%</td><td>高</td><td>2025/07/15 09:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>84</td><td>user84@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/06/21</td><td>有効</td><td>アクティブ</td><td>84%</td><td>低</td><td>2025/07/15 08:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>85</td><td>user85@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/06/20</td><td>無効</td><td>非アクティブ</td><td>85%</td><td>中</td><td>2025/07/15 07:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>86</td><td>user86@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/06/19</td><td>未設定</td><td>停止中</td><td>86%</td><td>高</td><td>2025/07/15 06:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>87</td><td>user87@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/06/18</td><td>有効</td><td>アクティブ</td><td>87%</td><td>低</td><td>2025/07/15 05:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>88</td><td>user88@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/06/17</td><td>無効</td><td>非アクティブ</td><td>88%</td><td>中</td><td>2025/07/15 04:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>89</td><td>user89@example.com</td><td>開発部</td><td>Microsoft 365 Business</td><td>2025/06/16</td><td>未設定</td><td>停止中</td><td>89%</td><td>高</td><td>2025/07/15 03:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>90</td><td>user90@example.com</td><td>総務部</td><td>Office 365 E3</td><td>2025/07/15</td><td>有効</td><td>アクティブ</td><td>90%</td><td>低</td><td>2025/07/15 02:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>91</td><td>user91@example.com</td><td>人事部</td><td>Office 365 E5</td><td>2025/07/14</td><td>無効</td><td>非アクティブ</td><td>91%</td><td>中</td><td>2025/07/15 01:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>92</td><td>user92@example.com</td><td>営業部</td><td>Microsoft 365 Business</td><td>2025/07/13</td><td>未設定</td><td>停止中</td><td>92%</td><td>高</td><td>2025/07/15 00:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>93</td><td>user93@example.com</td><td>開発部</td><td>Office 365 E3</td><td>2025/07/12</td><td>有効</td><td>アクティブ</td><td>93%</td><td>低</td><td>2025/07/14 23:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>94</td><td>user94@example.com</td><td>総務部</td><td>Office 365 E5</td><td>2025/07/11</td><td>無効</td><td>非アクティブ</td><td>94%</td><td>中</td><td>2025/07/14 22:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>95</td><td>user95@example.com</td><td>人事部</td><td>Microsoft 365 Business</td><td>2025/07/10</td><td>未設定</td><td>停止中</td><td>95%</td><td>高</td><td>2025/07/14 21:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>96</td><td>user96@example.com</td><td>営業部</td><td>Office 365 E3</td><td>2025/07/09</td><td>有効</td><td>アクティブ</td><td>96%</td><td>低</td><td>2025/07/15 20:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>97</td><td>user97@example.com</td><td>開発部</td><td>Office 365 E5</td><td>2025/07/08</td><td>無効</td><td>非アクティブ</td><td>97%</td><td>中</td><td>2025/07/15 19:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>98</td><td>user98@example.com</td><td>総務部</td><td>Microsoft 365 Business</td><td>2025/07/07</td><td>未設定</td><td>停止中</td><td>98%</td><td>高</td><td>2025/07/15 18:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>99</td><td>user99@example.com</td><td>人事部</td><td>Office 365 E3</td><td>2025/07/06</td><td>有効</td><td>アクティブ</td><td>99%</td><td>低</td><td>2025/07/15 17:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr><tr><td>100</td><td>user100@example.com</td><td>営業部</td><td>Office 365 E5</td><td>2025/07/05</td><td>無効</td><td>非アクティブ</td><td>0%</td><td>中</td><td>2025/07/15 16:48</td><td>これは。長いテキストがPDFでどのように表示されるかをテストしています。</td></tr></tbody></table></div></div>        <div class="footer">
+            <p>Microsoft製品運用管理ツール - ITSM/ISO27001/27002準拠</p>
+            <p>© 2025 All Rights Reserved</p>
+        </div>
+    </div>
+</body>
+</html>
