@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(powershell:*)",
+      "Bash(pwsh:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(openssl pkcs12:*)",
+      "Bash(sed:*)",
+      "Bash(openssl:*)"
+    ],
+    "deny": []
+  }
+}

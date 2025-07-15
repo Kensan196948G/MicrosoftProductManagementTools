@@ -5,8 +5,46 @@ Import-Module ./Scripts/Common/Authentication.psm1 -Force
 
 try {
     Write-Host "設定ファイルを読み込み中..." -ForegroundColor Yellow
-    $configText = Get-Content ./Config/appsettings.json -Raw
-    $config = $configText | ConvertFrom-Json
+    
+    # ローカル設定ファイルを優先的に読み込み
+    $localConfigPath = "./Config/appsettings.local.json"
+    $baseConfigPath = "./Config/appsettings.json"
+    
+    if (Test-Path $localConfigPath) {
+        Write-Host "ローカル設定ファイルを使用: $localConfigPath" -ForegroundColor Green
+        $configText = Get-Content $localConfigPath -Raw
+        $config = $configText | ConvertFrom-Json
+    }
+    elseif (Test-Path $baseConfigPath) {
+        Write-Host "ベース設定ファイルを使用: $baseConfigPath" -ForegroundColor Yellow
+        $configText = Get-Content $baseConfigPath -Raw
+        $config = $configText | ConvertFrom-Json
+        
+        # プレースホルダーチェック
+        if ($config.EntraID.ClientId -like "*YOUR-*-HERE*" -or $config.EntraID.TenantId -like "*YOUR-*-HERE*") {
+            Write-Host "⚠️  設定ファイルにプレースホルダーが含まれています" -ForegroundColor Yellow
+            Write-Host "💡 実際の認証情報を Config/appsettings.local.json に設定してください" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "例: Config/appsettings.local.json" -ForegroundColor White
+            Write-Host @"
+{
+  "EntraID": {
+    "TenantId": "your-actual-tenant-id",
+    "ClientId": "your-actual-client-id",
+    "ClientSecret": "your-actual-client-secret"
+  },
+  "ExchangeOnline": {
+    "AppId": "your-actual-app-id",
+    "CertificateThumbprint": "your-actual-certificate-thumbprint"
+  }
+}
+"@ -ForegroundColor Gray
+            throw "設定ファイルの認証情報が未設定です"
+        }
+    }
+    else {
+        throw "設定ファイルが見つかりません: $baseConfigPath または $localConfigPath"
+    }
     
     Write-Host "ClientId: $($config.EntraID.ClientId)" -ForegroundColor Green
     Write-Host "TenantId: $($config.EntraID.TenantId)" -ForegroundColor Green

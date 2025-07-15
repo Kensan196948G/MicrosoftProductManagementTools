@@ -5,8 +5,31 @@ Import-Module ./Scripts/Common/Authentication.psm1 -Force
 
 try {
     Write-Host "Exchange Online認証テスト開始..." -ForegroundColor Yellow
-    $configText = Get-Content ./Config/appsettings.json -Raw
-    $config = $configText | ConvertFrom-Json
+    
+    # ローカル設定ファイルを優先的に読み込み
+    $localConfigPath = "./Config/appsettings.local.json"
+    $baseConfigPath = "./Config/appsettings.json"
+    
+    if (Test-Path $localConfigPath) {
+        Write-Host "ローカル設定ファイルを使用: $localConfigPath" -ForegroundColor Green
+        $configText = Get-Content $localConfigPath -Raw
+        $config = $configText | ConvertFrom-Json
+    }
+    elseif (Test-Path $baseConfigPath) {
+        Write-Host "ベース設定ファイルを使用: $baseConfigPath" -ForegroundColor Yellow
+        $configText = Get-Content $baseConfigPath -Raw
+        $config = $configText | ConvertFrom-Json
+        
+        # プレースホルダーチェック
+        if ($config.ExchangeOnline.AppId -like "*YOUR-*-HERE*" -or $config.ExchangeOnline.CertificateThumbprint -like "*YOUR-*-HERE*") {
+            Write-Host "⚠️  Exchange Online設定にプレースホルダーが含まれています" -ForegroundColor Yellow
+            Write-Host "💡 実際の認証情報を Config/appsettings.local.json に設定してください" -ForegroundColor Cyan
+            throw "Exchange Online認証情報が未設定です"
+        }
+    }
+    else {
+        throw "設定ファイルが見つかりません: $baseConfigPath または $localConfigPath"
+    }
     
     Write-Host "AppId: $($config.ExchangeOnline.AppId)" -ForegroundColor Green
     Write-Host "Organization: $($config.ExchangeOnline.Organization)" -ForegroundColor Green

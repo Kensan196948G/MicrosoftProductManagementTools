@@ -1,0 +1,7 @@
+﻿"Service","ActiveUsers","TotalUsers","AdoptionRate","DailyActiveUsers","WeeklyActiveUsers","MonthlyActiveUsers","TrendDirection"
+"Exchange Online","173","195","81","125","166","170","安定"
+"SharePoint Online","71","182","69","114","157","207","上昇"
+"Teams","63","182","68","115","121","180","下降"
+"OneDrive","90","194","79","108","174","172","下降"
+"Power BI","186","196","94","52","184","176","下降"
+"Power Apps","116","185","70","128","199","169","安定"

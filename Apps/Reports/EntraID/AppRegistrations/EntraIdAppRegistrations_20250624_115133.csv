@@ -1,4 +1,0 @@
-﻿"アプリ名","アプリID","所有者","作成日","最終使用","状態","権限","セキュリティ状態","リスクレベル","推奨アクション"
-"PowerBI Dashboard App","12345678-1234-1234-1234-123456789012","john.smith@contoso.com","2025-05-25","2025-06-24 05:51:33","アクティブ","User.Read, Mail.Read","安全","低","継続監視"
-"Legacy API Connector","87654321-4321-4321-4321-210987654321","legacy-system@contoso.com","2024-12-26","2025-05-25 11:51:33","非アクティブ","Directory.ReadWrite.All","要注意","高","削除検討"
-"SharePoint Custom App","abcdef12-3456-7890-abcd-ef1234567890","david.brown@contoso.com","2025-06-09","2025-06-24 09:51:33","アクティブ","Sites.ReadWrite.All","要注意","中","権限見直し"

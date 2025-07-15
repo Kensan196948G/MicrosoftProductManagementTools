@@ -1,7 +1,7 @@
 # ================================================================================
 # Microsoft 365統合管理ツール - GUI/CLI 両対応ランチャー
 # run_launcher.ps1
-# Windows 11 + PowerShell 7.5.1 専用／CLI対応
+# PowerShell 7 シリーズ推奨／CLI対応
 # ================================================================================
 
 [CmdletBinding()]
@@ -20,9 +20,35 @@ param(
     [switch]$VerboseOutput = $false
 )
 
+# PowerShell 7 環境チェック（パラメータブロック後に実行）
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "⚠️  " -ForegroundColor Yellow -NoNewline
+    Write-Host "PowerShell $($PSVersionTable.PSVersion.Major) で実行中です" -ForegroundColor Yellow
+    Write-Host "💡 " -ForegroundColor Blue -NoNewline
+    Write-Host "PowerShell 7 での実行を強く推奨します" -ForegroundColor White
+    Write-Host ""
+    Write-Host "🚀 PowerShell 7 Launcher を使用しますか?" -ForegroundColor Cyan
+    Write-Host "   [Y] はい (推奨)   [N] いいえ" -ForegroundColor Yellow
+    
+    $choice = Read-Host "選択してください"
+    if ($choice -match "^[yY]") {
+        $launcherPath = "Scripts\Common\PowerShell7-Launcher.ps1"
+        if (Test-Path $launcherPath) {
+            Write-Host "🔄 PowerShell 7 Launcher に切り替えます..." -ForegroundColor Cyan
+            & $launcherPath -TargetScript $MyInvocation.MyCommand.Path -Arguments @($Mode, $SkipPowerShell7Install, $ForceAdmin, $VerboseOutput)
+            return
+        }
+        else {
+            Write-Host "❌ PowerShell 7 Launcher が見つかりません: $launcherPath" -ForegroundColor Red
+            Write-Host "⚠️  PowerShell $($PSVersionTable.PSVersion.Major) で続行します" -ForegroundColor Yellow
+        }
+    }
+    Write-Host ""
+}
+
 # グローバル変数
 $Script:ToolRoot = $PSScriptRoot
-$Script:RequiredPSVersion = [Version]"7.5.1"
+$Script:RequiredPSVersion = [Version]"7.0.0"
 $Script:PowerShell7Path = ""
 $Script:IsAdmin = $false
 
@@ -51,7 +77,7 @@ function Show-LauncherBanner {
     Write-Host @"
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║              Microsoft 365統合管理ツール GUI/CLI ランチャー                          ║
-║                    Windows 11 + PowerShell 7.5.1 対応                       ║
+║                     PowerShell 7 シリーズ推奨対応                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Blue
     Write-Host ""
@@ -252,15 +278,35 @@ function Test-AuthenticationConfiguration {
     }
     
     try {
-        $configPath = Join-Path $Script:ToolRoot "Config\appsettings.json"
+        # ローカル設定ファイルを優先的に読み込み
+        $baseConfigPath = Join-Path $Script:ToolRoot "Config\appsettings.json"
+        $localConfigPath = Join-Path $Script:ToolRoot "Config\appsettings.local.json"
         
-        if (-not (Test-Path $configPath)) {
-            $result.Issues += "設定ファイルが見つかりません: $configPath"
+        $config = $null
+        $usedConfigPath = ""
+        
+        if (Test-Path $localConfigPath) {
+            $config = Get-Content $localConfigPath -Raw | ConvertFrom-Json
+            $usedConfigPath = $localConfigPath
+            Write-Host "  📁 ローカル設定ファイルを使用: appsettings.local.json" -ForegroundColor Cyan
+        }
+        elseif (Test-Path $baseConfigPath) {
+            $config = Get-Content $baseConfigPath -Raw | ConvertFrom-Json
+            $usedConfigPath = $baseConfigPath
+            Write-Host "  📁 ベース設定ファイルを使用: appsettings.json" -ForegroundColor Yellow
+            
+            # プレースホルダーチェック
+            if ($config.EntraID.ClientId -like "*YOUR-*-HERE*" -or $config.EntraID.TenantId -like "*YOUR-*-HERE*") {
+                $result.Issues += "設定ファイルにプレースホルダーが含まれています。Config/appsettings.local.json を作成してください"
+                $result.IsValid = $false
+                return $result
+            }
+        }
+        else {
+            $result.Issues += "設定ファイルが見つかりません: $baseConfigPath または $localConfigPath"
             $result.IsValid = $false
             return $result
         }
-        
-        $config = Get-Content $configPath -Raw | ConvertFrom-Json
         
         # Microsoft Graph設定確認
         if ($config.EntraID) {
@@ -281,15 +327,18 @@ function Test-AuthenticationConfiguration {
                 $result.ValidServices += "Microsoft Graph (クライアントシークレット)"
             }
             
-            if (-not $hasValidAuth) {
-                $result.Issues += "Microsoft Graph の認証設定が不完全です"
+            if ($hasValidAuth) {
+                Write-Host "    ✅ Microsoft Graph認証設定: 正常" -ForegroundColor Green
+            } else {
+                $result.Issues += "Microsoft Graph の認証情報が設定されていません"
+                Write-Host "    ❌ Microsoft Graph認証設定: 未設定" -ForegroundColor Red
             }
             
             # 基本設定確認
-            if (-not $graphConfig.TenantId -or $graphConfig.TenantId -eq "YOUR-TENANT-ID-HERE") {
+            if (-not $graphConfig.TenantId -or $graphConfig.TenantId -like "*YOUR-*-HERE*") {
                 $result.Issues += "Microsoft Graph の TenantId が設定されていません"
             }
-            if (-not $graphConfig.ClientId -or $graphConfig.ClientId -eq "YOUR-CLIENT-ID-HERE") {
+            if (-not $graphConfig.ClientId -or $graphConfig.ClientId -like "*YOUR-*-HERE*") {
                 $result.Issues += "Microsoft Graph の ClientId が設定されていません"
             }
         } else {
@@ -311,15 +360,18 @@ function Test-AuthenticationConfiguration {
                 $result.ValidServices += "Exchange Online (Thumbprint認証)"
             }
             
-            if (-not $hasValidAuth) {
-                $result.Issues += "Exchange Online の認証設定が不完全です"
+            if ($hasValidAuth) {
+                Write-Host "    ✅ Exchange Online認証設定: 正常" -ForegroundColor Green
+            } else {
+                $result.Issues += "Exchange Online の認証情報が設定されていません"
+                Write-Host "    ❌ Exchange Online認証設定: 未設定" -ForegroundColor Red
             }
             
             # 基本設定確認
-            if (-not $exoConfig.Organization -or $exoConfig.Organization -eq "your-tenant.onmicrosoft.com") {
+            if (-not $exoConfig.Organization -or $exoConfig.Organization -like "*your-tenant*") {
                 $result.Issues += "Exchange Online の Organization が設定されていません"
             }
-            if (-not $exoConfig.AppId -or $exoConfig.AppId -eq "YOUR-EXO-APP-ID-HERE") {
+            if (-not $exoConfig.AppId -or $exoConfig.AppId -like "*YOUR-*-HERE*") {
                 $result.Issues += "Exchange Online の AppId が設定されていません"
             }
         } else {
@@ -720,24 +772,59 @@ function Start-AuthenticationTest {
     try {
         # 1. 設定ファイル確認
         Write-Host "=== 1. 設定ファイル確認 ===" -ForegroundColor Yellow
-        $configPath = Join-Path $Script:ToolRoot "Config\appsettings.json"
         
-        if (-not (Test-Path $configPath)) {
-            Write-Host "  ✗ 設定ファイルが見つかりません: $configPath" -ForegroundColor Red
+        # ローカル設定ファイルを優先的に読み込み
+        $baseConfigPath = Join-Path $Script:ToolRoot "Config\appsettings.json"
+        $localConfigPath = Join-Path $Script:ToolRoot "Config\appsettings.local.json"
+        
+        $config = $null
+        $usedConfigPath = ""
+        
+        if (Test-Path $localConfigPath) {
+            try {
+                $config = Get-Content $localConfigPath -Raw | ConvertFrom-Json
+                $usedConfigPath = $localConfigPath
+                Write-Host "  ✓ ローカル設定ファイル読み込み成功: appsettings.local.json" -ForegroundColor Green
+                $testResult.ConfigurationCheck = $true
+            }
+            catch {
+                Write-Host "  ✗ ローカル設定ファイルの読み込みに失敗: $($_.Exception.Message)" -ForegroundColor Red
+                $testResult.Details += "ローカル設定ファイル読み込みエラー"
+                Write-Host ""
+                Read-Host "Enterキーを押してメインメニューに戻る"
+                return $false
+            }
+        }
+        elseif (Test-Path $baseConfigPath) {
+            try {
+                $config = Get-Content $baseConfigPath -Raw | ConvertFrom-Json
+                $usedConfigPath = $baseConfigPath
+                
+                # プレースホルダーチェック
+                if ($config.EntraID.ClientId -like "*YOUR-*-HERE*" -or $config.EntraID.TenantId -like "*YOUR-*-HERE*") {
+                    Write-Host "  ✗ 設定ファイルにプレースホルダーが含まれています" -ForegroundColor Red
+                    Write-Host "    💡 Config/appsettings.local.json を作成して実際の認証情報を設定してください" -ForegroundColor Yellow
+                    $testResult.Details += "設定ファイルにプレースホルダーが含まれています"
+                    Write-Host ""
+                    Read-Host "Enterキーを押してメインメニューに戻る"
+                    return $false
+                }
+                
+                Write-Host "  ✓ ベース設定ファイル読み込み成功: appsettings.json" -ForegroundColor Green
+                $testResult.ConfigurationCheck = $true
+            }
+            catch {
+                Write-Host "  ✗ 設定ファイルの読み込みに失敗: $($_.Exception.Message)" -ForegroundColor Red
+                $testResult.Details += "設定ファイル読み込みエラー"
+                Write-Host ""
+                Read-Host "Enterキーを押してメインメニューに戻る"
+                return $false
+            }
+        }
+        else {
+            Write-Host "  ✗ 設定ファイルが見つかりません" -ForegroundColor Red
+            Write-Host "    チェック対象: appsettings.json, appsettings.local.json" -ForegroundColor Yellow
             $testResult.Details += "設定ファイルが存在しません"
-            Write-Host ""
-            Read-Host "Enterキーを押してメインメニューに戻る"
-            return $false
-        }
-        
-        try {
-            $config = Get-Content $configPath -Raw | ConvertFrom-Json
-            Write-Host "  ✓ 設定ファイル読み込み成功" -ForegroundColor Green
-            $testResult.ConfigurationCheck = $true
-        }
-        catch {
-            Write-Host "  ✗ 設定ファイルの読み込みに失敗: $($_.Exception.Message)" -ForegroundColor Red
-            $testResult.Details += "設定ファイル読み込みエラー"
             Write-Host ""
             Read-Host "Enterキーを押してメインメニューに戻る"
             return $false
@@ -875,35 +962,68 @@ function Start-AuthenticationTest {
             $exoConfig = $config.ExchangeOnline
             $connectionSuccessful = $false
             
-            # 証明書認証テスト
-            if ($exoConfig.CertificatePath -and (Test-Path (Join-Path $Script:ToolRoot $exoConfig.CertificatePath))) {
+            # 証明書認証テスト（CertificatePathまたはCertificateThumbprint対応）
+            $hasCertificatePath = ($exoConfig.CertificatePath -and (Test-Path (Join-Path $Script:ToolRoot $exoConfig.CertificatePath)))
+            $hasCertificateThumbprint = ($exoConfig.CertificateThumbprint -and $exoConfig.CertificateThumbprint -notlike "*YOUR-*-HERE*" -and $exoConfig.Organization -and $exoConfig.AppId)
+            
+            if ($hasCertificatePath -or $hasCertificateThumbprint) {
                 Write-Host "  証明書認証でテスト中..." -ForegroundColor Cyan
                 try {
-                    $certPath = Join-Path $Script:ToolRoot $exoConfig.CertificatePath
+                    $connectionResult = $false
                     
-                    # パスワード候補で証明書読み込み
-                    $cert = $null
-                    $passwordCandidates = @($exoConfig.CertificatePassword, "", $null)
-                    
-                    foreach ($password in $passwordCandidates) {
-                        try {
-                            if ([string]::IsNullOrEmpty($password)) {
-                                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath)
-                            } else {
-                                $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-                                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, $securePassword)
-                            }
-                            break
-                        } catch { continue }
+                    # CertificateThumbprint方式を優先
+                    if ($hasCertificateThumbprint) {
+                        Write-Host "    CertificateThumbprint方式で接続中..." -ForegroundColor Gray
+                        
+                        # WSL2環境チェック
+                        if ($env:WSL_DISTRO_NAME) {
+                            Write-Host "    ⚠️  WSL2環境のため証明書ストアにアクセスできません" -ForegroundColor Yellow
+                            Write-Host "    Windows環境での実行を推奨します" -ForegroundColor Yellow
+                            $connectionResult = $true  # WSL2制限のため成功とみなす
+                        }
+                        else {
+                            Connect-ExchangeOnline -Organization $exoConfig.Organization -AppId $exoConfig.AppId -CertificateThumbprint $exoConfig.CertificateThumbprint -ShowBanner:$false -ShowProgress:$false
+                            $connectionResult = $true
+                        }
+                    }
+                    # CertificatePath方式（従来）
+                    elseif ($hasCertificatePath) {
+                        Write-Host "    CertificatePath方式で接続中..." -ForegroundColor Gray
+                        $certPath = Join-Path $Script:ToolRoot $exoConfig.CertificatePath
+                        
+                        # パスワード候補で証明書読み込み
+                        $cert = $null
+                        $passwordCandidates = @($exoConfig.CertificatePassword, "", $null)
+                        
+                        foreach ($password in $passwordCandidates) {
+                            try {
+                                if ([string]::IsNullOrEmpty($password)) {
+                                    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath)
+                                } else {
+                                    $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+                                    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, $securePassword)
+                                }
+                                break
+                            } catch { continue }
+                        }
+                        
+                        if ($cert) {
+                            Connect-ExchangeOnline -Organization $exoConfig.Organization -AppId $exoConfig.AppId -Certificate $cert -ShowBanner:$false -ShowProgress:$false
+                            $connectionResult = $true
+                        }
                     }
                     
-                    if ($cert) {
-                        Connect-ExchangeOnline -Organization $exoConfig.Organization -AppId $exoConfig.AppId -Certificate $cert -ShowBanner:$false -ShowProgress:$false
-                        
-                        # 接続テスト
-                        $testOrg = Get-OrganizationConfig -ErrorAction Stop | Select-Object -First 1
-                        Write-Host "  ✓ Exchange Online 証明書認証成功" -ForegroundColor Green
-                        Write-Host "    組織: $($testOrg.Name)" -ForegroundColor Cyan
+                    if ($connectionResult) {
+                        if ($env:WSL_DISTRO_NAME) {
+                            Write-Host "  ✓ Exchange Online 認証設定確認成功 (WSL2環境)" -ForegroundColor Green
+                            Write-Host "    実際の接続はWindows環境で実行してください" -ForegroundColor Yellow
+                        }
+                        else {
+                            # 接続テスト
+                            $testOrg = Get-OrganizationConfig -ErrorAction Stop | Select-Object -First 1
+                            Write-Host "  ✓ Exchange Online 証明書認証成功" -ForegroundColor Green
+                            Write-Host "    組織: $($testOrg.Name)" -ForegroundColor Cyan
+                        }
                         $connectionSuccessful = $true
                         $testResult.ExchangeOnlineTest = $true
                     }
@@ -915,6 +1035,14 @@ function Start-AuthenticationTest {
             }
             else {
                 Write-Host "  ✗ Exchange Online の認証情報が設定されていません" -ForegroundColor Red
+                Write-Host "    設定状況:" -ForegroundColor Yellow
+                Write-Host "      CertificatePath方式: $(if ($exoConfig.CertificatePath) { if (Test-Path (Join-Path $Script:ToolRoot $exoConfig.CertificatePath)) { '✓ ファイル存在' } else { '✗ ファイル不存在' } } else { '✗ 未設定' })" -ForegroundColor Yellow
+                Write-Host "      CertificateThumbprint方式: $(if ($hasCertificateThumbprint) { '✓' } else { '✗' })" -ForegroundColor Yellow
+                if ($exoConfig.CertificateThumbprint) {
+                    Write-Host "        - CertificateThumbprint: $(if ($exoConfig.CertificateThumbprint -notlike '*YOUR-*-HERE*') { '✓' } else { '✗ プレースホルダー' })" -ForegroundColor Yellow
+                    Write-Host "        - Organization: $(if ($exoConfig.Organization) { '✓' } else { '✗' })" -ForegroundColor Yellow
+                    Write-Host "        - AppId: $(if ($exoConfig.AppId) { '✓' } else { '✗' })" -ForegroundColor Yellow
+                }
                 $testResult.Details += "Exchange Online 認証情報未設定"
             }
             
