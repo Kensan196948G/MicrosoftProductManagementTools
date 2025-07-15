@@ -284,8 +284,13 @@ function Main {
     # 既存のタスクを削除
     Remove-ExistingTask -TaskName $TaskName
     
-    # Git同期実行スクリプトを作成
-    $scriptPath = New-GitSyncScript -RepositoryPath $RepositoryPath -Branch $Branch
+    # 既存のGit同期実行スクリプトを使用（最新版）
+    $scriptPath = Join-Path $RepositoryPath "Scripts\Common\Execute-GitSync.ps1"
+    
+    if (-not (Test-Path $scriptPath)) {
+        Write-SchedulerLog "Git同期実行スクリプトが見つかりません: $scriptPath" -Level "Error"
+        exit 1
+    }
     
     # タスクスケジューラーに登録
     Register-GitSyncTask -TaskName $TaskName -ScriptPath $scriptPath -IntervalMinutes $IntervalMinutes
