@@ -671,17 +671,55 @@ function New-MainForm {
                 $actionValue = $sender.Tag
                 Write-Host "ボタンクリック検出: $buttonText (アクション: $actionValue)" -ForegroundColor Cyan
                 
+                # ボタンを一時的に無効化してダブルクリック防止
+                $sender.Enabled = $false
+                $originalText = $sender.Text
+                $sender.Text = "処理中..."
+                
+                # GUIの応答性を保つためにDoEventsを実行
+                [System.Windows.Forms.Application]::DoEvents()
+                
+                # レポート生成処理を完全に非同期化（バックグラウンドジョブで実行）
                 try {
-                    # GuiReportFunctions.psm1の確実なインポート
-                    $guiModulePath = Join-Path $Script:ToolRoot "Scripts\Common\GuiReportFunctions.psm1"
-                    if (Test-Path $guiModulePath) {
-                        Import-Module $guiModulePath -Force -ErrorAction SilentlyContinue
-                        Write-Host "GuiReportFunctions.psm1 インポート完了" -ForegroundColor Green
-                    }
+                $backgroundJob = Start-Job -ScriptBlock {
+                    param($toolRoot, $actionValue, $buttonText)
                     
-                    Write-Host "ボタンアクション実行: $buttonText ($actionValue)" -ForegroundColor Cyan
-                    
-                    switch ($actionValue) {
+                    try {
+                        # GuiReportFunctions.psm1のインポート
+                        $guiModulePath = Join-Path $toolRoot "Scripts\Common\GuiReportFunctions.psm1"
+                        if (Test-Path $guiModulePath) {
+                            Import-Module $guiModulePath -Force -ErrorAction SilentlyContinue
+                        }
+                        
+                        # ダミーデータ生成関数をジョブ内で定義
+                        function New-DummyData {
+                            param(
+                                [Parameter(Mandatory = $true)]
+                                [string]$DataType,
+                                [Parameter(Mandatory = $false)]
+                                [int]$RecordCount = 50
+                            )
+                            
+                            $dummyData = @()
+                            $userNames = @("田中太郎", "鈴木花子", "佐藤次郎", "高橋美咲", "渡辺健一")
+                            $departments = @("営業部", "開発部", "総務部", "人事部", "経理部")
+                            
+                            for ($i = 1; $i -le $RecordCount; $i++) {
+                                $dummyData += [PSCustomObject]@{
+                                    ID = $i
+                                    ユーザー名 = $userNames[(Get-Random -Maximum $userNames.Count)]
+                                    部署 = $departments[(Get-Random -Maximum $departments.Count)]
+                                    作成日時 = (Get-Date).AddDays(-$i).ToString("yyyy-MM-dd HH:mm:ss")
+                                    ステータス = @("正常", "警告", "注意")[(Get-Random -Maximum 3)]
+                                    数値データ = Get-Random -Minimum 10 -Maximum 100
+                                }
+                            }
+                            return $dummyData
+                        }
+                        
+                        Write-Host "バックグラウンドでレポート生成開始: $buttonText ($actionValue)" -ForegroundColor Cyan
+                        
+                        switch ($actionValue) {
                         # 定期レポート
                         "Daily" {
                             Invoke-GuiReportGeneration -ReportType "Daily" -ReportName "日次レポート" -FallbackDataGenerator {
@@ -852,32 +890,97 @@ function New-MainForm {
                         
                         default {
                             Write-Host "予期しないアクション: $actionValue" -ForegroundColor Red
-                            [System.Windows.Forms.MessageBox]::Show(
-                                "この機能は現在開発中です: $actionValue", 
-                                "情報", 
-                                [System.Windows.Forms.MessageBoxButtons]::OK, 
-                                [System.Windows.Forms.MessageBoxIcon]::Information
-                            )
+                            # バックグラウンド処理では MessageBox を使用しない
+                            return @{ Success = $false; Error = "この機能は現在開発中です: $actionValue" }
+                        }
+                        }
+                        
+                        return @{ Success = $true; Message = "レポート生成完了: $buttonText" }
+                        
+                    } catch {
+                        return @{ Success = $false; Error = $_.Exception.Message }
+                    }
+                } -ArgumentList $Script:ToolRoot, $actionValue, $buttonText
+                
+                # バックグラウンドジョブの完了を監視するタイマーを作成
+                $timer = New-Object System.Windows.Forms.Timer
+                $timer.Interval = 500 # 500ms間隔でチェック
+                $timer.Add_Tick({
+                    param($timerSender, $timerArgs)
+                    
+                    try {
+                        if ($backgroundJob.State -eq 'Completed') {
+                            $timerSender.Stop()
+                            
+                            # ジョブの結果を取得
+                            $result = Receive-Job $backgroundJob
+                            Remove-Job $backgroundJob
+                            
+                            # ボタンを元の状態に復元
+                            if (-not $sender.IsDisposed) {
+                                $sender.Text = $originalText
+                                $sender.Enabled = $true
+                                [System.Windows.Forms.Application]::DoEvents()
+                            }
+                            
+                            if ($result.Success) {
+                                Write-Host $result.Message -ForegroundColor Green
+                            } else {
+                                Write-Host "エラー: $($result.Error)" -ForegroundColor Red
+                                if (-not $sender.IsDisposed -and -not $sender.FindForm().IsDisposed) {
+                                    [System.Windows.Forms.MessageBox]::Show($result.Error, "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                                }
+                            }
+                        }
+                        elseif ($backgroundJob.State -eq 'Failed') {
+                            $timerSender.Stop()
+                            
+                            # ジョブが失敗した場合
+                            $error = $backgroundJob.ChildJobs[0].JobStateInfo.Reason.Message
+                            Remove-Job $backgroundJob -Force
+                            
+                            # ボタンを元の状態に復元
+                            if (-not $sender.IsDisposed) {
+                                $sender.Text = $originalText
+                                $sender.Enabled = $true
+                                [System.Windows.Forms.Application]::DoEvents()
+                            }
+                            
+                            Write-Host "バックグラウンド処理失敗: $error" -ForegroundColor Red
+                            if (-not $sender.IsDisposed -and -not $sender.FindForm().IsDisposed) {
+                                [System.Windows.Forms.MessageBox]::Show("処理中にエラーが発生しました: $error", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                            }
+                        }
+                    } catch {
+                        $timerSender.Stop()
+                        Write-Host "タイマー処理エラー: $($_.Exception.Message)" -ForegroundColor Red
+                        
+                        # エラー時もボタンを復元
+                        if (-not $sender.IsDisposed) {
+                            $sender.Text = $originalText
+                            $sender.Enabled = $true
+                            [System.Windows.Forms.Application]::DoEvents()
                         }
                     }
+                })
+                $timer.Start()
+                
+                Write-Host "バックグラウンド処理開始: $buttonText" -ForegroundColor Green
                 }
                 catch {
-                    if ($_.Exception -is [System.ObjectDisposedException]) {
-                        Write-Host "オブジェクトは既に破棄されています" -ForegroundColor Yellow
-                        return
+                    # バックグラウンドジョブ作成時のエラー処理
+                    Write-Host "バックグラウンドジョブ作成エラー: $($_.Exception.Message)" -ForegroundColor Red
+                    
+                    # ボタンを元の状態に復元
+                    if (-not $sender.IsDisposed) {
+                        $sender.Text = $originalText
+                        $sender.Enabled = $true
+                        [System.Windows.Forms.Application]::DoEvents()
                     }
                     
-                    $errorMessage = "ボタンアクション実行エラー: $($_.Exception.Message)"
-                    Write-Host $errorMessage -ForegroundColor Red
-                    
-                    # フォームがまだ有効な場合のみメッセージボックスを表示
-                    try {
-                        if (-not $sender.IsDisposed -and -not $sender.FindForm().IsDisposed) {
-                            [System.Windows.Forms.MessageBox]::Show($errorMessage, "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-                        }
-                    }
-                    catch {
-                        Write-Host "メッセージボックス表示エラー: $($_.Exception.Message)" -ForegroundColor Yellow
+                    # エラーメッセージを表示
+                    if (-not $sender.IsDisposed -and -not $sender.FindForm().IsDisposed) {
+                        [System.Windows.Forms.MessageBox]::Show("処理開始エラー: $($_.Exception.Message)", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                     }
                 }
             })

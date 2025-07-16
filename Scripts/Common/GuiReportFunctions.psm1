@@ -478,27 +478,66 @@ function Export-GuiReport {
             }
         }
         
-        # ファイルを開く
+        # ファイルを非同期で開く（GUIフリーズ防止）
+        $openFileJobs = @()
+        
         if (Test-Path $csvPath) {
-            if ($PSVersionTable.PSVersion.Major -ge 6) {
-                Start-Process $csvPath
-            } else {
-                Start-Process -FilePath $csvPath -UseShellExecute
-            }
+            $openFileJobs += Start-Job -ScriptBlock {
+                param($filePath)
+                try {
+                    if ($PSVersionTable.PSVersion.Major -ge 6) {
+                        Start-Process $filePath -NoNewWindow -PassThru | Out-Null
+                    } else {
+                        Start-Process -FilePath $filePath -UseShellExecute -PassThru | Out-Null
+                    }
+                } catch {
+                    Write-Warning "CSVファイルを開けませんでした: $($_.Exception.Message)"
+                }
+            } -ArgumentList $csvPath
         }
+        
         if (Test-Path $htmlPath) {
-            if ($PSVersionTable.PSVersion.Major -ge 6) {
-                Start-Process $htmlPath
-            } else {
-                Start-Process -FilePath $htmlPath -UseShellExecute
-            }
+            $openFileJobs += Start-Job -ScriptBlock {
+                param($filePath)
+                try {
+                    if ($PSVersionTable.PSVersion.Major -ge 6) {
+                        Start-Process $filePath -NoNewWindow -PassThru | Out-Null
+                    } else {
+                        Start-Process -FilePath $filePath -UseShellExecute -PassThru | Out-Null
+                    }
+                } catch {
+                    Write-Warning "HTMLファイルを開けませんでした: $($_.Exception.Message)"
+                }
+            } -ArgumentList $htmlPath
         }
+        
         if ($pdfPath -and (Test-Path $pdfPath)) {
-            if ($PSVersionTable.PSVersion.Major -ge 6) {
-                Start-Process $pdfPath
-            } else {
-                Start-Process -FilePath $pdfPath -UseShellExecute
-            }
+            $openFileJobs += Start-Job -ScriptBlock {
+                param($filePath)
+                try {
+                    if ($PSVersionTable.PSVersion.Major -ge 6) {
+                        Start-Process $filePath -NoNewWindow -PassThru | Out-Null
+                    } else {
+                        Start-Process -FilePath $filePath -UseShellExecute -PassThru | Out-Null
+                    }
+                } catch {
+                    Write-Warning "PDFファイルを開けませんでした: $($_.Exception.Message)"
+                }
+            } -ArgumentList $pdfPath
+        }
+        
+        # ジョブのクリーンアップ（バックグラウンドで実行）
+        if ($openFileJobs.Count -gt 0) {
+            Start-Job -ScriptBlock {
+                param($jobs)
+                Start-Sleep -Seconds 10
+                foreach ($job in $jobs) {
+                    if ($job.State -eq 'Running') {
+                        Stop-Job $job -Force
+                    }
+                    Remove-Job $job -Force
+                }
+            } -ArgumentList (,$openFileJobs) | Out-Null
         }
         
         return @{

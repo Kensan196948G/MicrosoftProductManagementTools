@@ -687,7 +687,7 @@ function removePDFEnhancements() {
 }
 
 // PDFダウンロード機能
-function downloadPDF() {
+async function downloadPDF() {
     // PDF生成開始の通知
     const loadingOverlay = createLoadingOverlay();
     document.body.appendChild(loadingOverlay);
@@ -705,31 +705,88 @@ function downloadPDF() {
         
         console.log('html2pdf.js確認: OK');
         
+        // PDF生成前に全データを表示状態にする
+        const originalPage = currentPage;
+        const originalItemsPerPage = itemsPerPage;
+        
+        // フィルター・検索・ページネーション要素を一時的に非表示
+        const elementsToHide = [
+            document.querySelector('.filter-section'),
+            document.querySelector('.pagination'),
+            document.querySelector('.table-actions')
+        ];
+        elementsToHide.forEach(el => {
+            if (el) el.style.display = 'none';
+        });
+        
+        // 全フィルタ済みデータを表示
+        currentPage = 1;
+        itemsPerPage = Math.max(filteredData.length, 1000); // 全データ表示
+        
+        // 表示更新を待機
+        await new Promise(resolve => {
+            updateDisplay();
+            setTimeout(resolve, 500); // 500ms待機でレンダリング完了を待つ
+        });
+        
         // PDF生成対象の要素を取得
-        const element = document.body;
+        let element = document.querySelector('main.container');
+        if (!element) {
+            element = document.querySelector('.container');
+        }
+        if (!element) {
+            element = document.body;
+        }
+        
+        console.log('PDF生成対象要素:', element);
+        console.log('表示データ件数:', filteredData.length);
+        console.log('テーブル行数:', document.querySelectorAll('#tableBody tr:not([style*="display: none"])').length);
         
         // ヘッダー情報を取得してファイル名を作成
-        let reportTitle = 'Microsoft_365_Report';
+        let reportTitle = 'Microsoft365_Report';
         try {
+            // ページタイトルまたはヘッダーから情報を取得
+            const pageTitle = document.title;
             const headerH1 = document.querySelector('.header h1');
-            if (headerH1) {
-                let title = headerH1.textContent || 'Microsoft_365_Report';
-                // 日本語文字とアイコンを除去してファイル名に適した形式に変換
-                title = title.replace(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g, ''); // 日本語文字除去
-                title = title.replace(/[\uF000-\uF8FF]/g, ''); // アイコン除去
-                title = title.replace(/[^a-zA-Z0-9_\s]/g, ''); // 特殊文字除去
-                title = title.trim().replace(/\s+/g, '_'); // スペースをアンダースコアに
-                if (title) {
-                    reportTitle = title;
-                }
+            
+            if (pageTitle && pageTitle !== 'Document') {
+                reportTitle = pageTitle.replace(/[^a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g, '').substring(0, 20) || 'Microsoft365_Report';
+            } else if (headerH1) {
+                // h1からレポート名を抽出（日本語対応）
+                let title = headerH1.textContent || '';
+                title = title.replace(/[📊🔍👥📧💬💾]/g, '').trim(); // 絵文字除去
+                
+                // 日本語レポート名の判定と適切な英語名への変換
+                if (title.includes('日次')) reportTitle = 'Daily_Report';
+                else if (title.includes('週次')) reportTitle = 'Weekly_Report';
+                else if (title.includes('月次')) reportTitle = 'Monthly_Report';
+                else if (title.includes('年次')) reportTitle = 'Yearly_Report';
+                else if (title.includes('ライセンス')) reportTitle = 'License_Analysis';
+                else if (title.includes('使用状況')) reportTitle = 'Usage_Analysis';
+                else if (title.includes('パフォーマンス')) reportTitle = 'Performance_Analysis';
+                else if (title.includes('セキュリティ')) reportTitle = 'Security_Analysis';
+                else if (title.includes('権限監査')) reportTitle = 'Permission_Audit';
+                else if (title.includes('ユーザー')) reportTitle = 'User_Management';
+                else if (title.includes('MFA')) reportTitle = 'MFA_Status';
+                else if (title.includes('条件付きアクセス')) reportTitle = 'Conditional_Access';
+                else if (title.includes('サインイン')) reportTitle = 'SignIn_Logs';
+                else if (title.includes('メールボックス')) reportTitle = 'Mailbox_Management';
+                else if (title.includes('メールフロー')) reportTitle = 'Mail_Flow';
+                else if (title.includes('スパム')) reportTitle = 'Spam_Protection';
+                else if (title.includes('配信')) reportTitle = 'Delivery_Analysis';
+                else if (title.includes('Teams') || title.includes('チーム')) reportTitle = 'Teams_Management';
+                else if (title.includes('OneDrive') || title.includes('ワンドライブ')) reportTitle = 'OneDrive_Management';
+                else reportTitle = 'Microsoft365_Report';
             }
         } catch (titleError) {
             console.warn('ヘッダーからタイトルを取得できませんでした:', titleError);
+            reportTitle = 'Microsoft365_Report';
         }
         
-        // 現在の日時を取得してファイル名に追加
+        // 現在の日時を取得してファイル名に追加（日本時間）
         const now = new Date();
-        const timestamp = now.toISOString().slice(0, 19).replace(/[T:-]/g, '_');
+        const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // JST変換
+        const timestamp = jstDate.toISOString().slice(0, 16).replace(/[T:-]/g, '_'); // YYYY_MM_DD_HHMM形式
         const fileName = `${reportTitle}_${timestamp}.pdf`;
         
         console.log('生成するファイル名:', fileName);
@@ -743,19 +800,21 @@ function downloadPDF() {
                 quality: 0.98 
             },
             html2canvas: { 
-                scale: 2, // 高解像度でフォントを鮮明に
+                scale: 1.5, // 高解像度でフォントを鮮明に（軽量化）
                 useCORS: true,
                 letterRendering: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: 0,
-                width: window.innerWidth,
-                height: window.innerHeight,
+                x: 0,
+                y: 0,
                 // 日本語フォントレンダリングの改善
                 foreignObjectRendering: true,
-                imageTimeout: 15000,
-                logging: true
+                imageTimeout: 10000,
+                logging: false, // ログ無効化で高速化
+                removeContainer: true,
+                async: true
             },
             jsPDF: { 
                 unit: 'mm', 
@@ -798,13 +857,41 @@ function downloadPDF() {
                 .save()
                 .then(() => {
                     console.log('PDF生成完了:', fileName);
+                    
+                    // 非表示にした要素を復元
+                    elementsToHide.forEach(el => {
+                        if (el) el.style.display = '';
+                    });
+                    
+                    // 元の表示状態に戻す
+                    setTimeout(() => {
+                        currentPage = originalPage;
+                        itemsPerPage = originalItemsPerPage;
+                        updateDisplay();
+                    }, 1000);
+                    
                     document.body.removeChild(loadingOverlay);
                     showSuccessMessage(`PDFファイル「${fileName}」のダウンロードが完了しました。\n日本語フォント対応で生成されました。`);
                 })
                 .catch((error) => {
                     console.error('html2pdf.jsエラー:', error);
+                    
+                    // 非表示にした要素を復元
+                    elementsToHide.forEach(el => {
+                        if (el) el.style.display = '';
+                    });
+                    
+                    // エラー時も元の表示状態に戻す
+                    currentPage = originalPage;
+                    itemsPerPage = originalItemsPerPage;
+                    updateDisplay();
+                    
                     document.body.removeChild(loadingOverlay);
                     showErrorMessage('PDF生成中にエラーが発生しました: ' + error.message);
+                    
+                    // フォールバック: Canvas方式を試行
+                    console.log('フォールバック: Canvas方式PDF生成を試行');
+                    setTimeout(() => downloadPDFWithCanvas(), 1000);
                 });
         });
             

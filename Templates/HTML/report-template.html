@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{REPORT_NAME}} - Microsoft 365統合管理ツール</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- PDF生成ライブラリ（複数のCDN対応） -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
             onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
@@ -12,6 +16,9 @@
             onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
             onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <!-- html2pdf.js (PDF生成用) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
     
     <!-- バックアップCDN読み込み関数 -->
     <script>
@@ -44,17 +51,28 @@
             };
             document.head.appendChild(script);
         }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
     </script>
     
     <!-- jsPDF初期化確認スクリプト -->
     <script>
-        // jsPDF読み込み確認と初期化
+        // PDF生成ライブラリの初期化確認
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('=== jsPDF初期化確認 ===');
+            console.log('=== PDF生成ライブラリ初期化確認 ===');
             console.log('window.jsPDF:', typeof window.jsPDF);
             console.log('global jsPDF:', typeof jsPDF);
             console.log('window.jspdf:', typeof window.jspdf);
             console.log('html2canvas:', typeof html2canvas);
+            console.log('html2pdf:', typeof html2pdf);
             
             // jsPDF の統一化
             if (typeof window.jsPDF === 'undefined') {
@@ -74,8 +92,16 @@
                 console.log('autoTable確認: 利用不可');
             }
             
+            // html2pdf確認
+            if (typeof html2pdf !== 'undefined') {
+                console.log('html2pdf確認: 利用可能');
+            } else {
+                console.log('html2pdf確認: 利用不可');
+            }
+            
             // 最終確認
             console.log('最終確認 - window.jsPDF:', typeof window.jsPDF);
+            console.log('最終確認 - html2pdf:', typeof html2pdf);
             console.log('===============================');
         });
     </script>
@@ -88,7 +114,7 @@
         }
         
         body {
-            font-family: 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #f5f7fa;
             color: #333;
             line-height: 1.6;
