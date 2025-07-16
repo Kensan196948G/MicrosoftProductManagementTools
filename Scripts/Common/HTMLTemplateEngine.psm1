@@ -38,6 +38,7 @@ $Script:TemplateMapping = @{
     
     # 定期レポート
     "DailyReport" = "Regularreports\daily-report.html"
+    "UserDailyActivity" = "Regularreports\user-daily-activity.html"
     "WeeklyReport" = "Regularreports\weekly-report.html"
     "MonthlyReport" = "Regularreports\monthly-report.html"
     "YearlyReport" = "Regularreports\yearly-report.html"
@@ -89,63 +90,103 @@ function Convert-DataToHTML {
     # レポートタイプに応じたHTML生成
     switch ($ReportType) {
         "Users" {
+            # HTMLテンプレートのヘッダー順序に合わせて出力
             foreach ($item in $Data) {
                 $html += "<tr>"
-                $html += "<td>$($item.DisplayName)</td>"
-                $html += "<td>$($item.UserPrincipalName)</td>"
-                $html += "<td>$($item.UserPrincipalName)</td>"
-                $html += "<td>$($item.Department)</td>"
-                $html += "<td>$($item.JobTitle)</td>"
-                $html += "<td>$($item.AccountStatus)</td>"
-                $html += "<td>$($item.LicenseStatus)</td>"
-                $html += "<td>$($item.CreationDate)</td>"
-                $html += "<td>$($item.LastSignIn)</td>"
+                $html += "<td>$($item.DisplayName ?? '不明')</td>"  # 表示名
+                $html += "<td>$($item.UserPrincipalName ?? '不明')</td>"  # ユーザープリンシパル名
+                $html += "<td>$($item.Email ?? '不明')</td>"  # メールアドレス
+                $html += "<td>$($item.Department ?? '不明')</td>"  # 部署
+                $html += "<td>$($item.JobTitle ?? '不明')</td>"  # 職種
+                $html += "<td><span class='badge badge-$(if($item.AccountStatus -eq '有効') { 'active' } else { 'inactive' })'>$($item.AccountStatus)</span></td>"  # アカウントステータス
+                $html += "<td><span class='badge badge-enabled'>$($item.LicenseStatus ?? '不明')</span></td>"  # ライセンス状況
+                $html += "<td>$($item.CreationDate ?? '不明')</td>"  # 作成日
+                $html += "<td>$($item.LastSignIn ?? '不明')</td>"  # 最終サインイン
                 $html += "</tr>"
             }
         }
         "LicenseAnalysis" {
+            # HTMLテンプレートのヘッダー順序に合わせて出力
             foreach ($item in $Data) {
                 $html += "<tr>"
-                $html += "<td>$($item.LicenseName)</td>"
-                $html += "<td>$($item.SkuId)</td>"
-                $html += "<td>$($item.PurchasedQuantity)</td>"
-                $html += "<td>$($item.AssignedQuantity)</td>"
-                $html += "<td>$($item.AvailableQuantity)</td>"
-                $html += "<td>$($item.UsageRate)%</td>"
-                $html += "<td>$($item.MonthlyUnitPrice)</td>"
-                $html += "<td>$($item.MonthlyCost)</td>"
-                $html += "<td>$($item.Status)</td>"
+                $html += "<td>$($item.LicenseName ?? '不明')</td>"  # ライセンス名
+                $html += "<td>$($item.SkuId ?? '不明')</td>"  # SKU ID
+                $html += "<td>$($item.PurchasedQuantity ?? 0)</td>"  # 購入数
+                $html += "<td>$($item.AssignedQuantity ?? 0)</td>"  # 割り当て済み
+                $html += "<td>$($item.AvailableQuantity ?? 0)</td>"  # 利用可能
+                $html += "<td>$($item.UsageRate ?? 0)%</td>"  # 利用率
+                $html += "<td>$($item.MonthlyUnitPrice ?? '¥0')</td>"  # 月額単価
+                $html += "<td>$($item.MonthlyCost ?? '¥0')</td>"  # 月額コスト
+                $html += "<td><span class='badge badge-$(if($item.Status -eq '利用可能') { 'active' } else { 'inactive' })'>$($item.Status ?? '不明')</span></td>"  # ステータス
                 $html += "</tr>"
             }
         }
         "MFAStatus" {
+            # HTMLテンプレートのヘッダー順序に合わせて出力
             foreach ($item in $Data) {
                 $html += "<tr>"
-                $html += "<td>$($item.UserName)</td>"
-                $html += "<td>$($item.Email)</td>"
-                $html += "<td>$($item.Department)</td>"
-                $html += "<td>$($item.MFAStatus)</td>"
-                $html += "<td>$($item.AuthenticationMethod)</td>"
-                $html += "<td>$($item.FallbackMethod)</td>"
-                $html += "<td>$($item.LastMFASetupDate)</td>"
-                $html += "<td>$($item.Compliance)</td>"
-                $html += "<td>$($item.RiskLevel)</td>"
+                $html += "<td>$($item.UserName ?? '不明')</td>"  # ユーザー名
+                $html += "<td>$($item.Email ?? '不明')</td>"  # メールアドレス
+                $html += "<td>$($item.Department ?? '不明')</td>"  # 部署
+                $html += "<td><span class='badge badge-$(if($item.MFAStatus -eq '有効') { 'active' } else { 'inactive' })'>$($item.MFAStatus ?? '不明')</span></td>"  # MFAステータス
+                $html += "<td>$($item.AuthenticationMethod ?? '不明')</td>"  # 認証方法
+                $html += "<td>$($item.FallbackMethod ?? '不明')</td>"  # フォールバック方法
+                $html += "<td>$($item.LastMFASetupDate ?? '不明')</td>"  # 最終MFA設定日
+                $html += "<td>$($item.Compliance ?? '不明')</td>"  # コンプライアンス
+                $html += "<td>$($item.RiskLevel ?? '不明')</td>"  # リスクレベル
                 $html += "</tr>"
             }
         }
         "TeamsUsage" {
+            # HTMLテンプレートのヘッダー順序に合わせて出力
             foreach ($item in $Data) {
                 $html += "<tr>"
-                $html += "<td>$($item.UserName)</td>"
-                $html += "<td>$($item.Department)</td>"
-                $html += "<td>$($item.LastAccess)</td>"
-                $html += "<td>$($item.MonthlyMeetingParticipation)</td>"
-                $html += "<td>$($item.MonthlyChatCount)</td>"
-                $html += "<td>$($item.StorageUsedMB)</td>"
-                $html += "<td>$($item.AppUsageCount)</td>"
-                $html += "<td>$($item.UsageLevel)</td>"
-                $html += "<td>$($item.Status)</td>"
+                $html += "<td>$($item.UserName ?? '不明')</td>"  # ユーザー名
+                $html += "<td>$($item.Department ?? '不明')</td>"  # 部署
+                $html += "<td>$($item.LastAccess ?? '不明')</td>"  # 最終アクセス
+                $html += "<td>$($item.MonthlyMeetingParticipation ?? 0)</td>"  # 月次会議参加
+                $html += "<td>$($item.MonthlyChatCount ?? 0)</td>"  # 月次チャット数
+                $html += "<td>$($item.StorageUsedMB ?? 0)</td>"  # 使用ストレージ
+                $html += "<td>$($item.AppUsageCount ?? 0)</td>"  # アプリ使用数
+                $html += "<td>$($item.UsageLevel ?? '不明')</td>"  # 使用レベル
+                $html += "<td><span class='badge badge-$(if($item.Status -eq '正常') { 'normal' } else { 'alert' })'>$($item.Status ?? '不明')</span></td>"  # ステータス
                 $html += "</tr>"
+            }
+        }
+        "DailyReport" {
+            # データ構造を確認して適切なテーブルを生成
+            if ($Data.Count -gt 0) {
+                $firstItem = $Data[0]
+                if ($firstItem.PSObject.Properties.Name -contains "ServiceName") {
+                    # サービスサマリーデータの場合
+                    foreach ($item in $Data) {
+                        $html += "<tr>"
+                        $html += "<td>$($item.ServiceName ?? '不明')</td>"
+                        $html += "<td>$($item.ActiveUsersCount ?? 0)</td>"
+                        $html += "<td>$($item.TotalActivityCount ?? 0)</td>"
+                        $html += "<td>$($item.NewUsersCount ?? 0)</td>"
+                        $html += "<td>$($item.ErrorCount ?? 0)</td>"
+                        $html += "<td><span class='badge badge-$(if($item.ServiceStatus -eq '正常') { 'normal' } else { 'alert' })'>$($item.ServiceStatus ?? '不明')</span></td>"
+                        $html += "<td>$($item.PerformanceScore ?? 0)</td>"
+                        $html += "<td>$($item.LastCheck ?? '不明')</td>"
+                        $html += "<td><span class='badge badge-$(if($item.Status -eq '正常') { 'normal' } else { 'alert' })'>$($item.Status ?? '不明')</span></td>"
+                        $html += "</tr>"
+                    }
+                } elseif ($firstItem.PSObject.Properties.Name -contains "UserName") {
+                    # 個別ユーザーアクティビティデータの場合（不要項目を除去）
+                    foreach ($item in $Data) {
+                        $html += "<tr>"
+                        $html += "<td>$($item.UserName ?? '不明')</td>"  # ユーザー名
+                        $html += "<td>$($item.UserPrincipalName ?? '不明')</td>"  # UPN
+                        $html += "<td>$($item.DailyLogins ?? 0)</td>"  # 日次ログイン
+                        $html += "<td>$($item.DailyEmails ?? 0)</td>"  # 日次メール
+                        $html += "<td>$($item.TeamsActivity ?? 0)</td>"  # Teamsアクティビティ
+                        $html += "<td><span class='badge badge-$(if($item.ActivityLevel -eq '高') { 'active' } elseif($item.ActivityLevel -eq '中') { 'warning' } else { 'inactive' })'>$($item.ActivityLevel ?? '不明')</span></td>"  # アクティビティレベル
+                        $html += "<td>$($item.ActivityScore ?? 0)</td>"  # アクティビティスコア
+                        $html += "<td><span class='badge badge-$(if($item.Status -eq 'アクティブ') { 'active' } else { 'inactive' })'>$($item.Status ?? '不明')</span></td>"  # ステータス
+                        $html += "</tr>"
+                    }
+                }
             }
         }
         default {
@@ -259,19 +300,72 @@ function Generate-EnhancedHTMLReport {
             }
         }
         
-        # 変数を準備（テンプレートファイルの変数名に合わせる）
+        # レポートタイプ別の変数を準備
         $variables = @{
             "Title" = $Title
-            "USER_DATA" = $htmlTable
-            "LICENSE_DATA" = $htmlTable
-            "MFA_DATA" = $htmlTable
-            "TEAMS_DATA" = $htmlTable
             "REPORT_DATE" = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
             "REPORT_TIME" = Get-Date -Format "HH:mm:ss"
             "SYSTEM_INFO" = "Microsoft 365統合管理ツール v2.0"
             "TOTAL_COUNT" = $Data.Count
             "ChartLabels" = ($chartData.labels | ConvertTo-Json)
             "ChartData" = ($chartData.data | ConvertTo-Json)
+        }
+        
+        # レポートタイプ別の特定変数を設定
+        switch ($ReportType) {
+            "Users" {
+                $variables["USER_DATA"] = $htmlTable
+                $variables["TOTAL_USERS"] = $Data.Count
+                $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.AccountStatus -eq "有効" }).Count
+            }
+            "LicenseAnalysis" {
+                $variables["LICENSE_DATA"] = $htmlTable
+                $variables["TOTAL_LICENSES"] = $Data.Count
+                $variables["ACTIVE_USERS"] = ($Data | Measure-Object AssignedQuantity -Sum).Sum
+            }
+            "DailyReport" {
+                $variables["DAILY_ACTIVITY_DATA"] = $htmlTable
+                # データ構造に応じて変数を設定
+                if ($Data.Count -gt 0 -and $Data[0].PSObject.Properties.Name -contains "UserName") {
+                    # 個別ユーザーデータの場合
+                    $variables["TOTAL_USERS"] = $Data.Count
+                    $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.ActivityLevel -ne "低" }).Count
+                    $variables["DAILY_LOGINS"] = ($Data | Measure-Object DailyLogins -Sum).Sum
+                    $variables["DAILY_EMAILS"] = ($Data | Measure-Object DailyEmails -Sum).Sum
+                    $variables["DAILY_ALERTS"] = 0  # ユーザーデータにはアラート情報なし
+                } else {
+                    # サービスサマリーデータの場合
+                    $variables["TOTAL_USERS"] = ($Data | Measure-Object ActiveUsersCount -Sum).Sum
+                    $variables["ACTIVE_USERS"] = ($Data | Measure-Object ActiveUsersCount -Sum).Sum
+                    $variables["DAILY_LOGINS"] = ($Data | Measure-Object ActiveUsersCount -Sum).Sum
+                    $variables["DAILY_EMAILS"] = ($Data | Measure-Object TotalActivityCount -Sum).Sum
+                    $variables["DAILY_ALERTS"] = ($Data | Measure-Object ErrorCount -Sum).Sum
+                }
+            }
+            "MFAStatus" {
+                $variables["MFA_DATA"] = $htmlTable
+                $variables["TOTAL_USERS"] = $Data.Count
+                $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.MFAStatus -eq "有効" }).Count
+            }
+            "TeamsUsage" {
+                $variables["TEAMS_DATA"] = $htmlTable
+                $variables["TOTAL_USERS"] = $Data.Count
+                $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.UsageLevel -ne "未使用" }).Count
+            }
+            default {
+                # デフォルトの汎用変数
+                $variables["USER_DATA"] = $htmlTable
+                $variables["LICENSE_DATA"] = $htmlTable
+                $variables["MFA_DATA"] = $htmlTable
+                $variables["TEAMS_DATA"] = $htmlTable
+                $variables["DAILY_ACTIVITY_DATA"] = $htmlTable
+                $variables["TOTAL_USERS"] = $Data.Count
+                $variables["ACTIVE_USERS"] = $Data.Count
+                $variables["TOTAL_LICENSES"] = $Data.Count
+                $variables["DAILY_LOGINS"] = 0
+                $variables["DAILY_EMAILS"] = 0
+                $variables["DAILY_ALERTS"] = 0
+            }
         }
         
         # 追加変数をマージ

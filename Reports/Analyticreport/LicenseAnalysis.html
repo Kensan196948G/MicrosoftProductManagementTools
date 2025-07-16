@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{REPORT_TITLE}}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <!-- html2pdf.js (PDF生成用) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
+    <script>
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+    
+    <!-- PDF生成ライブラリ初期化 -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('=== PDF生成ライブラリ初期化確認 ===');
+            console.log('window.jsPDF:', typeof window.jsPDF);
+            console.log('global jsPDF:', typeof jsPDF);
+            console.log('window.jspdf:', typeof window.jspdf);
+            console.log('html2canvas:', typeof html2canvas);
+            console.log('html2pdf:', typeof html2pdf);
+            
+            // jsPDF の統一化
+            if (typeof window.jsPDF === 'undefined') {
+                if (typeof jsPDF !== 'undefined') {
+                    window.jsPDF = jsPDF;
+                    console.log('jsPDFをwindow.jsPDFに設定しました');
+                } else if (typeof window.jspdf !== 'undefined') {
+                    window.jsPDF = window.jspdf;
+                    console.log('window.jspdfをwindow.jsPDFに設定しました');
+                }
+            }
+            
+            // autoTable確認
+            if (window.jsPDF && window.jsPDF.jsPDF && window.jsPDF.jsPDF.autoTable) {
+                console.log('autoTable確認: 利用可能');
+            } else {
+                console.log('autoTable確認: 利用不可');
+            }
+            
+            // html2pdf確認
+            if (typeof html2pdf !== 'undefined') {
+                console.log('html2pdf確認: 利用可能');
+            } else {
+                console.log('html2pdf確認: 利用不可');
+            }
+        });
+    </script>
+
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #004499;
+            --accent-color: #0078d4;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --border-color: #e8ecef;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-color) 0%, #e3f2fd 100%);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 2.5rem 0;
+            margin-bottom: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 i {
+            font-size: 2rem;
+            color: #fff;
+        }
+
+        .meta-info {
+            margin-top: 1.5rem;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item i {
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        /* フィルターセクション */
+        .filter-section {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+
+        .filter-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .filter-controls {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 1.2rem;
+            align-items: end;
+        }
+
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+
+        .search-container label {
+            display: block;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.9rem 1.2rem 0.9rem 3rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.15);
+            background: #fbfcfd;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            bottom: 1rem;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        /* ドロップダウン */
+        .filter-dropdown {
+            position: relative;
+        }
+
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.15);
+        }
+
+        /* ボタン */
+        .btn {
+            padding: 0.9rem 1.8rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 120, 212, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        /* テーブルコンテナ */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .table-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+            min-width: 800px;
+        }
+
+        th, td {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--text-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: #e9ecef;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* バッジ */
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 70px;
+        }
+
+        .badge-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning-color);
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--info-color);
+            color: white;
+        }
+
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* PDF/印刷専用スタイル */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 10pt !important;
+                line-height: 1.4 !important;
+                background: white !important;
+                color: black !important;
+            }
+            
+            /* 不要な要素を非表示 */
+            .filter-section {
+                display: none !important;
+            }
+            
+            /* コンテナ調整 */
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm !important;
+                margin: 0 !important;
+            }
+            
+            /* ヘッダー調整 */
+            .header {
+                background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+                color: white !important;
+                padding: 10mm !important;
+                margin-bottom: 5mm !important;
+                page-break-after: avoid !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            
+            /* テーブル調整 */
+            .table-container {
+                background: white !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+            
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                page-break-inside: auto !important;
+            }
+            
+            th, td {
+                border: 1px solid #ddd !important;
+                padding: 5mm !important;
+                font-size: 9pt !important;
+                page-break-inside: avoid !important;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                font-weight: bold !important;
+            }
+        }
+
+        /* 画面表示時の追加スタイル */
+        @media screen {
+            .pdf-only {
+                display: none !important;
+            }
+        }
+
+        @media print {
+            .screen-only {
+                display: none !important;
+            }
+            
+            .pdf-only {
+                display: block !important;
+            }
+        }
+
+        /* 通知スタイル */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1.2rem 1.8rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.4s ease;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, var(--info-color) 0%, #138496 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-license"></i>
+                {{REPORT_TITLE}}
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>レポート生成日時: {{REPORT_DATE}}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データ件数: <strong id="totalRecords">0</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-filter"></i>
+                        <span>表示中: <strong id="visibleRecords">0</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-server"></i>
+                        <span>実行システム: {{SYSTEM_INFO}}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-code"></i>
+                        <span>PowerShell バージョン: {{PS_VERSION}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- フィルターセクション -->
+        <section class="filter-section screen-only">
+            <h2 class="filter-title">
+                <i class="fas fa-search"></i>
+                検索・フィルター機能
+            </h2>
+            
+            <div class="filter-controls">
+                <div class="filter-row">
+                    <!-- 検索ボックス -->
+                    <div class="search-container">
+                        <label for="searchBox">🔍 キーワード検索</label>
+                        <input type="text" id="searchBox" class="search-box" 
+                               placeholder="ライセンス名、SKU、ユーザー名で検索...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    
+                    <!-- フィルター1: ライセンス種別 -->
+                    <div class="filter-dropdown">
+                        <label for="filter1">📋 ライセンス種別</label>
+                        <select id="filter1" class="filter-select">
+                            <option value="">すべて</option>
+                        </select>
+                    </div>
+                    
+                    <!-- フィルター2: 使用状況 -->
+                    <div class="filter-dropdown">
+                        <label for="filter2">📊 使用状況</label>
+                        <select id="filter2" class="filter-select">
+                            <option value="">すべて</option>
+                        </select>
+                    </div>
+                    
+                    <!-- フィルター3: コスト効率 -->
+                    <div class="filter-dropdown">
+                        <label for="filter3">💰 コスト効率</label>
+                        <select id="filter3" class="filter-select">
+                            <option value="">すべて</option>
+                        </select>
+                    </div>
+                    
+                    <!-- ボタン -->
+                    <div style="display: flex; gap: 0.8rem; flex-direction: column;">
+                        <button class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i> リセット
+                        </button>
+                        <button class="btn btn-primary" onclick="downloadPDF()">
+                            <i class="fas fa-download"></i> PDF
+                        </button>
+                        <button class="btn btn-success" onclick="printPDF()">
+                            <i class="fas fa-print"></i> 印刷
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{CONTENT_SECTIONS}}
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p><strong>Microsoft 365統合管理ツール</strong> - ライセンス分析レポート</p>
+        <p>PowerShell Microsoft Graph API | 自動生成レポート</p>
+        <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // グローバル変数
+        let tableData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let itemsPerPage = 25;
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        let activeFilters = {};
+
+        // PDF生成関数
+        function downloadPDF() {
+            console.log('📄 PDF生成開始...');
+            showNotification('📄 PDFを生成中です...', 'info');
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const filename = `ライセンス分析レポート${year}${month}${day}${hour}${minute}.pdf`;
+            
+            // 3段階のフォールバック
+            if (typeof html2pdf !== 'undefined') {
+                // 方法1: html2pdf.js (推奨)
+                const opt = {
+                    margin: 10,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+                
+                html2pdf().from(document.body).set(opt).save()
+                    .then(() => showNotification('✅ PDFダウンロードが完了しました', 'success'))
+                    .catch(err => {
+                        console.error('html2pdf失敗:', err);
+                        fallbackPDF();
+                    });
+            } else {
+                fallbackPDF();
+            }
+        }
+
+        function fallbackPDF() {
+            if (typeof window.jsPDF !== 'undefined' && typeof html2canvas !== 'undefined') {
+                // 方法2: jsPDF + html2canvas
+                html2canvas(document.body).then(canvas => {
+                    const pdf = new window.jsPDF('l', 'mm', 'a4');
+                    const imgData = canvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', 10, 10, 277, 190);
+                    pdf.save(filename);
+                    showNotification('✅ PDFダウンロードが完了しました', 'success');
+                }).catch(err => {
+                    console.error('jsPDF + html2canvas失敗:', err);
+                    printPDF();
+                });
+            } else {
+                // 方法3: ブラウザ印刷機能
+                printPDF();
+            }
+        }
+
+        function printPDF() {
+            console.log('🖨️ 印刷ダイアログを開いています...');
+            showNotification('🖨️ 印刷ダイアログを開いています...', 'info');
+            window.print();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchBox').value = '';
+            document.getElementById('filter1').value = '';
+            document.getElementById('filter2').value = '';
+            document.getElementById('filter3').value = '';
+            showNotification('🔄 フィルターをリセットしました', 'info');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 400);
+            }, 3000);
+        }
+
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('📊 ライセンス分析レポート初期化完了');
+            showNotification('📊 ライセンス分析レポートが読み込まれました', 'success');
+        });
+    </script>
+</body>
+</html>

@@ -158,28 +158,79 @@ try {
             }
             
             try {
-                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                $reportsDir = Join-Path $Script:ToolRoot $FolderName
-                $specificDir = Join-Path $reportsDir $ReportName
-                
-                if (-not (Test-Path $specificDir)) {
-                    New-Item -Path $specificDir -ItemType Directory -Force | Out-Null
+                # 日本語レポート名を英語キーに変換するマッピング
+                $reportTypeMapping = @{
+                    "日次レポート" = "DailyReport"
+                    "週次レポート" = "WeeklyReport"
+                    "月次レポート" = "MonthlyReport"
+                    "年次レポート" = "YearlyReport"
+                    "テスト実行結果" = "TestExecution"
+                    "ライセンス分析" = "LicenseAnalysis"
+                    "使用状況分析" = "UsageAnalysis"
+                    "パフォーマンス分析" = "PerformanceAnalysis"
+                    "セキュリティ分析" = "SecurityAnalysis"
+                    "権限監査" = "PermissionAudit"
+                    "ユーザー一覧" = "Users"
+                    "MFA状況" = "MFAStatus"
+                    "条件付きアクセス" = "ConditionalAccess"
+                    "サインインログ" = "SignInLogs"
+                    "メールボックス分析" = "MailboxAnalysis"
+                    "メールフロー分析" = "MailFlowAnalysis"
+                    "スパム対策分析" = "SpamProtectionAnalysis"
+                    "メール配信分析" = "MailDeliveryAnalysis"
+                    "Teams使用状況" = "TeamsUsage"
+                    "Teams設定分析" = "TeamsSettings"
+                    "会議品質分析" = "MeetingQuality"
+                    "Teamsアプリ分析" = "TeamsAppAnalysis"
+                    "OneDrive分析" = "OneDriveAnalysis"
+                    "共有分析" = "SharingAnalysis"
+                    "OneDrive同期エラー分析" = "SyncErrorAnalysis"
+                    "OneDrive外部共有分析" = "ExternalSharingAnalysis"
                 }
                 
-                # CSV出力
-                $csvPath = Join-Path $specificDir "${ReportName}_${timestamp}.csv"
-                $Data | Export-Csv -Path $csvPath -Encoding UTF8BOM -NoTypeInformation
+                # 英語キーを取得（見つからない場合はそのまま使用）
+                $reportTypeKey = $reportTypeMapping[$ReportName]
+                if (-not $reportTypeKey) {
+                    $reportTypeKey = $ReportName
+                    Write-Host "⚠️ レポートタイプマッピングが見つかりません: $ReportName" -ForegroundColor Yellow
+                }
                 
-                # HTML出力
-                $htmlPath = Join-Path $specificDir "${ReportName}_${timestamp}.html"
-                $htmlContent = Generate-EnhancedHTMLReport -Data $Data -ReportType $ReportName -Title $ReportName
-                $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                
-                # ファイルを開く
-                Start-Process $htmlPath
-                Start-Process $csvPath
-                
-                [System.Windows.Forms.MessageBox]::Show("レポートを生成しました。`n`nHTML: $htmlPath`nCSV: $csvPath", "完了", "OK", "Information")
+                # マルチフォーマットレポートジェネレーターを使用
+                $multiFormatModule = Join-Path $Script:ToolRoot "Scripts\Common\MultiFormatReportGenerator.psm1"
+                if (Test-Path $multiFormatModule) {
+                    Import-Module $multiFormatModule -Force -Global
+                    
+                    # マルチフォーマット出力（CSV、HTML、PDF）とポップアップ表示
+                    $result = Export-MultiFormatReport -Data $Data -ReportName $ReportName -ReportType $reportTypeKey -ShowPopup
+                    
+                    if ($result) {
+                        Write-Host "✅ マルチフォーマット出力完了: $($result.DataCount)件のデータ" -ForegroundColor Green
+                    }
+                } else {
+                    # フォールバック: 既存の方法で出力
+                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                    $reportsDir = Join-Path $Script:ToolRoot $FolderName
+                    $specificDir = Join-Path $reportsDir $ReportName
+                    
+                    if (-not (Test-Path $specificDir)) {
+                        New-Item -Path $specificDir -ItemType Directory -Force | Out-Null
+                    }
+                    
+                    # CSV出力
+                    $csvPath = Join-Path $specificDir "${ReportName}_${timestamp}.csv"
+                    $Data | Export-Csv -Path $csvPath -Encoding UTF8BOM -NoTypeInformation
+                    
+                    # HTML出力（英語キーを使用）
+                    $htmlPath = Join-Path $specificDir "${ReportName}_${timestamp}.html"
+                    $htmlContent = Generate-EnhancedHTMLReport -Data $Data -ReportType $reportTypeKey -Title $ReportName
+                    $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                    
+                    # ファイルを開く
+                    Start-Process $htmlPath
+                    Start-Process $csvPath
+                    
+                    [System.Windows.Forms.MessageBox]::Show("レポートを生成しました。`n`nHTML: $htmlPath`nCSV: $csvPath", "完了", "OK", "Information")
+                }
             }
             catch {
                 [System.Windows.Forms.MessageBox]::Show("ファイル出力エラー: $($_.Exception.Message)", "エラー", "OK", "Error")

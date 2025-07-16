@@ -3,17 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microsoft 365 日次レポート</title>
+    <title>ユーザー別日次アクティビティレポート</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- PDF生成ライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         * {
@@ -102,7 +96,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: auto;
-            min-width: 800px;
+            min-width: 1200px;
         }
         
         th {
@@ -139,7 +133,7 @@
             letter-spacing: 0.5px;
         }
         
-        .badge-normal {
+        .badge-active {
             background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
             border: 1px solid #c3e6cb;
@@ -151,16 +145,10 @@
             border: 1px solid #ffeaa7;
         }
         
-        .badge-alert {
+        .badge-inactive {
             background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
             color: #721c24;
             border: 1px solid #f5c6cb;
-        }
-        
-        .badge-info {
-            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-            color: #0c5460;
-            border: 1px solid #bee5eb;
         }
         
         .footer {
@@ -182,7 +170,7 @@
         <div class="container">
             <h1>
                 <i class="fas fa-chart-line"></i>
-                Microsoft 365 ユーザー別日次アクティビティレポート
+                ユーザー別日次アクティビティレポート
             </h1>
             <div class="meta-info">
                 <div class="stats">
@@ -212,7 +200,7 @@
             <div class="table-header">
                 <div class="table-title">
                     <i class="fas fa-users"></i>
-                    ユーザー別日次アクティビティ詳細
+                    個別ユーザー日次アクティビティ詳細
                 </div>
             </div>
             
@@ -222,6 +210,8 @@
                         <tr>
                             <th>ユーザー名</th>
                             <th>ユーザープリンシパル名</th>
+                            <th>部署</th>
+                            <th>最終サインイン</th>
                             <th>日次ログイン</th>
                             <th>日次メール</th>
                             <th>Teamsアクティビティ</th>
@@ -239,7 +229,7 @@
     </main>
 
     <footer class="footer">
-        <p><strong>Microsoft 365統合管理ツール</strong> - 日次レポート</p>
+        <p><strong>Microsoft 365統合管理ツール</strong> - ユーザー別日次アクティビティレポート</p>
         <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on {{REPORT_DATE}}</p>
         <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
     </footer>
