@@ -314,6 +314,9 @@ function ConvertTo-PDFFromHTML {
         [hashtable]$Options = @{}
     )
     
+    # 一時ファイル用変数
+    $optionsFile = $null
+    
     try {
         # 入力ファイルの存在確認
         if (-not (Test-Path $InputHtmlPath)) {
@@ -334,11 +337,19 @@ function ConvertTo-PDFFromHTML {
             New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
         }
         
-        # PDF生成スクリプトのパス
-        $scriptPath = Join-Path $PSScriptRoot "..\..\scripts\generate-pdf.js"
+        # PDF生成スクリプトのパス（新しいファイル対応版を使用）
+        $scriptPath = Join-Path $PSScriptRoot "..\generate-pdf.js"
         
-        # オプションをJSON形式に変換
-        $optionsJson = $Options | ConvertTo-Json -Compress
+        # オプションを一時ファイルに保存（エスケープ問題回避）
+        $optionsFile = "$env:TEMP\puppeteer_options_$(Get-Random).json"
+        $optionsJson = if ($Options.Count -gt 0) { 
+            $Options | ConvertTo-Json -Depth 10
+        } else { 
+            '{}' 
+        }
+        
+        # オプションを一時ファイルに保存
+        $optionsJson | Out-File -FilePath $optionsFile -Encoding UTF8 -Force
         
         # Node.js スクリプトの実行
         Write-Log "Puppeteer でPDF生成を開始します..." -Level "Info"
@@ -348,7 +359,7 @@ function ConvertTo-PDFFromHTML {
             $scriptPath,
             "`"$InputHtmlPath`"",
             "`"$OutputPdfPath`"",
-            "`"$optionsJson`""
+            "`"$optionsFile`""
         )
         
         $processInfo = New-Object System.Diagnostics.ProcessStartInfo
@@ -411,6 +422,12 @@ function ConvertTo-PDFFromHTML {
     catch {
         Write-Log "PDF生成エラー: $($_.Exception.Message)" -Level "Error"
         throw $_
+    }
+    finally {
+        # 一時ファイルのクリーンアップ
+        if ($optionsFile -and (Test-Path $optionsFile)) {
+            Remove-Item $optionsFile -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 

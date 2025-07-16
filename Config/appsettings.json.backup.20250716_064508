@@ -1,0 +1,169 @@
+{
+  "General": {
+    "OrganizationName": "みらい建設工業株式会社",
+    "Domain": "miraiconst.onmicrosoft.com",
+    "TimeZone": "Tokyo Standard Time",
+    "LanguageCode": "ja-JP",
+    "Environment": "Production"
+  },
+  "EntraID": {
+    "TenantId": "YOUR-TENANT-ID-HERE",
+    "ClientId": "YOUR-CLIENT-ID-HERE",
+    "CertificateThumbprint": "YOUR-CERTIFICATE-THUMBPRINT-HERE",
+    "CertificatePath": "",
+    "CertificatePassword": "YOUR-CERTIFICATE-PASSWORD-HERE",
+    "ClientSecret": "YOUR-CLIENT-SECRET-HERE",
+    "Scopes": [
+      "https://graph.microsoft.com/User.Read.All",
+      "https://graph.microsoft.com/Group.Read.All",
+      "https://graph.microsoft.com/Directory.Read.All",
+      "https://graph.microsoft.com/AuditLog.Read.All",
+      "https://graph.microsoft.com/Reports.Read.All",
+      "https://graph.microsoft.com/Team.ReadBasic.All",
+      "https://graph.microsoft.com/TeamMember.Read.All",
+      "https://graph.microsoft.com/Channel.ReadBasic.All",
+      "https://graph.microsoft.com/TeamSettings.Read.All",
+      "https://graph.microsoft.com/Sites.Read.All",
+      "https://graph.microsoft.com/Files.Read.All",
+      "https://graph.microsoft.com/Files.ReadWrite.All",
+      "https://graph.microsoft.com/Sites.ReadWrite.All",
+      "https://graph.microsoft.com/Mail.Read",
+      "https://graph.microsoft.com/Mail.ReadWrite"
+    ]
+  },
+  "ExchangeOnline": {
+    "Organization": "miraiconst.onmicrosoft.com",
+    "AppId": "YOUR-APP-ID-HERE",
+    "CertificateThumbprint": "YOUR-CERTIFICATE-THUMBPRINT-HERE",
+    "CertificatePath": "",
+    "CertificatePassword": "armageddon2002"
+  },
+  "ActiveDirectory": {
+    "DomainController": "miraiconst-dc.miraiconst.local",
+    "SearchBase": "DC=miraiconst,DC=local",
+    "UseAlternateCredentials": false,
+    "CredentialUsername": "",
+    "CredentialPasswordSecure": ""
+  },
+  "Logging": {
+    "LogLevel": "Info",
+    "MaxLogFileSizeMB": 50,
+    "RetentionDays": 365,
+    "EnableAuditLog": true,
+    "EnablePerformanceLog": false,
+    "LogDirectory": "Logs"
+  },
+  "Reports": {
+    "OutputFormats": ["HTML", "CSV"],
+    "BaseDirectory": "Reports",
+    "TemplateDirectory": "Templates",
+    "EnableEmailReports": false,
+    "EmailSettings": {
+      "SmtpServer": "smtp.office365.com",
+      "SmtpPort": 587,
+      "UseSSL": true,
+      "FromAddress": "reports@miraiconst.onmicrosoft.com",
+      "ToAddresses": [
+        "admin@miraiconst.onmicrosoft.com",
+        "security@miraiconst.onmicrosoft.com"
+      ]
+    }
+  },
+  "Scheduling": {
+    "DailyReportTime": "06:00",
+    "WeeklyReportDay": "Monday",
+    "WeeklyReportTime": "07:00",
+    "MonthlyReportDay": 1,
+    "MonthlyReportTime": "08:00",
+    "YearlyReportDate": "01-01",
+    "YearlyReportTime": "09:00",
+    "EnableAutoScheduling": false
+  },
+  "Thresholds": {
+    "MailboxCapacityWarningPercent": 80,
+    "MailboxCapacityCriticalPercent": 95,
+    "PasswordExpiryWarningDays": 14,
+    "InactiveUserDays": 90,
+    "LargeAttachmentSizeMB": 10,
+    "OneDriveHighUsagePercent": 80,
+    "TeamsInactiveDays": 30
+  },
+  "Security": {
+    "EncryptSensitiveData": true,
+    "RequireMFAForAdmins": true,
+    "EnableAuditTrail": true,
+    "RestrictAccessByIP": false,
+    "AllowedIPRanges": [
+      "192.168.1.0/24",
+      "10.0.0.0/8"
+    ],
+    "DataClassification": {
+      "DefaultLevel": "Internal",
+      "HighRiskKeywords": [
+        "password",
+        "secret",
+        "confidential",
+        "social security",
+        "credit card"
+      ]
+    }
+  },
+  "Performance": {
+    "MaxConcurrentTasks": 5,
+    "TimeoutMinutes": 45,
+    "RetryAttempts": 7,
+    "RetryDelaySeconds": 15,
+    "EnableProgressReporting": true,
+    "CacheExpirationMinutes": 60,
+    "ConnectionTimeoutSeconds": 300,
+    "RequestTimeoutSeconds": 180
+  },
+  "Compliance": {
+    "EnableISO27001Compliance": true,
+    "EnableISO27002Compliance": true,
+    "EnableITSMCompliance": true,
+    "RequireDigitalSignature": false,
+    "DataRetentionYears": 7,
+    "ArchiveAfterDays": 90,
+    "ComplianceOfficerEmail": "compliance@miraiconst.onmicrosoft.com"
+  },
+  "Notifications": {
+    "EnableEmailNotifications": false,
+    "EnableEventLogNotifications": true,
+    "CriticalErrorRecipients": [
+      "admin@miraiconst.onmicrosoft.com"
+    ],
+    "WarningRecipients": [
+      "it-team@miraiconst.onmicrosoft.com"
+    ],
+    "NotificationThresholds": {
+      "FailedLoginAttempts": 5,
+      "ConsecutiveErrors": 3,
+      "HighRiskSignIns": 1,
+      "ExpiredCertificates": 1
+    }
+  },
+  "Integration": {
+    "EnableSIEMIntegration": false,
+    "SIEMEndpoint": "https://your-siem-endpoint.com/api/events",
+    "SIEMApiKey": "",
+    "EnableTicketingSystem": false,
+    "TicketingSystemEndpoint": "https://your-ticketing-system.com/api",
+    "TicketingSystemApiKey": "",
+    "CustomWebhooks": []
+  },
+  "Advanced": {
+    "EnableDebugMode": false,
+    "EnableVerboseLogging": false,
+    "CustomScriptPaths": [],
+    "ExcludedUsers": [
+      "service-account@miraiconst.onmicrosoft.com",
+      "admin@miraiconst.onmicrosoft.com"
+    ],
+    "ExcludedGroups": [
+      "Service Accounts",
+      "System Groups"
+    ],
+    "CustomReportQueries": {}
+  }
+}

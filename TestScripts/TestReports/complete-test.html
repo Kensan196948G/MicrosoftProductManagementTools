@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完全システムテスト - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <!-- html2pdf.js (PDF生成用) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
+    <script>
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+    
+    <!-- jsPDF初期化確認スクリプト -->
+    <script>
+        // PDF生成ライブラリの初期化確認
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('=== PDF生成ライブラリ初期化確認 ===');
+            console.log('window.jsPDF:', typeof window.jsPDF);
+            console.log('global jsPDF:', typeof jsPDF);
+            console.log('window.jspdf:', typeof window.jspdf);
+            console.log('html2canvas:', typeof html2canvas);
+            console.log('html2pdf:', typeof html2pdf);
+            
+            // jsPDF の統一化
+            if (typeof window.jsPDF === 'undefined') {
+                if (typeof jsPDF !== 'undefined') {
+                    window.jsPDF = jsPDF;
+                    console.log('jsPDFをwindow.jsPDFに設定しました');
+                } else if (typeof window.jspdf !== 'undefined') {
+                    window.jsPDF = window.jspdf;
+                    console.log('window.jspdfをwindow.jsPDFに設定しました');
+                }
+            }
+            
+            // autoTable確認
+            if (window.jsPDF && window.jsPDF.jsPDF && window.jsPDF.jsPDF.autoTable) {
+                console.log('autoTable確認: 利用可能');
+            } else {
+                console.log('autoTable確認: 利用不可');
+            }
+            
+            // html2pdf確認
+            if (typeof html2pdf !== 'undefined') {
+                console.log('html2pdf確認: 利用可能');
+            } else {
+                console.log('html2pdf確認: 利用不可');
+            }
+            
+            // 最終確認
+            console.log('最終確認 - window.jsPDF:', typeof window.jsPDF);
+            console.log('最終確認 - html2pdf:', typeof html2pdf);
+            console.log('===============================');
+        });
+    </script>
+    <style>
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header .meta-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* コンテナ */
+        .container {
+            width: 95%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 2fr repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* サジェストボックス */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .suggestion-item.selected {
+            background-color: #e3f2fd;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown {
+            position: relative;
+        }
+        
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        /* フィルターボタン */
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        /* アクティブフィルター表示 */
+        .active-filters {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tag {
+            background: #e3f2fd;
+            color: #0078d4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-tag .remove {
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        
+        .filter-tag .remove:hover {
+            opacity: 1;
+        }
+        
+        /* データテーブル */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+        
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #e1e8ed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            font-size: 13px;
+        }
+        
+        td:hover {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
+            z-index: 1;
+            position: relative;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        tbody tr.filtered-out {
+            display: none;
+        }
+        
+        /* ステータスバッジ */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* ページネーション */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e1e8ed;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #0078d4;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+        
+        .page-info {
+            margin: 0 1rem;
+            color: #666;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .table-wrapper {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* アニメーション */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* ローディング */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* PDF/印刷専用スタイル */
+        @media print {
+            /* 基本設定 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 10pt !important;
+                line-height: 1.4 !important;
+                background: white !important;
+                color: black !important;
+            }
+            
+            /* 不要な要素を非表示 */
+            .filter-section,
+            .pagination,
+            .table-actions,
+            .btn,
+            .search-suggestions,
+            .active-filters,
+            .table-header .table-actions {
+                display: none !important;
+            }
+            
+            /* コンテナ調整 */
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm !important;
+                margin: 0 !important;
+            }
+            
+            /* ヘッダー調整 */
+            .header {
+                background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%) !important;
+                color: white !important;
+                padding: 10mm !important;
+                margin-bottom: 5mm !important;
+                page-break-after: avoid !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            
+            .header h1 {
+                font-size: 18pt !important;
+                margin-bottom: 5mm !important;
+            }
+            
+            .header .meta-info {
+                font-size: 9pt !important;
+            }
+            
+            .header .stats {
+                flex-wrap: wrap !important;
+                gap: 10mm !important;
+            }
+            
+            .header .stat-item {
+                font-size: 9pt !important;
+            }
+            
+            /* テーブル調整 */
+            .table-container {
+                background: white !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+            
+            .table-header {
+                background: #f8f9fa !important;
+                padding: 5mm !important;
+                border-bottom: 2px solid #ddd !important;
+                page-break-after: avoid !important;
+            }
+            
+            .table-title {
+                font-size: 12pt !important;
+                font-weight: bold !important;
+                color: black !important;
+            }
+            
+            .table-wrapper {
+                overflow: visible !important;
+            }
+            
+            /* テーブル要素の詳細調整 */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                page-break-inside: auto !important;
+                font-size: 8pt !important;
+                margin: 0 !important;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                padding: 3mm !important;
+                text-align: left !important;
+                font-weight: bold !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                font-size: 9pt !important;
+                white-space: nowrap !important;
+            }
+            
+            td {
+                padding: 2mm !important;
+                border: 1px solid #ddd !important;
+                page-break-inside: avoid !important;
+                font-size: 8pt !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 50mm !important;
+            }
+            
+            /* 行の改ページ制御 */
+            tbody tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+            }
+            
+            /* 最初の行をヘッダーと一緒に保持 */
+            tbody tr:first-child {
+                page-break-before: avoid !important;
+            }
+            
+            /* 長いセルの内容を改行 */
+            td.long-content {
+                white-space: normal !important;
+                word-wrap: break-word !important;
+                max-width: 40mm !important;
+            }
+            
+            /* バッジ要素 */
+            .badge {
+                padding: 1mm 2mm !important;
+                font-size: 7pt !important;
+                font-weight: normal !important;
+                border-radius: 2mm !important;
+                display: inline-block !important;
+                white-space: nowrap !important;
+            }
+            
+            .badge-success {
+                background: #d4edda !important;
+                color: #155724 !important;
+                border: 1px solid #c3e6cb !important;
+            }
+            
+            .badge-warning {
+                background: #fff3cd !important;
+                color: #856404 !important;
+                border: 1px solid #ffeaa7 !important;
+            }
+            
+            .badge-danger {
+                background: #f8d7da !important;
+                color: #721c24 !important;
+                border: 1px solid #f5c6cb !important;
+            }
+            
+            .badge-info {
+                background: #d1ecf1 !important;
+                color: #0c5460 !important;
+                border: 1px solid #bee5eb !important;
+            }
+            
+            /* フッター調整 */
+            .footer {
+                page-break-before: avoid !important;
+                padding: 5mm !important;
+                text-align: center !important;
+                font-size: 8pt !important;
+                color: #666 !important;
+                border-top: 1px solid #ddd !important;
+                margin-top: 5mm !important;
+            }
+            
+            /* アイコン非表示 */
+            .fas, .far, .fab {
+                display: none !important;
+            }
+            
+            /* 改ページ制御 */
+            .page-break {
+                page-break-before: always !important;
+            }
+            
+            .no-break {
+                page-break-inside: avoid !important;
+            }
+            
+            /* 孤立行・寡婦行の制御 */
+            p, li {
+                orphans: 2 !important;
+                widows: 2 !important;
+            }
+            
+            /* テーブルの各セクション */
+            thead {
+                display: table-header-group !important;
+            }
+            
+            tfoot {
+                display: table-footer-group !important;
+            }
+            
+            tbody {
+                display: table-row-group !important;
+            }
+        }
+        
+        /* 画面表示時の追加スタイル */
+        @media screen {
+            .pdf-only {
+                display: none !important;
+            }
+        }
+        
+        @media print {
+            .screen-only {
+                display: none !important;
+            }
+            
+            .pdf-only {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                完全システムテスト
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>生成日時: 2025年07月16日 12:41:08</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データ件数: <strong id="totalRecords">1</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-filter"></i>
+                        <span>表示中: <strong id="visibleRecords">1</strong> 件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <!-- 検索ボックス -->
+                <div class="search-container">
+                    <label for="searchInput">検索</label>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="search-box" 
+                           placeholder="検索キーワードを入力..."
+                           autocomplete="off">
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+                
+                <!-- ドロップダウンフィルター（動的に生成） -->
+                <div id="filterDropdowns"></div>
+                
+                <!-- フィルターアクション -->
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i>
+                        リセット
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-print"></i>
+                        PDF印刷
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadPDF()">
+                        <i class="fas fa-download"></i>
+                        PDFダウンロード
+                    </button>
+                </div>
+            </div>
+            
+            <!-- アクティブフィルター -->
+            <div id="activeFilters" class="active-filters"></div>
+        </section>
+
+        <!-- データテーブル -->
+        <section class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">データ一覧</h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="toggleColumns()">
+                        <i class="fas fa-columns"></i>
+                        列の表示/非表示
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th onclick="sortTable('テスト')">テスト <i class="fas fa-sort sort-icon"></i></th><th onclick="sortTable('値')">値 <i class="fas fa-sort sort-icon"></i></th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td>UTF8BOM</td><td>日本語テスト</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ページネーション -->
+            <div class="pagination" id="pagination"></div>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p>Microsoft 365統合管理ツール - 自動生成レポート</p>
+        <p>PowerShell 7.5.2 | Generated by Microsoft 365統合管理ツール v1.0</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="data:text/javascript;base64,Y29uc29sZS5sb2coJ+ODrOODneODvOODiOOBjOiqreOBv+i+vOOBvuOCjOOBvuOBl+OBnycpOyBmdW5jdGlvbiBkb3dubG9hZFBERigpIHsgd2luZG93LnByaW50KCk7IH0gZnVuY3Rpb24gZXhwb3J0VG9QREYoKSB7IHdpbmRvdy5wcmludCgpOyB9IGZ1bmN0aW9uIHJlc2V0RmlsdGVycygpIHsgY29uc29sZS5sb2coJ+ODleOCo+ODq+OCv+ODvOODquOCu+ODg+ODiCcpOyB9"></script>
+</body>
+</html>

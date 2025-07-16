@@ -8,20 +8,29 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
 
 ## アーキテクチャ
 
-### GUI/CLI両対応システム
+### GUI/CLI両対応システム（完全版対応）
 
-- **Apps/GuiApp.ps1**: 26機能搭載のWindows Forms GUI（PowerShell 7.5.1対応）
+- **Apps/GuiApp_Enhanced.ps1**: 26機能搭載のWindows Forms GUI完全版（PowerShell 7.5.1対応）
   - 📊 定期レポート (5機能): 日次・週次・月次・年次・テスト実行
-  - 🔍 分析レポート (5機能): ライセンス・使用状況・パフォーマンス・セキュリティ・権限監査
+  - 🔍 分析レポート (5機能): ライセンス・使用状況・パフォーマンス・セキュリティ・権限監査  
   - 👥 Entra ID管理 (4機能): ユーザー一覧・MFA状況・条件付きアクセス・サインインログ
   - 📧 Exchange Online管理 (4機能): メールボックス・メールフロー・スパム対策・配信分析
   - 💬 Teams管理 (4機能): 使用状況・設定・会議品質・アプリ分析
   - 💾 OneDrive管理 (4機能): ストレージ・共有・同期エラー・外部共有分析
+  - **新機能**: リアルタイムMicrosoft 365データ取得対応
+  - **新機能**: Templates/Samplesの全6フォルダ構造に完全対応
+  - **新機能**: Microsoft Graph API統合・Exchange Online PowerShell統合
 
-- **Apps/CliApp.ps1**: クロスプラットフォーム対応CLIアプリケーション
-  - PowerShell 5.1/7.x両対応
+- **Apps/CliApp_Enhanced.ps1**: 完全版CLIアプリケーション
+  - PowerShell 5.1/7.x両対応・クロスプラットフォーム対応
   - バッチモード・対話モード切替
   - 全GUI機能をコマンドラインで実行可能
+  - **新機能**: 30種類以上のコマンド対応
+  - **新機能**: CSV・HTML出力オプション
+  - **新機能**: リアルタイムデータ取得対応
+
+- **Apps/GuiApp.ps1**: 従来版GUI（後方互換性維持）
+- **Apps/CliApp.ps1**: 従来版CLI（後方互換性維持）
 
 - **run_launcher.ps1**: 統一ランチャー
   - PowerShell 7.5.1自動検出・インストール
@@ -33,6 +42,11 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
 - **Scripts/Common/**: 共通機能を提供するコアモジュール
   - `Common.psm1`: メイン初期化と設定読み込み
   - `Authentication.psm1`: 全Microsoftサービス統一認証
+  - `RealM365DataProvider.psm1`: **新機能** Microsoft 365リアルデータ取得エンジン
+    - Microsoft Graph API統合
+    - Exchange Online PowerShell統合
+    - 全ユーザー・ライセンス・使用状況・MFA状況等の実データ取得
+    - Teams使用状況（ダミーデータ対応）・OneDrive・サインインログ対応
   - `Logging.psm1`: 監査証跡対応の集中ログ機能
   - `ErrorHandling.psm1`: 標準化されたエラーハンドリングと再試行ロジック
   - `ReportGenerator.psm1`: HTMLおよびCSVレポート生成
@@ -74,23 +88,34 @@ pwsh -File run_launcher.ps1
 
 ### GUI操作（推奨）
 ```powershell
-# GUIモードで起動
+# GUIモードで起動（完全版が自動選択）
 pwsh -File run_launcher.ps1
 # → 1を選択
 
-# または直接GUI起動
+# または直接完全版GUI起動
+pwsh -File Apps/GuiApp_Enhanced.ps1
+
+# 従来版GUI起動（後方互換性）
 pwsh -File Apps/GuiApp.ps1
 ```
 
 ### CLI操作
 ```powershell
-# CLIモードで特定レポート実行
+# CLIモードで特定レポート実行（完全版が自動選択）
+pwsh -File run_launcher.ps1
+# → 2を選択
+
+# または直接完全版CLI実行
+pwsh -File Apps/CliApp_Enhanced.ps1 daily -OutputHTML
+pwsh -File Apps/CliApp_Enhanced.ps1 users -Batch -OutputCSV -MaxResults 500
+pwsh -File Apps/CliApp_Enhanced.ps1 license -OutputPath 'C:\Reports'
+
+# 完全版CLI対話メニューモード
+pwsh -File Apps/CliApp_Enhanced.ps1 menu
+
+# 従来版CLI操作（後方互換性）
 pwsh -File Apps/CliApp.ps1 -Action daily
-
-# バッチモードで自動実行
 pwsh -File Apps/CliApp.ps1 -Action weekly -Batch
-
-# 対話メニューモード
 pwsh -File Apps/CliApp.ps1 -Action menu
 ```
 

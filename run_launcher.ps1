@@ -346,10 +346,18 @@ function Start-GUIMode {
         Write-IconMessage $Script:Icons.GUI "GUI アプリケーションを起動しています..." -Color Cyan
         Write-Host ""
         
-        # 事前チェック
-        $guiPath = Join-Path $PSScriptRoot "Apps\GuiApp.ps1"
-        if (-not (Test-Path $guiPath)) {
-            throw "GUIアプリケーションが見つかりません: $guiPath"
+        # 事前チェック - Enhanced GUIを優先使用
+        $enhancedGuiPath = Join-Path $PSScriptRoot "Apps\GuiApp_Enhanced.ps1"
+        $originalGuiPath = Join-Path $PSScriptRoot "Apps\GuiApp.ps1"
+        
+        if (Test-Path $enhancedGuiPath) {
+            $guiPath = $enhancedGuiPath
+            Write-IconMessage $Script:Icons.Info "Enhanced GUI (完全版) を使用します" -Color Cyan
+        } elseif (Test-Path $originalGuiPath) {
+            $guiPath = $originalGuiPath
+            Write-IconMessage $Script:Icons.Warning "標準GUIを使用します" -Color Yellow
+        } else {
+            throw "GUIアプリケーションが見つかりません: $enhancedGuiPath, $originalGuiPath"
         }
         
         # PowerShellバージョンチェック
@@ -395,10 +403,25 @@ function Start-GUIMode {
             Write-IconMessage $Script:Icons.Warning "PowerShell 7が見つかりません。Windows PowerShellで起動します。" -Color Yellow
         }
         
-        # プロセス起動オプション
+        # PowerShell 7の視覚的識別強化
+        $psTitle = if ($psCommand -eq "pwsh") {
+            "🚀 Microsoft 365統合管理ツール - PowerShell 7 GUI"
+        } else {
+            "🚀 Microsoft 365統合管理ツール - Windows PowerShell GUI"
+        }
+        
+        # プロセス起動オプション（タイトル設定付き）
+        $argumentList = @(
+            "-sta"
+            "-NoProfile" 
+            "-ExecutionPolicy", "Bypass"
+            "-Command"
+            "& { $Host.UI.RawUI.WindowTitle = '$psTitle'; & '$guiPath' }"
+        )
+        
         $startProcessArgs = @{
             FilePath = $psCommand
-            ArgumentList = @("-sta", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$guiPath`"")
+            ArgumentList = $argumentList
             PassThru = $true
             WindowStyle = "Normal"
         }
@@ -501,20 +524,31 @@ function Start-CLIMode {
     
     $selected = $cliOptions | Where-Object { $_.Number -eq $choice }
     if ($selected -and $selected.Command -ne "back") {
-        $cliPath = Join-Path $PSScriptRoot "Apps\CliApp.ps1"
+        # Enhanced CLIを優先使用
+        $enhancedCliPath = Join-Path $PSScriptRoot "Apps\CliApp_Enhanced.ps1"
+        $originalCliPath = Join-Path $PSScriptRoot "Apps\CliApp.ps1"
         
-        if (Test-Path $cliPath) {
-            Write-Host ""
-            Write-IconMessage $Script:Icons.Running "$($selected.Text)を実行中..." -Color Cyan
-            
-            try {
-                # 同じプロセスで実行
-                & $cliPath -Action $selected.Command
-                Write-IconMessage $Script:Icons.Success "完了しました" -Color Green
-            }
-            catch {
-                Write-IconMessage $Script:Icons.Error "エラー: $_" -Color Red
-            }
+        if (Test-Path $enhancedCliPath) {
+            $cliPath = $enhancedCliPath
+            Write-IconMessage $Script:Icons.Info "Enhanced CLI (完全版) を使用します" -Color Cyan
+        } elseif (Test-Path $originalCliPath) {
+            $cliPath = $originalCliPath
+            Write-IconMessage $Script:Icons.Warning "標準CLIを使用します" -Color Yellow
+        } else {
+            Write-IconMessage $Script:Icons.Error "CLIアプリケーションが見つかりません" -Color Red
+            return
+        }
+        
+        Write-Host ""
+        Write-IconMessage $Script:Icons.Running "$($selected.Text)を実行中..." -Color Cyan
+        
+        try {
+            # 同じプロセスで実行
+            & $cliPath -Action $selected.Command
+            Write-IconMessage $Script:Icons.Success "完了しました" -Color Green
+        }
+        catch {
+            Write-IconMessage $Script:Icons.Error "エラー: $_" -Color Red
         }
     }
     

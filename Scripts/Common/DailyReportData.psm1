@@ -188,8 +188,10 @@ function Get-UserActivityRealData {
     try {
         Write-Log "ユーザー基本情報を取得中（E3ライセンス対応版）..." -Level "Debug"
         
-        # E3ライセンスで取得可能な基本情報のみ取得（全ユーザー取得）
+        # E3ライセンスで取得可能な基本情報のみ取得（全ユーザー対象）
+        Write-Log "ユーザー情報を取得中（全ユーザー）..." -Level "Info"
         $users = Get-MgUser -All -Property Id,DisplayName,UserPrincipalName,Department,JobTitle,AccountEnabled,LastPasswordChangeDateTime,CreatedDateTime
+        Write-Log "取得したユーザー数: $($users.Count)" -Level "Info"
         
         $activities = @()
         $today = Get-Date
@@ -258,10 +260,16 @@ function Get-MailboxCapacityRealData {
         
         # Exchange Online接続確認
         if (Test-ExchangeOnlineConnection) {
+            Write-Log "メールボックス一覧を取得中（全メールボックス）..." -Level "Info"
             $mbxList = Get-Mailbox -ResultSize Unlimited
+            Write-Log "取得したメールボックス数: $($mbxList.Count)" -Level "Info"
             
+            $processedCount = 0
             foreach ($mbx in $mbxList) {
-                $stats = Get-MailboxStatistics -Identity $mbx.Identity
+                try {
+                    $processedCount++
+                    Write-Log "メールボックス統計処理中: $processedCount/$($mbxList.Count) - $($mbx.DisplayName)" -Level "Debug"
+                    $stats = Get-MailboxStatistics -Identity $mbx.Identity
                 
                 # サイズ計算
                 $totalSizeGB = 0
@@ -295,17 +303,32 @@ function Get-MailboxCapacityRealData {
                     [Math]::Round(($totalSizeGB / $quotaGB) * 100, 2) 
                 } else { 0 }
                 
-                $mailboxes += [PSCustomObject]@{
-                    メールボックス = $mbx.DisplayName
-                    メールアドレス = $mbx.PrimarySmtpAddress
-                    使用容量GB = [Math]::Round($totalSizeGB, 2)
-                    制限容量GB = $quotaGB
-                    使用率 = $usagePercent
-                    アイテム数 = $stats.ItemCount
-                    Status = if ($usagePercent -ge 90) { "危険" }
-                            elseif ($usagePercent -ge 80) { "警告" }
-                            else { "正常" }
-                    最終確認 = (Get-Date).ToString("yyyy-MM-dd HH:mm")
+                    $mailboxes += [PSCustomObject]@{
+                        メールボックス = $mbx.DisplayName
+                        メールアドレス = $mbx.PrimarySmtpAddress
+                        使用容量GB = [Math]::Round($totalSizeGB, 2)
+                        制限容量GB = $quotaGB
+                        使用率 = $usagePercent
+                        アイテム数 = $stats.ItemCount
+                        Status = if ($usagePercent -ge 90) { "危険" }
+                                elseif ($usagePercent -ge 80) { "警告" }
+                                else { "正常" }
+                        最終確認 = (Get-Date).ToString("yyyy-MM-dd HH:mm")
+                    }
+                }
+                catch {
+                    Write-Log "メールボックス $($mbx.DisplayName) の統計取得エラー: $($_.Exception.Message)" -Level "Warning"
+                    # エラーが発生した場合はダミーデータを作成
+                    $mailboxes += [PSCustomObject]@{
+                        メールボックス = $mbx.DisplayName
+                        メールアドレス = $mbx.PrimarySmtpAddress
+                        使用容量GB = 0
+                        制限容量GB = 100
+                        使用率 = 0
+                        アイテム数 = 0
+                        Status = "取得エラー"
+                        最終確認 = (Get-Date).ToString("yyyy-MM-dd HH:mm")
+                    }
                 }
             }
         }
@@ -481,11 +504,14 @@ function Get-MFAStatusRealData {
     try {
         $mfaStatus = @()
         
+        Write-Log "MFA状況確認用ユーザー情報を取得中（全ユーザー）..." -Level "Info"
         $users = Get-MgUser -All -Property Id,DisplayName,UserPrincipalName,AccountEnabled,UserType
+        Write-Log "MFA確認対象ユーザー数: $($users.Count)" -Level "Info"
         
         foreach ($user in $users) {
             if ($user.AccountEnabled -and $user.UserType -eq "Member") {
                 try {
+                    Write-Log "ユーザー $($user.UserPrincipalName) のMFA情報を取得中..." -Level "Debug"
                     $authMethods = Get-MgUserAuthenticationMethod -UserId $user.Id
                     
                     $hasMFA = $false

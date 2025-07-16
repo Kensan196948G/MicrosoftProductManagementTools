@@ -1,0 +1,47 @@
+{
+  "GoogleDriveAPI": {
+    "ClientId": "YOUR_GOOGLE_CLIENT_ID",
+    "ClientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
+    "RefreshToken": "YOUR_REFRESH_TOKEN",
+    "AccessToken": "",
+    "TokenExpiryTime": "",
+    "ScopeUrl": "https://www.googleapis.com/auth/drive.file",
+    "AuthUrl": "https://accounts.google.com/o/oauth2/auth",
+    "TokenUrl": "https://oauth2.googleapis.com/token",
+    "RedirectUri": "urn:ietf:wg:oauth:2.0:oob"
+  },
+  "SyncSettings": {
+    "RemoteFolderName": "MicrosoftProductManagementTools_Certificates",
+    "RemoteFolderId": "",
+    "LocalCertificatesPath": "Certificates/",
+    "LocalConfigPath": "Config/",
+    "SyncInterval": 300,
+    "EnableEncryption": true,
+    "EncryptionPassword": "YOUR_ENCRYPTION_PASSWORD",
+    "BackupRetentionDays": 30,
+    "AutoSyncEnabled": true,
+    "SyncOnFileChange": true,
+    "ExcludePatterns": [
+      "*.tmp",
+      "*.log",
+      "*.backup"
+    ]
+  },
+  "Security": {
+    "EnableAuditLog": true,
+    "AuditLogPath": "Logs/googledrive-sync.log",
+    "RequireConfirmation": false,
+    "MaxFileSize": 100,
+    "AllowedFileTypes": [
+      ".key",
+      ".crt",
+      ".cer",
+      ".csr",
+      ".pfx",
+      ".p12",
+      ".txt",
+      ".json",
+      ".md"
+    ]
+  }
+}

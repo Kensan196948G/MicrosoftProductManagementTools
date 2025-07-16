@@ -1,0 +1,728 @@
+# 🎯 itmux完全導入ガイド - ITSM開発環境構築
+
+## 📋 目次
+1. [itmux実際の構造](#itmux実際の構造)
+2. [導入・セットアップ手順](#導入・セットアップ手順)
+3. [tmux設定ファイル](#tmux設定ファイル)
+4. [ITSM開発セッション構築](#itsm開発セッション構築)
+5. [PowerShell統合実行スクリプト](#powershell統合実行スクリプト)
+6. [実用的な使用例](#実用的な使用例)
+7. [トラブルシューティング](#トラブルシューティング)
+
+---
+
+## 📁 itmux実際の構造
+
+### 確認済みitmux構成
+```
+C:\tools\itmux\
+├── bin\                          # 実行可能ファイル・ライブラリ
+│   ├── mintty.exe               # ターミナルエミュレータ（メイン）
+│   ├── tmux.exe                 # tmux本体
+│   ├── bash.exe                 # Bashシェル
+│   ├── ssh.exe                  # SSH関連ツール
+│   ├── scp.exe, sftp.exe        # ファイル転送
+│   ├── cygwin1.dll              # Cygwin基盤DLL
+│   ├── (その他多数のUNIXツール)
+│   └── (cyg*.dll - 依存ライブラリ)
+├── etc\                         # 設定ファイル
+│   ├── ssh\                     # SSH設定
+│   ├── terminfo\                # 端末情報
+│   ├── nsswitch.conf           # ネームサービス設定
+│   └── profile                  # シェル初期設定
+├── usr\                         # ユーザー領域
+│   └── share\                   # 共有データ
+│       └── terminfo\            # 詳細な端末情報
+├── tmp\                         # 一時ファイル
+├── fstab.txt                    # マウント設定説明
+├── itmux.cmd                    # 起動スクリプト
+└── LICENSE.TXT                  # ライセンス情報
+```
+
+---
+
+## 🚀 導入・セットアップ手順
+
+### 1️⃣ 初期セットアップ
+```powershell
+# 1. itmux配置（既に完了）
+# C:\tools\itmux\ に配置済み
+
+# 2. 環境変数設定（PowerShell）
+$env:PATH += ";C:\tools\itmux\bin"
+[Environment]::SetEnvironmentVariable("PATH", $env:PATH, [EnvironmentVariableTarget]::User)
+
+# 3. 起動確認
+C:\tools\itmux\itmux.cmd
+```
+
+### 2️⃣ 正しいitmux起動シーケンス
+```powershell
+# 方法1: 標準起動（推奨）
+C:\tools\itmux\itmux.cmd
+
+# 方法2: 直接mintty起動
+C:\tools\itmux\bin\mintty.exe --title "ITSM Development" -
+
+# 方法3: PowerShellから起動
+Start-Process "C:\tools\itmux\itmux.cmd" -WindowStyle Normal
+
+# 方法4: カスタム起動
+C:\tools\itmux\bin\mintty.exe --title "ITSM-ITmanagementSystem" --size 120,40 -
+```
+
+---
+
+## 🔧 tmux設定ファイル
+
+### ~/.tmux.conf（Cygwin環境内）
+```bash
+# ~/.tmux.conf (C:\tools\itmux\tmp\ 配下に作成される)
+
+# 基本設定
+unbind C-b
+set-option -g prefix C-a
+bind-key C-a send-prefix
+
+# itmux/mintty環境最適化
+set -g mouse on
+set -g default-terminal "screen-256color"
+set -g terminal-overrides "xterm*:Tc"
+set -g base-index 1
+set -g pane-base-index 1
+
+# Windows/Cygwin統合
+set -g default-shell "/bin/bash"
+set -g history-limit 10000
+
+# ウィンドウ・ペイン操作（ITSM開発向け）
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+bind c new-window -c "#{pane_current_path}"
+
+# ペイン移動（vim風）
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+# ペインリサイズ
+bind -r H resize-pane -L 5
+bind -r J resize-pane -D 5
+bind -r K resize-pane -U 5
+bind -r L resize-pane -R 5
+
+# PowerShell/CMD統合
+bind P new-window -n "PowerShell" 'cmd.exe /c powershell.exe'
+bind C new-window -n "CMD" 'cmd.exe'
+bind W new-window -n "WinTools" 'cmd.exe /c "cd /d C:\tools && powershell.exe"'
+
+# クリップボード統合（Windows）
+bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "/dev/clipboard"
+bind ] run "cat /dev/clipboard | tmux load-buffer - ; tmux paste-buffer"
+
+# ITSM開発特化バインド
+bind I new-window -n "ITSM-Frontend" 'cd /cygdrive/c/workspace/itsm-project/frontend && bash'
+bind B new-window -n "ITSM-Backend" 'cd /cygdrive/c/workspace/itsm-project/backend && bash'
+bind T new-window -n "ITSM-Test" 'cd /cygdrive/c/workspace/itsm-project/tests && bash'
+
+# ステータスバー（ITSM開発向け）
+set -g status-position bottom
+set -g status-bg colour234
+set -g status-fg colour137
+set -g status-interval 1
+set -g status-left '#[fg=colour233,bg=colour245,bold] 🎯 ITSM-Dev #[fg=colour245,bg=colour235,nobold]'
+set -g status-right '#[fg=colour233,bg=colour245,bold] %d/%m %H:%M:%S '
+set -g status-right-length 50
+set -g status-left-length 30
+
+# ウィンドウ表示
+setw -g window-status-current-format ' #I#[fg=colour250]:#[fg=colour255]#W#[fg=colour50]#F '
+setw -g window-status-format ' #I#[fg=colour237]:#[fg=colour250]#W#[fg=colour244]#F '
+
+# ペイン境界
+set -g pane-border-style 'fg=colour238 bg=colour235'
+set -g pane-active-border-style 'fg=colour51 bg=colour235'
+
+# メッセージ
+set -g message-style 'fg=colour232 bg=colour166 bold'
+```
+
+---
+
+## 🏗️ ITSM開発セッション構築
+
+### create-itsm-session.sh（実構造対応版）
+```bash
+#!/bin/bash
+# create-itsm-session.sh - 実際のitmux環境対応版
+
+SESSION_NAME="ITSM-ITmanagementSystem"
+WORKSPACE_BASE="/cygdrive/c/workspace/itsm-project"
+
+# 作業ディレクトリ確認・作成
+echo "🔍 Checking workspace structure..."
+mkdir -p "$WORKSPACE_BASE"/{frontend,backend,tests,integration,scripts,logs,docs}
+
+# 既存セッション削除
+tmux has-session -t $SESSION_NAME 2>/dev/null && tmux kill-session -t $SESSION_NAME
+
+# 新セッション作成
+echo "🚀 Creating ITSM development session..."
+tmux new-session -d -s $SESSION_NAME
+
+# Window 0: 👑 CEO Strategy Terminal
+tmux rename-window -t $SESSION_NAME:0 "CEO-Strategy"
+tmux send-keys -t $SESSION_NAME:0 "clear" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '👑 CEO Strategy Terminal - ITSM Project Management'" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '📁 Workspace: $WORKSPACE_BASE'" C-m
+tmux send-keys -t $SESSION_NAME:0 "cd $WORKSPACE_BASE" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '🎯 Current tasks:'" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '  - Review development progress'" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '  - Approve feature implementations'" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '  - Strategic decisions'" C-m
+
+# Window 1: 👔 Manager Coordination Terminal
+tmux new-window -t $SESSION_NAME:1 -n "Manager-Coord"
+tmux send-keys -t $SESSION_NAME:1 "clear" C-m
+tmux send-keys -t $SESSION_NAME:1 "echo '👔 Manager Coordination Terminal - Team Management'" C-m
+tmux send-keys -t $SESSION_NAME:1 "cd $WORKSPACE_BASE" C-m
+tmux send-keys -t $SESSION_NAME:1 "echo '📊 Team coordination tasks:'" C-m
+tmux send-keys -t $SESSION_NAME:1 "echo '  - Monitor developer progress'" C-m
+tmux send-keys -t $SESSION_NAME:1 "echo '  - Resolve blockers'" C-m
+tmux send-keys -t $SESSION_NAME:1 "echo '  - Quality assurance'" C-m
+
+# Window 2: 💻 dev1 Frontend Development
+tmux new-window -t $SESSION_NAME:2 -n "dev1-Frontend"
+tmux send-keys -t $SESSION_NAME:2 "clear" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '💻 Developer 1 - Frontend Development (React/Vue.js)'" C-m
+tmux send-keys -t $SESSION_NAME:2 "cd $WORKSPACE_BASE/frontend" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '🎨 Frontend development environment ready'" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '📝 Available commands:'" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '  - npm install    # Install dependencies'" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '  - npm run dev    # Start development server'" C-m
+tmux send-keys -t $SESSION_NAME:2 "echo '  - npm run build  # Build for production'" C-m
+
+# Window 3: 🔧 dev2 Backend/DB/API
+tmux new-window -t $SESSION_NAME:3 -n "dev2-Backend"
+tmux send-keys -t $SESSION_NAME:3 "clear" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '🔧 Developer 2 - Backend/Database/API Development'" C-m
+tmux send-keys -t $SESSION_NAME:3 "cd $WORKSPACE_BASE/backend" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '🗄️ Backend development environment ready'" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '📝 Available commands:'" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '  - node server.js # Start API server'" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '  - npm run migrate # Database migration'" C-m
+tmux send-keys -t $SESSION_NAME:3 "echo '  - npm run test   # Run API tests'" C-m
+
+# Window 4: 🗄️ dev3 Test/QA/Security
+tmux new-window -t $SESSION_NAME:4 -n "dev3-TestQA"
+tmux send-keys -t $SESSION_NAME:4 "clear" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '🗄️ Developer 3 - Test Automation/QA/Security'" C-m
+tmux send-keys -t $SESSION_NAME:4 "cd $WORKSPACE_BASE/tests" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '🧪 Test automation environment ready'" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '📝 Available commands:'" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '  - npm run test:unit     # Unit tests'" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '  - npm run test:integration # Integration tests'" C-m
+tmux send-keys -t $SESSION_NAME:4 "echo '  - npm run security:scan # Security scan'" C-m
+
+# Window 5: 🧪 dev4 Integration/Validation
+tmux new-window -t $SESSION_NAME:5 -n "dev4-Integration"
+tmux send-keys -t $SESSION_NAME:5 "clear" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '🧪 Developer 4 - Integration/Validation Testing'" C-m
+tmux send-keys -t $SESSION_NAME:5 "cd $WORKSPACE_BASE/integration" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '🔍 Integration testing environment ready'" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '📝 Available commands:'" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '  - npm run test:e2e      # End-to-end tests'" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '  - npm run validate      # Validation tests'" C-m
+tmux send-keys -t $SESSION_NAME:5 "echo '  - npm run acceptance    # Acceptance tests'" C-m
+
+# プロジェクト情報表示
+echo "✅ ITSM development session created successfully!"
+echo "🔗 Session: $SESSION_NAME"
+echo "📋 Windows:"
+echo "  0: CEO-Strategy"
+echo "  1: Manager-Coord"
+echo "  2: dev1-Frontend"
+echo "  3: dev2-Backend"
+echo "  4: dev3-TestQA"
+echo "  5: dev4-Integration"
+echo ""
+echo "🎯 To attach: tmux attach-session -t $SESSION_NAME"
+echo "⌨️  Navigation: Ctrl+a + [0-5] to switch windows"
+
+# セッションアタッチ
+tmux attach-session -t $SESSION_NAME
+```
+
+---
+
+## ⚡ PowerShell統合実行スクリプト
+
+### powershell-itmux-manager.sh（実環境対応版）
+```bash
+#!/bin/bash
+# powershell-itmux-manager.sh - 実際のitmux環境対応版
+
+SCRIPT_DIR="/cygdrive/c/workspace/itsm-project/scripts"
+LOG_DIR="/cygdrive/c/workspace/itsm-project/logs"
+CONFIG_DIR="/cygdrive/c/workspace/itsm-project/config"
+
+# 初期化
+initialize_itmux_environment() {
+    echo "🔧 Initializing itmux ITSM development environment..."
+    
+    # 必要ディレクトリ作成
+    mkdir -p "$SCRIPT_DIR" "$LOG_DIR" "$CONFIG_DIR"
+    
+    # Cygwin環境確認
+    echo "📋 Cygwin environment check:"
+    echo "  - Cygwin version: $(uname -a)"
+    echo "  - tmux version: $(tmux -V)"
+    echo "  - bash version: $BASH_VERSION"
+    
+    # Windows統合確認
+    echo "🖥️ Windows integration check:"
+    if cmd.exe /c "echo Windows command available" 2>/dev/null; then
+        echo "  - Windows commands: ✅ Available"
+    else
+        echo "  - Windows commands: ❌ Not available"
+    fi
+    
+    if cmd.exe /c "powershell.exe -Command \"Write-Host 'PowerShell test'\"" 2>/dev/null; then
+        echo "  - PowerShell: ✅ Available"
+    else
+        echo "  - PowerShell: ❌ Not available"
+    fi
+    
+    # マウントポイント確認
+    echo "📁 Mount points:"
+    mount | grep cygdrive
+    
+    # 作業ディレクトリ確認
+    echo "📂 Workspace directories:"
+    ls -la /cygdrive/c/workspace/itsm-project/
+}
+
+# PowerShell実行関数（itmux環境特化）
+execute_powershell_script() {
+    local script_name=$1
+    local dev_window=$2
+    local iteration=$3
+    local max_iterations=$4
+    
+    local timestamp=$(date '+%Y%m%d_%H%M%S')
+    local log_file="$LOG_DIR/${script_name%.*}_${timestamp}.log"
+    
+    echo "⚡ Executing PowerShell script: $script_name"
+    echo "📝 Log file: $log_file"
+    
+    # Windows パス変換
+    local win_script_path=$(cygpath -w "$SCRIPT_DIR/$script_name")
+    local win_log_path=$(cygpath -w "$log_file")
+    
+    # PowerShell実行（itmux/Cygwin経由）
+    echo "🔄 Running: $win_script_path"
+    cmd.exe /c "powershell.exe -ExecutionPolicy Bypass -File \"$win_script_path\"" > "$log_file" 2>&1
+    
+    local exit_code=$?
+    local current_time=$(date '+%H:%M:%S')
+    
+    # 結果をtmuxウィンドウに通知
+    if [ -n "$dev_window" ]; then
+        if [ $exit_code -eq 0 ]; then
+            tmux send-keys -t "ITSM-ITmanagementSystem:$dev_window" "echo '✅ [$current_time] $script_name completed successfully (iteration $iteration/$max_iterations)'" C-m
+        else
+            tmux send-keys -t "ITSM-ITmanagementSystem:$dev_window" "echo '❌ [$current_time] $script_name failed with code $exit_code (iteration $iteration/$max_iterations)'" C-m
+        fi
+    fi
+    
+    # Manager窓に報告
+    tmux send-keys -t "ITSM-ITmanagementSystem:1" "echo '📊 [$current_time] Dev$dev_window: $script_name - Exit Code: $exit_code'" C-m
+    
+    # 結果表示
+    if [ $exit_code -eq 0 ]; then
+        echo "✅ Success: $script_name completed"
+        
+        # 成功時の後処理
+        if [ -f "$SCRIPT_DIR/Post-${script_name}" ]; then
+            echo "🔄 Running post-processing script..."
+            local win_post_path=$(cygpath -w "$SCRIPT_DIR/Post-${script_name}")
+            cmd.exe /c "powershell.exe -ExecutionPolicy Bypass -File \"$win_post_path\""
+        fi
+    else
+        echo "❌ Error: $script_name failed with exit code $exit_code"
+        
+        # エラー時の自動修復
+        if [ -f "$SCRIPT_DIR/Fix-${script_name}" ]; then
+            echo "🔧 Running auto-fix script..."
+            local win_fix_path=$(cygpath -w "$SCRIPT_DIR/Fix-${script_name}")
+            cmd.exe /c "powershell.exe -ExecutionPolicy Bypass -File \"$win_fix_path\""
+        fi
+    fi
+    
+    return $exit_code
+}
+
+# 自動実行ループ
+run_development_loop() {
+    local script_pattern=$1
+    local dev_window=$2
+    local max_iterations=${3:-5}
+    
+    echo "🔄 Starting development loop for $script_pattern"
+    
+    # 該当スクリプトを検索
+    local scripts=($(find "$SCRIPT_DIR" -name "$script_pattern" -type f))
+    
+    if [ ${#scripts[@]} -eq 0 ]; then
+        echo "⚠️ No scripts found matching pattern: $script_pattern"
+        return 1
+    fi
+    
+    for script in "${scripts[@]}"; do
+        local script_name=$(basename "$script")
+        echo "📋 Processing script: $script_name"
+        
+        for ((i=1; i<=max_iterations; i++)); do
+            echo "🔄 Iteration $i/$max_iterations"
+            
+            if execute_powershell_script "$script_name" "$dev_window" "$i" "$max_iterations"; then
+                echo "✅ Iteration $i successful"
+            else
+                echo "❌ Iteration $i failed"
+                
+                # エラー時の選択
+                read -p "🤔 Continue with next iteration? (y/n/s=skip script): " choice
+                case $choice in
+                    [Nn]* ) echo "🛑 Stopping loop"; return 1;;
+                    [Ss]* ) echo "⏭️ Skipping to next script"; break;;
+                    * ) echo "➡️ Continuing...";;
+                esac
+            fi
+            
+            # 間隔調整
+            sleep 2
+        done
+    done
+}
+
+# 開発者別実行関数
+run_frontend_development() {
+    echo "💻 Starting Frontend Development Loop"
+    run_development_loop "Build-Frontend*.ps1" 2 3
+    run_development_loop "Test-Frontend*.ps1" 2 2
+    run_development_loop "Deploy-Frontend*.ps1" 2 1
+}
+
+run_backend_development() {
+    echo "🔧 Starting Backend Development Loop"
+    run_development_loop "Build-Backend*.ps1" 3 3
+    run_development_loop "Test-API*.ps1" 3 2
+    run_development_loop "Deploy-Backend*.ps1" 3 1
+}
+
+run_qa_testing() {
+    echo "🗄️ Starting QA Testing Loop"
+    run_development_loop "Test-Integration*.ps1" 4 2
+    run_development_loop "Test-Security*.ps1" 4 1
+    run_development_loop "Test-Performance*.ps1" 4 1
+}
+
+run_integration_validation() {
+    echo "🧪 Starting Integration Validation Loop"
+    run_development_loop "Test-E2E*.ps1" 5 2
+    run_development_loop "Validate-System*.ps1" 5 1
+}
+
+# メイン処理
+main() {
+    case $1 in
+        init|initialize)
+            initialize_itmux_environment
+            ;;
+        frontend|fe)
+            run_frontend_development
+            ;;
+        backend|be)
+            run_backend_development
+            ;;
+        qa|test)
+            run_qa_testing
+            ;;
+        integration|int)
+            run_integration_validation
+            ;;
+        all)
+            initialize_itmux_environment
+            run_frontend_development
+            run_backend_development
+            run_qa_testing
+            run_integration_validation
+            ;;
+        *)
+            echo "🎯 ITSM Development Manager (itmux/Cygwin)"
+            echo "Usage: $0 {init|frontend|backend|qa|integration|all}"
+            echo ""
+            echo "Commands:"
+            echo "  init        - Initialize itmux environment"
+            echo "  frontend    - Run frontend development loop"
+            echo "  backend     - Run backend development loop"
+            echo "  qa          - Run QA testing loop"
+            echo "  integration - Run integration validation loop"
+            echo "  all         - Run all development loops"
+            echo ""
+            echo "🔗 Make sure to run from within itmux tmux session"
+            ;;
+    esac
+}
+
+# 実行
+main "$@"
+```
+
+---
+
+## 📋 実用的な使用例
+
+### 🎯 ITSM開発デイリーワークフロー
+
+#### 朝の開発開始ルーチン
+```bash
+# 1. itmux起動
+C:\tools\itmux\itmux.cmd
+
+# 2. 開発環境初期化
+bash ./powershell-itmux-manager.sh init
+
+# 3. 開発セッション作成
+bash ./create-itsm-session.sh
+
+# 4. 各開発者の作業開始
+# - CEO: Ctrl+a 0
+# - Manager: Ctrl+a 1
+# - dev1: Ctrl+a 2 → bash ./powershell-itmux-manager.sh frontend
+# - dev2: Ctrl+a 3 → bash ./powershell-itmux-manager.sh backend
+# - dev3: Ctrl+a 4 → bash ./powershell-itmux-manager.sh qa
+# - dev4: Ctrl+a 5 → bash ./powershell-itmux-manager.sh integration
+```
+
+#### 基本的なitmux操作
+```
+🔧 セッション管理
+Ctrl+a d         - セッションデタッチ（バックグラウンド実行）
+tmux attach      - セッション再接続
+tmux ls          - セッション一覧表示
+
+🪟 ウィンドウ操作
+Ctrl+a c         - 新ウィンドウ作成
+Ctrl+a n         - 次のウィンドウ
+Ctrl+a p         - 前のウィンドウ
+Ctrl+a 0-5       - ウィンドウ番号指定移動
+Ctrl+a ,         - ウィンドウ名変更
+
+📊 ペイン操作
+Ctrl+a |         - 垂直分割
+Ctrl+a -         - 水平分割
+Ctrl+a h/j/k/l   - ペイン移動（Vim風）
+Ctrl+a x         - ペイン削除
+Ctrl+a z         - ペインズーム切り替え
+
+💻 ITSM特化機能
+Ctrl+a P         - PowerShell新ウィンドウ
+Ctrl+a C         - CMD新ウィンドウ
+Ctrl+a I         - フロントエンド作業ウィンドウ
+Ctrl+a B         - バックエンド作業ウィンドウ
+Ctrl+a T         - テスト作業ウィンドウ
+```
+
+#### チーム連携例
+```bash
+# 開発者間でのメッセージ共有
+# Manager → dev1へのタスク指示
+tmux send-keys -t "ITSM-ITmanagementSystem:2" "echo 'Manager: 新しいUI仕様の実装をお願いします'" C-m
+
+# dev1 → Managerへの進捗報告
+tmux send-keys -t "ITSM-ITmanagementSystem:1" "echo 'dev1: フロントエンド実装完了しました'" C-m
+
+# CEO → 全員への重要通知
+for window in {0..5}; do
+    tmux send-keys -t "ITSM-ITmanagementSystem:$window" "echo 'CEO: 本日の目標を確認してください'" C-m
+done
+```
+
+---
+
+## 🛠️ トラブルシューティング
+
+### よくある問題と解決法
+
+#### 1. itmuxが起動しない
+```bash
+# 問題: itmux.cmdを実行してもエラーが出る
+# 解決法:
+# 1. パスの確認
+echo $PATH | grep itmux
+
+# 2. 実行権限の確認
+ls -la C:\tools\itmux\itmux.cmd
+
+# 3. Cygwinライブラリの確認
+ls -la C:\tools\itmux\bin\cygwin1.dll
+```
+
+#### 2. PowerShell実行エラー
+```powershell
+# 問題: PowerShellスクリプトが実行できない
+# 解決法:
+# 1. 実行ポリシーの確認・変更
+Get-ExecutionPolicy
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 2. スクリプトのブロック解除
+Unblock-File -Path "C:\workspace\itsm-project\scripts\*.ps1"
+```
+
+#### 3. tmuxセッションが作成できない
+```bash
+# 問題: tmux new-session でエラー
+# 解決法:
+# 1. tmuxサーバーの再起動
+tmux kill-server
+tmux new-session -d -s test
+
+# 2. 設定ファイルの確認
+tmux show-options -g
+
+# 3. 設定リロード
+tmux source-file ~/.tmux.conf
+```
+
+#### 4. パス変換エラー
+```bash
+# 問題: cygpath コマンドでエラー
+# 解決法:
+# 1. cygpathの確認
+which cygpath
+
+# 2. 手動パス変換
+# Windows → Cygwin
+echo "C:\workspace" | sed 's/\\/\//g' | sed 's/://'
+
+# 3. マウントポイント確認
+mount
+```
+
+#### 5. 日本語文字化け
+```bash
+# 問題: 日本語が文字化けする
+# 解決法:
+# 1. 環境変数設定
+export LANG=ja_JP.UTF-8
+export LC_ALL=ja_JP.UTF-8
+
+# 2. minttyの設定
+# minttyオプションメニュー → Text → Character set → UTF-8
+```
+
+---
+
+## 📝 参考情報
+
+### 推奨PowerShellスクリプト例
+
+#### Build-Frontend.ps1
+```powershell
+# Build-Frontend.ps1
+param(
+    [string]$ProjectPath = "C:\workspace\itsm-project\frontend"
+)
+
+Write-Host "🎨 Starting Frontend Build Process" -ForegroundColor Green
+Set-Location $ProjectPath
+
+try {
+    # 依存関係インストール
+    Write-Host "📦 Installing dependencies..." -ForegroundColor Yellow
+    npm install
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+    
+    # ビルド実行
+    Write-Host "🔨 Building frontend..." -ForegroundColor Yellow
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw "npm build failed" }
+    
+    Write-Host "✅ Frontend build completed successfully" -ForegroundColor Green
+    exit 0
+} catch {
+    Write-Host "❌ Frontend build failed: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
+```
+
+#### Test-API.ps1
+```powershell
+# Test-API.ps1
+param(
+    [string]$ProjectPath = "C:\workspace\itsm-project\backend"
+)
+
+Write-Host "🔧 Starting API Test Process" -ForegroundColor Green
+Set-Location $ProjectPath
+
+try {
+    # テスト実行
+    Write-Host "🧪 Running API tests..." -ForegroundColor Yellow
+    npm test
+    if ($LASTEXITCODE -ne 0) { throw "API tests failed" }
+    
+    # カバレッジ確認
+    Write-Host "📊 Checking test coverage..." -ForegroundColor Yellow
+    npm run test:coverage
+    
+    Write-Host "✅ API tests completed successfully" -ForegroundColor Green
+    exit 0
+} catch {
+    Write-Host "❌ API tests failed: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
+```
+
+### 開発環境構築チェックリスト
+
+#### 必要なソフトウェア
+- [ ] itmux (配置済み)
+- [ ] Node.js (推奨: v18.x LTS)
+- [ ] Git for Windows
+- [ ] PowerShell 5.1+ または PowerShell Core 7.x
+- [ ] Visual Studio Code (推奨)
+
+#### 開発ディレクトリ構造
+```
+C:\workspace\itsm-project\
+├── frontend\          # React/Vue.js フロントエンド
+├── backend\           # Node.js/Express バックエンド
+├── tests\             # テストスイート
+├── integration\       # 統合テスト
+├── scripts\           # PowerShellスクリプト
+├── logs\              # ログファイル
+├── docs\              # ドキュメント
+└── config\            # 設定ファイル
+```
+
+---
+
+## 🎯 まとめ
+
+このガイドを使用することで、itmuxを活用したITSM開発環境が効率的に構築できます。
+
+### 主な特徴
+- **Windows Native**: WSL不要でWindows環境直接実行
+- **PowerShell統合**: PowerShellスクリプトの自動実行・監視
+- **チーム連携**: tmux経由でのリアルタイム情報共有
+- **自動化**: 開発プロセスの自動実行・エラー対応
+
+### 使用開始手順
+1. itmux起動: `C:\tools\itmux\itmux.cmd`
+2. 環境初期化: `bash ./powershell-itmux-manager.sh init`
+3. セッション作成: `bash ./create-itsm-session.sh`
+4. 開発開始: 各窓で作業開始

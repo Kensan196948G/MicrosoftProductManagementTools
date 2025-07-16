@@ -1,0 +1,4 @@
+﻿"ServiceName","ActiveUsersCount","TotalActivityCount","NewUsersCount","ErrorCount","ServiceStatus","PerformanceScore","LastCheck","Status"
+"Microsoft 365","0","0","0","0","正常","95","2025-07-16 18:48","正常"
+"Exchange Online","0","693","0","1","正常","87","2025-07-16 18:48","正常"
+"Microsoft Teams","0","609","0","1","正常","96","2025-07-16 18:48","正常"

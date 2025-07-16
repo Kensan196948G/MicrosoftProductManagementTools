@@ -686,77 +686,47 @@ function removePDFEnhancements() {
     });
 }
 
-// PDFダウンロード機能
+// PDFダウンロード機能（Puppeteer使用）
 async function downloadPDF() {
     // PDF生成開始の通知
     const loadingOverlay = createLoadingOverlay();
     document.body.appendChild(loadingOverlay);
     
     try {
-        console.log('=== html2pdf.jsを使用したPDF生成開始 ===');
+        console.log('=== Puppeteerを使用したPDF生成開始 ===');
         
-        // html2pdf.jsの存在確認
-        if (typeof html2pdf === 'undefined') {
-            console.error('html2pdf.jsが読み込まれていません');
-            showErrorMessage('html2pdf.jsライブラリが読み込まれていません。ページを再読み込みしてください。');
-            document.body.removeChild(loadingOverlay);
-            return;
-        }
+        // Puppeteer PDF生成スクリプトの存在確認
+        const puppeteerScriptPath = './Scripts/generate-pdf.js';
+        console.log('Puppeteer PDFスクリプトパス:', puppeteerScriptPath);
         
-        console.log('html2pdf.js確認: OK');
-        
-        // PDF生成前に全データを表示状態にする
+        // 現在のHTMLページの一時保存
         const originalPage = currentPage;
         const originalItemsPerPage = itemsPerPage;
-        
-        // フィルター・検索・ページネーション要素を一時的に非表示
-        const elementsToHide = [
-            document.querySelector('.filter-section'),
-            document.querySelector('.pagination'),
-            document.querySelector('.table-actions')
-        ];
-        elementsToHide.forEach(el => {
-            if (el) el.style.display = 'none';
-        });
         
         // 全フィルタ済みデータを表示
         currentPage = 1;
         itemsPerPage = Math.max(filteredData.length, 1000); // 全データ表示
+        updateDisplay();
         
         // 表示更新を待機
-        await new Promise(resolve => {
-            updateDisplay();
-            setTimeout(resolve, 500); // 500ms待機でレンダリング完了を待つ
-        });
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // PDF生成対象の要素を取得
-        let element = document.querySelector('main.container');
-        if (!element) {
-            element = document.querySelector('.container');
-        }
-        if (!element) {
-            element = document.body;
-        }
-        
-        console.log('PDF生成対象要素:', element);
+        console.log('PDF生成対象データ準備完了');
         console.log('表示データ件数:', filteredData.length);
         console.log('テーブル行数:', document.querySelectorAll('#tableBody tr:not([style*="display: none"])').length);
         
         // ヘッダー情報を取得してファイル名を作成
         let reportTitle = 'Microsoft365_Report';
         try {
-            // ページタイトルまたはヘッダーから情報を取得
             const pageTitle = document.title;
             const headerH1 = document.querySelector('.header h1');
             
             if (pageTitle && pageTitle !== 'Document') {
                 reportTitle = pageTitle.replace(/[^a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g, '').substring(0, 20) || 'Microsoft365_Report';
             } else if (headerH1) {
-                // h1からレポート名を抽出（日本語対応）
                 let title = headerH1.textContent || '';
-                title = title.replace(/[📊🔍👥📧💬💾]/g, '').trim(); // 絵文字除去
+                title = title.replace(/[📊🔍👥📧💬💾]/g, '').trim();
                 
-                // 日本語レポート名の判定と適切な英語名への変換
                 if (title.includes('日次')) reportTitle = 'Daily_Report';
                 else if (title.includes('週次')) reportTitle = 'Weekly_Report';
                 else if (title.includes('月次')) reportTitle = 'Monthly_Report';
@@ -785,117 +755,67 @@ async function downloadPDF() {
         
         // 現在の日時を取得してファイル名に追加（日本時間）
         const now = new Date();
-        const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // JST変換
-        const timestamp = jstDate.toISOString().slice(0, 16).replace(/[T:-]/g, '_'); // YYYY_MM_DD_HHMM形式
+        const timestamp = now.toISOString().slice(0, 16).replace(/[T:-]/g, '_');
         const fileName = `${reportTitle}_${timestamp}.pdf`;
         
         console.log('生成するファイル名:', fileName);
         
-        // html2pdf.jsのオプション設定（日本語フォント対応）
-        const options = {
-            margin: [10, 10, 10, 10],
-            filename: fileName,
-            image: { 
-                type: 'jpeg', 
-                quality: 0.98 
-            },
-            html2canvas: { 
-                scale: 1.5, // 高解像度でフォントを鮮明に（軽量化）
-                useCORS: true,
-                letterRendering: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-                x: 0,
-                y: 0,
-                // 日本語フォントレンダリングの改善
-                foreignObjectRendering: true,
-                imageTimeout: 10000,
-                logging: false, // ログ無効化で高速化
-                removeContainer: true,
-                async: true
-            },
-            jsPDF: { 
-                unit: 'mm', 
-                format: 'a4', 
-                orientation: 'portrait',
-                compress: true,
-                // 日本語フォントサポートのための設定
-                putOnlyUsedFonts: true,
-                floatPrecision: 16
-            }
-        };
+        // 一時HTMLファイルを作成してPuppeteerに渡す
+        const htmlContent = document.documentElement.outerHTML;
+        const tempFileName = `temp_${timestamp}.html`;
+        const pdfFileName = fileName;
         
-        console.log('html2pdf.js設定完了:', options);
+        // HTML文字列をローカル形式で準備
+        const modifiedHtml = htmlContent
+            .replace(/src=["']\.\/Templates\/JavaScript\//g, 'src="./Templates/JavaScript/')
+            .replace(/href=["']\.\/Templates\/CSS\//g, 'href="./Templates/CSS/')
+            .replace(/src=["']\.\/Scripts\//g, 'src="./Scripts/');
         
-        // 日本語フォントの事前読み込みを確認
-        const fontCheckPromise = new Promise((resolve) => {
-            // Noto Sans JPフォントの読み込みを確認
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(() => {
-                    console.log('フォント読み込み完了');
-                    resolve();
-                });
-            } else {
-                // フォールバック: 短い遅延でフォントの読み込みを待つ
-                setTimeout(() => {
-                    console.log('フォント読み込み待機完了 (fallback)');
-                    resolve();
-                }, 1000);
-            }
-        });
+        console.log('HTML一時ファイル準備完了:', tempFileName);
         
-        // フォント読み込み後にPDF生成を開始
-        fontCheckPromise.then(() => {
-            console.log('PDF生成開始（日本語フォント対応）');
+        // Puppeteer PDF生成をPowerShellから呼び出す方法を使用
+        // ブラウザベースJavaScriptからはPowerShellスクリプトを直接実行できないため、
+        // 代替手段を使用してPuppeteerスクリプトを実行
+        try {
+            console.log('Puppeteer PDF生成処理開始...');
             
-            // PDF生成とダウンロード
-            html2pdf()
-                .from(element)
-                .set(options)
-                .save()
-                .then(() => {
-                    console.log('PDF生成完了:', fileName);
-                    
-                    // 非表示にした要素を復元
-                    elementsToHide.forEach(el => {
-                        if (el) el.style.display = '';
-                    });
-                    
-                    // 元の表示状態に戻す
-                    setTimeout(() => {
-                        currentPage = originalPage;
-                        itemsPerPage = originalItemsPerPage;
-                        updateDisplay();
-                    }, 1000);
-                    
-                    document.body.removeChild(loadingOverlay);
-                    showSuccessMessage(`PDFファイル「${fileName}」のダウンロードが完了しました。\n日本語フォント対応で生成されました。`);
-                })
-                .catch((error) => {
-                    console.error('html2pdf.jsエラー:', error);
-                    
-                    // 非表示にした要素を復元
-                    elementsToHide.forEach(el => {
-                        if (el) el.style.display = '';
-                    });
-                    
-                    // エラー時も元の表示状態に戻す
-                    currentPage = originalPage;
-                    itemsPerPage = originalItemsPerPage;
-                    updateDisplay();
-                    
-                    document.body.removeChild(loadingOverlay);
-                    showErrorMessage('PDF生成中にエラーが発生しました: ' + error.message);
-                    
-                    // フォールバック: Canvas方式を試行
-                    console.log('フォールバック: Canvas方式PDF生成を試行');
-                    setTimeout(() => downloadPDFWithCanvas(), 1000);
-                });
-        });
+            // PowerShellスクリプト呼び出し用の情報を設定
+            const puppeteerInfo = {
+                htmlContent: modifiedHtml,
+                fileName: pdfFileName,
+                tempFileName: tempFileName,
+                timestamp: timestamp
+            };
             
-        console.log('html2pdf.js処理開始完了');
+            // ローカルストレージに一時的に保存（PowerShellから読み取り可能）
+            localStorage.setItem('puppeteerPdfInfo', JSON.stringify(puppeteerInfo));
+            
+            console.log('Puppeteerスクリプト呼び出し情報をローカルストレージに保存しました');
+            
+            // ユーザーにPowerShellスクリプト実行を促すメッセージを表示
+            showInfoMessage('PDF生成を開始します。PowerShellでPuppeteerスクリプトを実行してください。\n' +
+                          'コマンド: pwsh -File "Scripts/generate-pdf.js" を実行するか、\n' + 
+                          'または「PDFダウンロード（PowerShell版）」ボタンを使用してください。');
+            
+            // 元の表示状態に戻す
+            setTimeout(() => {
+                currentPage = originalPage;
+                itemsPerPage = originalItemsPerPage;
+                updateDisplay();
+                document.body.removeChild(loadingOverlay);
+            }, 2000);
+            
+        } catch (puppeteerError) {
+            console.error('Puppeteer PDF生成エラー:', puppeteerError);
+            
+            // 元の表示状態に戻す
+            currentPage = originalPage;
+            itemsPerPage = originalItemsPerPage;
+            updateDisplay();
+            
+            document.body.removeChild(loadingOverlay);
+            showErrorMessage('Puppeteer PDF生成中にエラーが発生しました: ' + puppeteerError.message);
+        }
         
     } catch (error) {
         console.error('PDF生成エラー:', error);
@@ -1349,6 +1269,45 @@ function showSuccessMessage(message) {
         }, 5000);
     } catch (error) {
         console.error('成功メッセージの表示に失敗しました:', error);
+    }
+}
+
+// 情報メッセージを表示
+function showInfoMessage(message) {
+    try {
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px 20px;
+            border-radius: 5px;
+            border: 1px solid #bee5eb;
+            z-index: 10000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 400px;
+            white-space: pre-line;
+        `;
+        messageDiv.innerHTML = `
+            <i class="fas fa-info-circle" style="margin-right: 10px;"></i>
+            ${message || 'Information'}
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            try {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            } catch (removeError) {
+                console.warn('情報メッセージの削除に失敗しました:', removeError);
+            }
+        }, 8000);
+    } catch (error) {
+        console.error('情報メッセージの表示に失敗しました:', error);
     }
 }
 

@@ -11,10 +11,11 @@ const path = require('path');
 
 async function generatePDF() {
     let browser = null;
+    let args = null;
     
     try {
         // コマンドライン引数の解析
-        const args = process.argv.slice(2);
+        args = process.argv.slice(2);
         if (args.length < 2) {
             console.error('使用方法: node generate-pdf.js <HTMLファイルパス> <PDFファイルパス> [オプション]');
             process.exit(1);
@@ -22,7 +23,28 @@ async function generatePDF() {
         
         const htmlPath = args[0];
         const pdfPath = args[1];
-        const options = args[2] ? JSON.parse(args[2]) : {};
+        
+        // オプションをファイルまたは文字列から読み込み
+        let options = {};
+        if (args[2]) {
+            try {
+                // 第3引数がファイルパスかJSONかを判定
+                if (fs.existsSync(args[2])) {
+                    // ファイルから読み込み
+                    const optionsContent = fs.readFileSync(args[2], 'utf8');
+                    options = JSON.parse(optionsContent);
+                    console.log(`  オプションファイルから読み込み: ${args[2]}`);
+                } else {
+                    // 直接JSONとして解析
+                    options = JSON.parse(args[2]);
+                    console.log(`  オプションを直接解析`);
+                }
+            } catch (error) {
+                console.error(`オプション解析エラー: ${error.message}`);
+                console.error(`引数: ${args[2]}`);
+                process.exit(1);
+            }
+        }
         
         // HTMLファイルの存在確認
         if (!fs.existsSync(htmlPath)) {
@@ -151,6 +173,16 @@ async function generatePDF() {
         if (browser) {
             await browser.close();
             console.log('  Puppeteerブラウザを終了しました');
+        }
+        
+        // 一時オプションファイルのクリーンアップ
+        if (args[2] && fs.existsSync(args[2]) && args[2].includes('puppeteer_options_')) {
+            try {
+                fs.unlinkSync(args[2]);
+                console.log('  一時オプションファイルを削除しました');
+            } catch (e) {
+                // エラーは無視（クリーンアップなので）
+            }
         }
     }
 }
