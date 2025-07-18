@@ -1,66 +1,82 @@
-"""HTML report generator."""
+"""
+HTML report generator with PowerShell compatibility.
+Maintains responsive design and Japanese formatting.
+"""
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
 import html
+import json
 
 
 class HTMLGenerator:
-    """HTML report generator with responsive design."""
+    """
+    HTML report generator with PowerShell compatibility.
+    Generates responsive HTML reports with Japanese formatting.
+    """
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
     def generate(self, data: List[Dict[str, Any]], output_path: str, 
-                 report_title: str = "Microsoft 365 レポート") -> bool:
+                 action: str, title: Optional[str] = None,
+                 metadata: Optional[Dict[str, Any]] = None) -> str:
         """
         Generate HTML report from data.
         
         Args:
             data: List of dictionaries containing report data
             output_path: Path to save the HTML file
-            report_title: Title for the report
+            action: Action that generated this report
+            title: Optional title for the report
+            metadata: Optional metadata to include
             
         Returns:
-            True if successful, False otherwise
+            Path to generated HTML file
         """
         try:
+            # Ensure output directory exists
+            output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            
             if not data:
                 self.logger.warning("No data provided for HTML generation")
-                return False
+                # Generate empty report
+                html_content = self._generate_empty_html(action, title)
+            else:
+                html_content = self._generate_html_content(data, action, title, metadata)
             
-            # Ensure output directory exists
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            
-            html_content = self._generate_html_content(data, report_title)
-            
-            with open(output_path, 'w', encoding='utf-8') as htmlfile:
+            with open(output_file, 'w', encoding='utf-8') as htmlfile:
                 htmlfile.write(html_content)
             
-            self.logger.info(f"HTML report generated successfully: {output_path}")
-            self.logger.info(f"Records included: {len(data)}")
-            
-            return True
+            self.logger.info(f"HTML report generated: {output_file}")
+            return str(output_file)
             
         except Exception as e:
             self.logger.error(f"Failed to generate HTML report: {e}")
-            return False
+            raise
     
-    def _generate_html_content(self, data: List[Dict[str, Any]], title: str) -> str:
+    def _generate_html_content(self, data: List[Dict[str, Any]], action: str,
+                             title: Optional[str], metadata: Optional[Dict[str, Any]]) -> str:
         """Generate complete HTML content."""
+        
+        # Generate report title
+        report_title = title or self._get_report_title(action)
         
         # Get headers from first record
         headers = list(data[0].keys()) if data else []
         
-        html_content = f"""
-<!DOCTYPE html>
+        # Generate metadata section
+        metadata_html = self._generate_metadata_section(metadata, len(data), len(headers))
+        
+        html_content = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{html.escape(title)}</title>
+    <title>{html.escape(report_title)}</title>
     <style>
         {self._get_css_styles()}
     </style>
@@ -68,32 +84,15 @@ class HTMLGenerator:
 <body>
     <div class="container">
         <header class="report-header">
-            <h1><i class="icon">🚀</i> {html.escape(title)}</h1>
+            <h1><i class="icon">🚀</i> {html.escape(report_title)}</h1>
             <div class="report-info">
                 <span class="generated-time">生成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}</span>
                 <span class="record-count">件数: {len(data):,} 件</span>
+                <span class="source">Python GUI版</span>
             </div>
         </header>
         
-        <div class="report-summary">
-            <div class="summary-card">
-                <h3>📊 サマリー情報</h3>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span class="label">総レコード数:</span>
-                        <span class="value">{len(data):,}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">データ項目数:</span>
-                        <span class="value">{len(headers)}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">レポート形式:</span>
-                        <span class="value">Python GUI版</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {metadata_html}
         
         <div class="table-container">
             <table class="data-table">
@@ -118,9 +117,119 @@ class HTMLGenerator:
         {self._get_javascript()}
     </script>
 </body>
-</html>
-"""
+</html>"""
         return html_content
+    
+    def _generate_empty_html(self, action: str, title: Optional[str]) -> str:
+        """Generate HTML for empty reports."""
+        report_title = title or self._get_report_title(action)
+        
+        html_content = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{html.escape(report_title)}</title>
+    <style>
+        {self._get_css_styles()}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="report-header">
+            <h1><i class="icon">📋</i> {html.escape(report_title)}</h1>
+            <div class="report-info">
+                <span class="generated-time">生成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}</span>
+                <span class="record-count">件数: 0 件</span>
+                <span class="source">Python GUI版</span>
+            </div>
+        </header>
+        
+        <div class="empty-state">
+            <div class="empty-card">
+                <h2>📝 データが見つかりません</h2>
+                <p>このレポートに表示するデータがありません。</p>
+                <p>以下をご確認ください：</p>
+                <ul>
+                    <li>Microsoft 365 への接続状況</li>
+                    <li>権限設定</li>
+                    <li>対象期間のデータ有無</li>
+                </ul>
+            </div>
+        </div>
+        
+        <footer class="report-footer">
+            <p>🐍 Microsoft 365 統合管理ツール - Python Edition</p>
+            <p>Powered by PyQt6 & Microsoft Graph API</p>
+        </footer>
+    </div>
+</body>
+</html>"""
+        return html_content
+    
+    def _get_report_title(self, action: str) -> str:
+        """Get localized report title based on action."""
+        title_map = {
+            'daily_report': '📅 日次レポート',
+            'weekly_report': '📊 週次レポート',
+            'monthly_report': '📈 月次レポート',
+            'yearly_report': '📆 年次レポート',
+            'test_execution': '🧪 テスト実行結果',
+            'license_analysis': '📊 ライセンス分析',
+            'usage_analysis': '📈 使用状況分析',
+            'performance_analysis': '⚡ パフォーマンス分析',
+            'security_analysis': '🛡️ セキュリティ分析',
+            'permission_audit': '🔍 権限監査',
+            'user_list': '👥 ユーザー一覧',
+            'mfa_status': '🔐 MFA状況',
+            'conditional_access': '🛡️ 条件付きアクセス',
+            'signin_logs': '📋 サインインログ',
+            'mailbox_management': '📧 メールボックス管理',
+            'mail_flow_analysis': '📨 メールフロー分析',
+            'spam_protection': '🛡️ スパム対策',
+            'delivery_analysis': '📊 配信分析',
+            'teams_usage': '💬 Teams使用状況',
+            'teams_settings': '⚙️ Teams設定',
+            'meeting_quality': '📞 会議品質',
+            'app_analysis': '📱 アプリ分析',
+            'storage_analysis': '💾 ストレージ分析',
+            'sharing_analysis': '🔗 共有分析',
+            'sync_errors': '⚠️ 同期エラー',
+            'external_sharing': '🌐 外部共有分析'
+        }
+        return title_map.get(action, f'📋 {action}')
+    
+    def _generate_metadata_section(self, metadata: Optional[Dict[str, Any]], 
+                                 data_count: int, field_count: int) -> str:
+        """Generate metadata section HTML."""
+        if not metadata:
+            metadata = {}
+        
+        return f"""
+        <div class="report-summary">
+            <div class="summary-card">
+                <h3>📊 サマリー情報</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">総レコード数:</span>
+                        <span class="value">{data_count:,}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">データ項目数:</span>
+                        <span class="value">{field_count}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">レポート形式:</span>
+                        <span class="value">Python GUI版</span>
+                    </div>
+                    {"".join(f'''
+                    <div class="summary-item">
+                        <span class="label">{html.escape(str(key))}:</span>
+                        <span class="value">{html.escape(str(value))}</span>
+                    </div>''' for key, value in metadata.items())}
+                </div>
+            </div>
+        </div>"""
     
     def _generate_table_rows(self, data: List[Dict[str, Any]], headers: List[str]) -> str:
         """Generate table rows HTML."""
@@ -328,6 +437,43 @@ class HTMLGenerator:
             margin: 5px 0;
         }
         
+        .empty-state {
+            padding: 60px 30px;
+            text-align: center;
+        }
+        
+        .empty-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .empty-card h2 {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .empty-card p {
+            color: #888;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .empty-card ul {
+            text-align: left;
+            margin: 20px 0;
+            padding-left: 30px;
+            color: #666;
+        }
+        
+        .empty-card li {
+            margin: 8px 0;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -358,6 +504,14 @@ class HTMLGenerator:
             .data-table th,
             .data-table td {
                 padding: 8px 6px;
+            }
+            
+            .empty-state {
+                padding: 30px 15px;
+            }
+            
+            .empty-card {
+                padding: 25px;
             }
         }
         """

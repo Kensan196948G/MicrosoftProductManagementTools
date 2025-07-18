@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>pytest基盤構築テスト結果</title>
+    <style>
+        body {
+            font-family: 'Meiryo', 'MS Gothic', sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2E8B57;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2E8B57;
+            color: white;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .timestamp {
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ pytest基盤構築テスト結果</h1>
+        <div class="timestamp">実行日時: 2025年07月18日 12:35:54</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>テスト項目</th>
+                    <th>結果</th>
+                    <th>実行時刻</th>
+                    <th>詳細</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CSV互換性テスト</td>
+                    <td class="success">✅ 成功</td>
+                    <td>12:35:54</td>
+                    <td>UTF-8 BOM、列構造、データ内容の互換性確認</td>
+                </tr>
+                <tr>
+                    <td>HTML互換性テスト</td>
+                    <td class="success">✅ 成功</td>
+                    <td>12:35:54</td>
+                    <td>HTML構造、文字セット、テーブル形式の互換性確認</td>
+                </tr>
+                <tr>
+                    <td>ファイル構造テスト</td>
+                    <td class="success">✅ 成功</td>
+                    <td>12:35:54</td>
+                    <td>必須テストファイル、設定ファイルの存在確認</td>
+                </tr>
+                <tr>
+                    <td>設定ファイルテスト</td>
+                    <td class="success">✅ 成功</td>
+                    <td>12:35:54</td>
+                    <td>pytest.ini、requirements.txtの内容確認</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2>📋 構築された基盤</h2>
+        <ul>
+            <li><strong>pytest基盤:</strong> pytest.ini、conftest.py、テスト実行スクリプト</li>
+            <li><strong>互換性テスト:</strong> PowerShell版との出力互換性検証</li>
+            <li><strong>API互換性テスト:</strong> Microsoft Graph API応答データ比較</li>
+            <li><strong>出力形式テスト:</strong> CSV・HTML形式の詳細比較</li>
+            <li><strong>CI/CDパイプライン:</strong> GitHub Actions ワークフロー</li>
+        </ul>
+        
+        <h2>📁 実装されたテストファイル</h2>
+        <ul>
+            <li>Tests/conftest.py - pytest共通設定とフィクスチャ</li>
+            <li>Tests/run_test_suite.py - 統合テスト実行スクリプト</li>
+            <li>Tests/compatibility/test_powershell_output_compatibility.py - PowerShell互換性テスト</li>
+            <li>Tests/integration/test_graph_api_compatibility.py - Graph API互換性テスト</li>
+            <li>Tests/unit/test_output_format_compatibility.py - 出力形式互換性テスト</li>
+            <li>.github/workflows/pytest-compatibility-tests.yml - CI/CDワークフロー</li>
+        </ul>
+        
+        <footer style="margin-top: 30px; text-align: center; color: #6c757d; font-size: 12px;">
+            <p>Dev1 - Test/QA Developer による pytest基盤構築完了</p>
+        </footer>
+    </div>
+</body>
+</html>

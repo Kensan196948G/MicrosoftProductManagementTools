@@ -1,1 +1,0 @@
-scripts/core/cto_progress_review.sh

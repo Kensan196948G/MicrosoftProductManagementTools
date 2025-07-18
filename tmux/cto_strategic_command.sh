@@ -1,1 +1,0 @@
-scripts/core/cto_strategic_command.sh

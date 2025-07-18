@@ -63,38 +63,101 @@ class GraphClient:
         self.logger.info(f"Graph client initialized with {auth_method} authentication")
     
     def _init_certificate_auth(self):
-        """Initialize certificate-based authentication."""
-        cert_path = self.config.get('Authentication.CertificatePath')
-        cert_thumbprint = self.config.get('Authentication.CertificateThumbprint')
-        cert_password = self.config.get('Authentication.CertificatePassword')
+        """Initialize certificate-based authentication with enhanced error handling."""
+        # Support both new and legacy config structures
+        cert_path = (self.config.get('Authentication.CertificatePath') or 
+                    self.config.get('ExchangeOnline.CertificatePath') or
+                    self.config.get('EntraID.CertificatePath'))
+        cert_thumbprint = (self.config.get('Authentication.CertificateThumbprint') or
+                          self.config.get('ExchangeOnline.CertificateThumbprint') or
+                          self.config.get('EntraID.CertificateThumbprint'))
+        cert_password = (self.config.get('Authentication.CertificatePassword') or
+                        self.config.get('ExchangeOnline.CertificatePassword') or
+                        self.config.get('EntraID.CertificatePassword'))
         
         if not cert_path and not cert_thumbprint:
-            raise ValueError("Certificate path or thumbprint required for certificate auth")
+            raise ValueError("証明書パスまたはサムプリントが必要です")
         
-        # Load certificate
-        if cert_path:
-            with open(cert_path, 'rb') as cert_file:
-                cert_data = cert_file.read()
-        else:
-            # TODO: Load certificate from Windows certificate store by thumbprint
-            raise NotImplementedError("Certificate store access not yet implemented")
-        
-        self.app = ConfidentialClientApplication(
-            self.config.get('Authentication.ClientId'),
-            authority=f"https://login.microsoftonline.com/{self.config.get('Authentication.TenantId')}",
-            client_credential={
-                "private_key": cert_data,
-                "password": cert_password
-            }
-        )
+        try:
+            # Load certificate
+            if cert_path:
+                import os
+                from pathlib import Path
+                
+                # Support relative paths from project root
+                if not os.path.isabs(cert_path):
+                    cert_path = Path(__file__).parent.parent.parent.parent / cert_path
+                    
+                if not os.path.exists(cert_path):
+                    raise FileNotFoundError(f"証明書ファイルが見つかりません: {cert_path}")
+                    
+                with open(cert_path, 'rb') as cert_file:
+                    cert_data = cert_file.read()
+                    
+                self.logger.info(f"証明書を読み込みました: {cert_path}")
+                
+            else:
+                # Load certificate from Windows certificate store by thumbprint
+                if not cert_thumbprint:
+                    raise ValueError("証明書ストアアクセスにはサムプリントが必要です")
+                    
+                try:
+                    import platform
+                    if platform.system() == "Windows":
+                        cert_data = self._load_cert_from_store(cert_thumbprint)
+                    else:
+                        raise NotImplementedError("証明書ストアアクセスはWindowsでのみサポートされています")
+                except ImportError:
+                    raise NotImplementedError("証明書ストアアクセスライブラリが利用できません")
+            
+            # Initialize MSAL app with certificate
+            tenant_id = (self.config.get('Authentication.TenantId') or 
+                        self.config.get('EntraID.TenantId'))
+            client_id = (self.config.get('Authentication.ClientId') or 
+                        self.config.get('EntraID.ClientId'))
+            
+            if not tenant_id or not client_id:
+                raise ValueError("TenantIdとClientIdが必要です")
+            
+            self.app = ConfidentialClientApplication(
+                client_id,
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+                client_credential={
+                    "private_key": cert_data,
+                    "password": cert_password
+                }
+            )
+            
+            self.logger.info("証明書認証の初期化が完了しました")
+            
+        except Exception as e:
+            self.logger.error(f"証明書認証の初期化に失敗しました: {e}")
+            raise
     
     def _init_client_secret_auth(self):
-        """Initialize client secret authentication."""
-        self.app = ConfidentialClientApplication(
-            self.config.get('Authentication.ClientId'),
-            authority=f"https://login.microsoftonline.com/{self.config.get('Authentication.TenantId')}",
-            client_credential=self.config.get('Authentication.ClientSecret')
-        )
+        """Initialize client secret authentication with enhanced error handling."""
+        # Support both new and legacy config structures
+        tenant_id = (self.config.get('Authentication.TenantId') or 
+                    self.config.get('EntraID.TenantId'))
+        client_id = (self.config.get('Authentication.ClientId') or 
+                    self.config.get('EntraID.ClientId'))
+        client_secret = (self.config.get('Authentication.ClientSecret') or 
+                        self.config.get('EntraID.ClientSecret'))
+        
+        if not tenant_id or not client_id or not client_secret:
+            raise ValueError("TenantId、ClientId、ClientSecretが必要です")
+        
+        try:
+            self.app = ConfidentialClientApplication(
+                client_id,
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+                client_credential=client_secret
+            )
+            self.logger.info("クライアント秘密認証の初期化が完了しました")
+            
+        except Exception as e:
+            self.logger.error(f"クライアント秘密認証の初期化に失敗しました: {e}")
+            raise
     
     def _init_interactive_auth(self):
         """Initialize interactive authentication."""
@@ -104,33 +167,50 @@ class GraphClient:
         )
     
     def acquire_token(self) -> str:
-        """Acquire access token for Graph API."""
+        """Acquire access token for Graph API with enhanced error handling."""
         if not self.app:
             self.initialize()
         
-        # Try to get token from cache first
-        accounts = self.app.get_accounts()
-        if accounts:
-            result = self.app.acquire_token_silent(self.DEFAULT_SCOPES, account=accounts[0])
+        try:
+            # Try to get token from cache first
+            accounts = self.app.get_accounts()
+            if accounts:
+                self.logger.debug("キャッシュからトークンを取得を試行中...")
+                result = self.app.acquire_token_silent(self.DEFAULT_SCOPES, account=accounts[0])
+                if result and 'access_token' in result:
+                    self.access_token = result['access_token']
+                    self.logger.info("キャッシュからトークンを取得しました")
+                    return self.access_token
+            
+            # Get new token
+            self.logger.info("新しいアクセストークンを取得中...")
+            if isinstance(self.app, ConfidentialClientApplication):
+                result = self.app.acquire_token_for_client(scopes=self.DEFAULT_SCOPES)
+            else:
+                # Interactive flow
+                result = self.app.acquire_token_interactive(scopes=self.DEFAULT_SCOPES)
+            
             if result and 'access_token' in result:
                 self.access_token = result['access_token']
+                self.logger.info("アクセストークンを正常に取得しました")
                 return self.access_token
-        
-        # Get new token
-        if isinstance(self.app, ConfidentialClientApplication):
-            result = self.app.acquire_token_for_client(scopes=self.DEFAULT_SCOPES)
-        else:
-            # Interactive flow
-            result = self.app.acquire_token_interactive(scopes=self.DEFAULT_SCOPES)
-        
-        if 'access_token' in result:
-            self.access_token = result['access_token']
-            self.logger.info("Successfully acquired access token")
-            return self.access_token
-        else:
-            error = result.get('error', 'Unknown error')
-            error_desc = result.get('error_description', '')
-            raise Exception(f"Failed to acquire token: {error} - {error_desc}")
+            else:
+                error = result.get('error', 'Unknown error') if result else 'No result returned'
+                error_desc = result.get('error_description', '') if result else ''
+                correlation_id = result.get('correlation_id', '') if result else ''
+                
+                error_msg = f"トークン取得に失敗: {error}"
+                if error_desc:
+                    error_msg += f" - {error_desc}"
+                if correlation_id:
+                    error_msg += f" (Correlation ID: {correlation_id})"
+                
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
+                
+        except Exception as e:
+            self.logger.error(f"トークン取得中にエラーが発生: {e}")
+            raise
     
     def _ensure_token(self):
         """Ensure we have a valid access token."""
@@ -148,7 +228,7 @@ class GraphClient:
     
     def get(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Make GET request to Graph API.
+        Make GET request to Graph API with enhanced error handling.
         
         Args:
             endpoint: API endpoint (e.g., '/users', '/me/messages')
@@ -159,15 +239,51 @@ class GraphClient:
         """
         url = f"{self.GRAPH_API_ENDPOINT}/{self.config.get('ApiSettings.GraphApiVersion', 'v1.0')}{endpoint}"
         
-        response = self.session.get(
-            url,
-            headers=self._get_headers(),
-            params=params,
-            timeout=self.config.get('ApiSettings.Timeout', 300)
-        )
-        
-        response.raise_for_status()
-        return response.json()
+        try:
+            self.logger.debug(f"GET request: {endpoint}")
+            response = self.session.get(
+                url,
+                headers=self._get_headers(),
+                params=params,
+                timeout=self.config.get('ApiSettings.Timeout', 300)
+            )
+            
+            # Handle HTTP errors
+            if response.status_code == 401:
+                self.logger.warning("認証エラー - トークンを再取得します")
+                self.access_token = None  # Force token refresh
+                response = self.session.get(
+                    url,
+                    headers=self._get_headers(),
+                    params=params,
+                    timeout=self.config.get('ApiSettings.Timeout', 300)
+                )
+            
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.Timeout:
+            error_msg = f"API要求がタイムアウトしました: {endpoint}"
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403:
+                error_msg = f"API権限不足: {endpoint} - 必要な権限が付与されていません"
+            elif e.response.status_code == 429:
+                error_msg = f"API使用制限に達しました: {endpoint} - しばらく待ってから再試行してください"
+            else:
+                error_msg = f"HTTP error {e.response.status_code}: {endpoint}"
+            
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+        except requests.exceptions.RequestException as e:
+            error_msg = f"ネットワークエラー: {endpoint} - {str(e)}"
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+        except Exception as e:
+            error_msg = f"予期しないエラー: {endpoint} - {str(e)}"
+            self.logger.error(error_msg)
+            raise
     
     def post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -285,6 +401,34 @@ class GraphClient:
     def get_subscriptions(self) -> List[Dict[str, Any]]:
         """Get organization subscriptions."""
         return self.get_all_pages('/subscribedSkus')
+    
+    def _load_cert_from_store(self, thumbprint: str) -> bytes:
+        """Load certificate from Windows certificate store by thumbprint."""
+        try:
+            import wincertstore
+            import binascii
+            
+            # Remove any spaces or colons from thumbprint
+            clean_thumbprint = thumbprint.replace(" ", "").replace(":", "").upper()
+            
+            # Search in different certificate stores
+            stores = ["MY", "ROOT", "CA"]
+            
+            for store_name in stores:
+                store = wincertstore.CertSystemStore(store_name)
+                
+                for cert in store.itercerts(usage=wincertstore.SERVER_AUTH):
+                    cert_thumbprint = binascii.hexlify(cert.get_fingerprint()).decode().upper()
+                    
+                    if cert_thumbprint == clean_thumbprint:
+                        self.logger.info(f"証明書が見つかりました: {store_name}ストア")
+                        return cert.get_pem().encode()
+            
+            raise FileNotFoundError(f"証明書が見つかりません (サムプリント: {thumbprint})")
+            
+        except ImportError:
+            self.logger.error("wincertstoreライブラリが利用できません")
+            raise NotImplementedError("Windows証明書ストアアクセスにはwincertstoreが必要です")
     
     def get_license_usage(self) -> List[Dict[str, Any]]:
         """Get license usage statistics."""
