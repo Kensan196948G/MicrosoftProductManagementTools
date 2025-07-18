@@ -1,11 +1,29 @@
 # ================================================================================
-# Microsoft 365統合管理ツール - 完全版 GUI
+# Microsoft 365統合管理ツール - 完全版 GUI v2.0
 # 実データ対応・全機能統合版
 # Templates/Samples の全6フォルダ対応
+# 
+# ✨ v2.0 改善項目 (Dev0 - Frontend Developer実装):
+# ● 26機能ボタンの最適化されたレイアウト (中央寄せ・サイズ拡張)
+# ● リアルタイムログ表示機能のパフォーマンス向上 (ログトリミング・スレッドセーフ)
+# ● モダンなポップアップ通知システム (フィードイン/アウト・ホバー停止)
+# ● キーボードショートカット対応 (Ctrl+R/T/Q, F5)
+# ● ユーザビリティ向上 (グラデーション背景・バージョン情報・クリーンアップ)
 # ================================================================================
 
 [CmdletBinding()]
 param()
+
+# Windows Forms初期設定（スクリプト最初、任意のオブジェクト作成前に実行）
+try {
+    Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+    [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+    Write-Host "✅ Windows Forms 最優先初期化完了" -ForegroundColor Green
+} catch {
+    # エラーがあっても継続
+    Write-Host "⚠️ Windows Forms 初期化に問題がありましたが継続します" -ForegroundColor Yellow
+}
 
 # PowerShellウィンドウタイトル設定（安全なアクセス）
 try {
@@ -54,215 +72,1101 @@ if ($IsLinux -or $IsMacOS) {
     exit 1
 }
 
-# 必要なアセンブリの読み込み
+# 残りの必要なアセンブリの読み込み（Windows.Formsは最初に読み込み済み）
 try {
-    Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
     Add-Type -AssemblyName System.Drawing -ErrorAction Stop
     Add-Type -AssemblyName System.ComponentModel -ErrorAction Stop
     Add-Type -AssemblyName System.Web -ErrorAction Stop
+    Write-Host "✅ 残りのアセンブリ読み込み完了" -ForegroundColor Green
 }
 catch {
-    Write-Host "エラー: Windows Formsアセンブリの読み込みに失敗しました。" -ForegroundColor Red
+    Write-Host "エラー: アセンブリの読み込みに失敗しました。" -ForegroundColor Red
     Write-Host "詳細: $($_.Exception.Message)" -ForegroundColor Yellow
     exit 1
 }
 
-# グローバル変数
+# Windows Forms初期設定は最初の行で完了済み
+# STAアパートメントステートの確認
+$apartmentState = [System.Threading.Thread]::CurrentThread.ApartmentState
+Write-Host "🔍 アパートメントステート: $apartmentState" -ForegroundColor Gray
+
+# グローバル変数（モジュール読み込み前に定義）
 $Script:ToolRoot = Split-Path $PSScriptRoot -Parent
 $Script:M365Connected = $false
 $Script:ExchangeConnected = $false
+$Script:LogTextBox = $null
+$Script:ErrorLogTextBox = $null
+$Script:PromptTextBox = $null
+$Script:PromptTextBox2 = $null
+$Script:PromptOutputTextBox = $null
+$Script:CommandHistory = @()
+$Script:HistoryIndex = -1
 
-# 共通モジュールをインポート
+# 詳細ログファイルパス定義
+$Script:GuiDetailLogPath = Join-Path $Script:ToolRoot "Logs\gui_detailed.log"
+$Script:GuiErrorLogPath = Join-Path $Script:ToolRoot "Logs\gui_errors.log"
+
+# ログディレクトリ作成
+$logDir = Join-Path $Script:ToolRoot "Logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+# 起動時ログの初期化
+$startupTimestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+$startupLogEntry = "[$startupTimestamp] [INFO] ========================= GUI起動開始 ========================="
+try {
+    Add-Content -Path $Script:GuiDetailLogPath -Value $startupLogEntry -Encoding UTF8 -Force
+    Add-Content -Path $Script:GuiDetailLogPath -Value "[$startupTimestamp] [INFO] PowerShell Version: $($PSVersionTable.PSVersion)" -Encoding UTF8 -Force
+    Add-Content -Path $Script:GuiDetailLogPath -Value "[$startupTimestamp] [INFO] Platform: $($PSVersionTable.Platform)" -Encoding UTF8 -Force
+    Add-Content -Path $Script:GuiDetailLogPath -Value "[$startupTimestamp] [INFO] Script Path: $PSScriptRoot" -Encoding UTF8 -Force
+} catch {
+    Write-Host "警告: 詳細ログファイルへの初期書き込みに失敗しました" -ForegroundColor Yellow
+}
+
+# 早期ログ出力関数（GUI初期化前に使用）
+function Write-EarlyLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+    $shortTimestamp = Get-Date -Format "HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    try {
+        if ($Script:GuiDetailLogPath) {
+            Add-Content -Path $Script:GuiDetailLogPath -Value $logEntry -Encoding UTF8 -Force
+        }
+    } catch {
+        # ファイル出力エラーは無視
+    }
+    
+    # レベルに応じた色分けでプロンプトに出力
+    $prefix = switch ($Level) {
+        "INFO"    { "ℹ️" }
+        "SUCCESS" { "✅" }
+        "WARNING" { "⚠️" }
+        "ERROR"   { "❌" }
+        "DEBUG"   { "🔍" }
+        default   { "📝" }
+    }
+    
+    $color = switch ($Level) {
+        "INFO"    { "Cyan" }
+        "SUCCESS" { "Green" }
+        "WARNING" { "Yellow" }
+        "ERROR"   { "Red" }
+        "DEBUG"   { "Magenta" }
+        default   { "White" }
+    }
+    
+    Write-Host "[$shortTimestamp] $prefix $Message" -ForegroundColor $color
+}
+
+# 共通モジュールをインポート（Windows Forms初期化後）
+Write-EarlyLog "共通モジュール読み込み開始"
 $modulePath = Join-Path $Script:ToolRoot "Scripts\Common"
 
 # 新しいReal M365 Data Provider モジュールをインポート
 try {
+    Write-EarlyLog "実行ポリシー確認開始"
+    # 実行ポリシーの詳細確認と設定
+    $originalExecutionPolicy = Get-ExecutionPolicy -Scope Process
+    Write-Host "🔍 実行ポリシー確認中..." -ForegroundColor Cyan
+    Write-Host "   元のProcess実行ポリシー: $originalExecutionPolicy" -ForegroundColor Gray
+    Write-EarlyLog "元のProcess実行ポリシー: $originalExecutionPolicy"
+    
+    # より安全な実行ポリシー設定
+    try {
+        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+        Write-Host "✅ Process実行ポリシーをBypassに設定" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "⚠️ Process実行ポリシー設定失敗、継続します" -ForegroundColor Yellow
+    }
+    
     # 既存のモジュールをクリーンアップ
+    Write-EarlyLog "既存モジュールのクリーンアップ開始"
     Get-Module RealM365DataProvider -ErrorAction SilentlyContinue | Remove-Module -Force
     Get-Module ProgressDisplay -ErrorAction SilentlyContinue | Remove-Module -Force
+    Get-Module HTMLTemplateEngine -ErrorAction SilentlyContinue | Remove-Module -Force
+    Get-Module DataSourceVisualization -ErrorAction SilentlyContinue | Remove-Module -Force
+    Write-EarlyLog "既存モジュールのクリーンアップ完了"
     
-    Import-Module "$modulePath\RealM365DataProvider.psm1" -Force -DisableNameChecking -Global
-    Import-Module "$modulePath\HTMLTemplateEngine.psm1" -Force -DisableNameChecking -Global
-    Import-Module "$modulePath\DataSourceVisualization.psm1" -Force -DisableNameChecking -Global
-    Write-Host "✅ RealM365DataProvider モジュール読み込み完了" -ForegroundColor Green
-    Write-Host "✅ HTMLTemplateEngine モジュール読み込み完了" -ForegroundColor Green
-    Write-Host "✅ DataSourceVisualization モジュール読み込み完了" -ForegroundColor Green
+    # モジュールファイルの存在確認
+    $modules = @(
+        @{ Name = "RealM365DataProvider"; Path = "$modulePath\RealM365DataProvider.psm1" },
+        @{ Name = "HTMLTemplateEngine"; Path = "$modulePath\HTMLTemplateEngine.psm1" },
+        @{ Name = "DataSourceVisualization"; Path = "$modulePath\DataSourceVisualization.psm1" }
+    )
     
-    # モジュール読み込み直後にメイン関数を定義（グローバルスコープ）
-    . {
-        function global:Get-ReportDataFromProvider {
-            param(
-                [string]$DataType,
-                [hashtable]$Parameters = @{}
-            )
-            
+    foreach ($module in $modules) {
+        Write-EarlyLog "$($module.Name) モジュール読み込み開始"
+        if (-not [string]::IsNullOrEmpty($module.Path) -and (Test-Path $module.Path)) {
             try {
-                # 常にリアルデータを取得（Microsoft 365接続状態は関数内で自動確認）
-                switch ($DataType) {
-                    "Users" { return Get-M365AllUsers @Parameters }
-                    "LicenseAnalysis" { return Get-M365LicenseAnalysis @Parameters }
-                    "UsageAnalysis" { return Get-M365UsageAnalysis @Parameters }
-                    "MFAStatus" { return Get-M365MFAStatus @Parameters }
-                    "MailboxAnalysis" { return Get-M365MailboxAnalysis @Parameters }
-                    "TeamsUsage" { return Get-M365TeamsUsage @Parameters }
-                    "OneDriveAnalysis" { return Get-M365OneDriveAnalysis @Parameters }
-                    "SignInLogs" { return Get-M365SignInLogs @Parameters }
-                    "DailyReport" { return Get-M365DailyReport @Parameters }
-                    "WeeklyReport" { return Get-M365WeeklyReport @Parameters }
-                    "MonthlyReport" { return Get-M365MonthlyReport @Parameters }
-                    "YearlyReport" { return Get-M365YearlyReport @Parameters }
-                    "TestExecution" { return Get-M365TestExecution @Parameters }
-                    "PerformanceAnalysis" { return Get-M365PerformanceAnalysis @Parameters }
-                    "SecurityAnalysis" { return Get-M365SecurityAnalysis @Parameters }
-                    "PermissionAudit" { return Get-M365PermissionAudit @Parameters }
-                    "ConditionalAccess" { return Get-M365ConditionalAccess @Parameters }
-                    "MailFlowAnalysis" { return Get-M365MailFlowAnalysis @Parameters }
-                    "SpamProtectionAnalysis" { return Get-M365SpamProtectionAnalysis @Parameters }
-                    "MailDeliveryAnalysis" { return Get-M365MailDeliveryAnalysis @Parameters }
-                    "TeamsSettings" { return Get-M365TeamsSettings @Parameters }
-                    "MeetingQuality" { return Get-M365MeetingQuality @Parameters }
-                    "TeamsAppAnalysis" { return Get-M365TeamsAppAnalysis @Parameters }
-                    "SharingAnalysis" { return Get-M365SharingAnalysis @Parameters }
-                    "SyncErrorAnalysis" { return Get-M365SyncErrorAnalysis @Parameters }
-                    "ExternalSharingAnalysis" { return Get-M365ExternalSharingAnalysis @Parameters }
-                    default { 
-                        Write-Warning "未対応のデータタイプ: $DataType"
-                        return @([PSCustomObject]@{ Message = "データタイプ '$DataType' は対応していません" })
-                    }
-                }
-            }
-            catch {
-                Write-Host "データ取得エラー: $($_.Exception.Message)" -ForegroundColor Red
-                # エラー時も基本的なエラー情報を返す
-                return @([PSCustomObject]@{ 
-                    Error = $_.Exception.Message
-                    DataType = $DataType
-                    Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                })
-            }
-        }
-        
-        Write-Host "✅ Get-ReportDataFromProvider 関数をグローバルスコープで定義完了" -ForegroundColor Green
-        
-        # Export-DataToFiles関数もグローバルスコープで定義
-        function global:Export-DataToFiles {
-            param(
-                [array]$Data,
-                [string]$ReportName,
-                [string]$FolderName = "Reports"
-            )
-            
-            if (-not $Data -or $Data.Count -eq 0) {
-                [System.Windows.Forms.MessageBox]::Show("出力するデータがありません。", "エラー", "OK", "Warning")
-                return
-            }
-            
-            try {
-                # 日本語レポート名を英語キーに変換するマッピング
-                $reportTypeMapping = @{
-                    "日次レポート" = "DailyReport"
-                    "週次レポート" = "WeeklyReport"
-                    "月次レポート" = "MonthlyReport"
-                    "年次レポート" = "YearlyReport"
-                    "テスト実行結果" = "TestExecution"
-                    "ライセンス分析" = "LicenseAnalysis"
-                    "使用状況分析" = "UsageAnalysis"
-                    "パフォーマンス分析" = "PerformanceAnalysis"
-                    "セキュリティ分析" = "SecurityAnalysis"
-                    "権限監査" = "PermissionAudit"
-                    "ユーザー一覧" = "Users"
-                    "MFA状況" = "MFAStatus"
-                    "条件付きアクセス" = "ConditionalAccess"
-                    "サインインログ" = "SignInLogs"
-                    "メールボックス分析" = "MailboxAnalysis"
-                    "メールフロー分析" = "MailFlowAnalysis"
-                    "スパム対策分析" = "SpamProtectionAnalysis"
-                    "メール配信分析" = "MailDeliveryAnalysis"
-                    "Teams使用状況" = "TeamsUsage"
-                    "Teams設定分析" = "TeamsSettings"
-                    "会議品質分析" = "MeetingQuality"
-                    "Teamsアプリ分析" = "TeamsAppAnalysis"
-                    "OneDrive分析" = "OneDriveAnalysis"
-                    "共有分析" = "SharingAnalysis"
-                    "OneDrive同期エラー分析" = "SyncErrorAnalysis"
-                    "OneDrive外部共有分析" = "ExternalSharingAnalysis"
+                # Unblock-Fileでファイルのブロックを解除（パスのnullチェック）
+                if (-not [string]::IsNullOrEmpty($module.Path)) {
+                    Unblock-File -Path $module.Path -ErrorAction SilentlyContinue
                 }
                 
-                # 英語キーを取得（見つからない場合はそのまま使用）
-                $reportTypeKey = $reportTypeMapping[$ReportName]
-                if (-not $reportTypeKey) {
-                    $reportTypeKey = $ReportName
-                    Write-Host "⚠️ レポートタイプマッピングが見つかりません: $ReportName" -ForegroundColor Yellow
-                }
-                
-                # マルチフォーマットレポートジェネレーターを使用
-                $multiFormatModule = Join-Path $Script:ToolRoot "Scripts\Common\MultiFormatReportGenerator.psm1"
-                if (Test-Path $multiFormatModule) {
-                    Import-Module $multiFormatModule -Force -Global
-                    
-                    # マルチフォーマット出力（CSV、HTML、PDF）とポップアップ表示
-                    $result = Export-MultiFormatReport -Data $Data -ReportName $ReportName -ReportType $reportTypeKey -ShowPopup
-                    
-                    if ($result) {
-                        Write-Host "✅ マルチフォーマット出力完了: $($result.DataCount)件のデータ" -ForegroundColor Green
-                    }
-                } else {
-                    # フォールバック: 既存の方法で出力
-                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                    $reportsDir = Join-Path $Script:ToolRoot $FolderName
-                    $specificDir = Join-Path $reportsDir $ReportName
-                    
-                    if (-not (Test-Path $specificDir)) {
-                        New-Item -Path $specificDir -ItemType Directory -Force | Out-Null
-                    }
-                    
-                    # CSV出力
-                    $csvPath = Join-Path $specificDir "${ReportName}_${timestamp}.csv"
-                    $Data | Export-Csv -Path $csvPath -Encoding UTF8BOM -NoTypeInformation
-                    
-                    # HTML出力（英語キーを使用）
-                    $htmlPath = Join-Path $specificDir "${ReportName}_${timestamp}.html"
-                    $htmlContent = Generate-EnhancedHTMLReport -Data $Data -ReportType $reportTypeKey -Title $ReportName
-                    $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                    
-                    # ファイルを開く
-                    Start-Process $htmlPath
-                    Start-Process $csvPath
-                    
-                    [System.Windows.Forms.MessageBox]::Show("レポートを生成しました。`n`nHTML: $htmlPath`nCSV: $csvPath", "完了", "OK", "Information")
-                }
+                # モジュールを読み込み
+                Import-Module $module.Path -Force -DisableNameChecking -Global -ErrorAction Stop
+                Write-Host "✅ $($module.Name) モジュール読み込み完了" -ForegroundColor Green
+                Write-EarlyLog "$($module.Name) モジュール読み込み成功"
             }
             catch {
-                [System.Windows.Forms.MessageBox]::Show("ファイル出力エラー: $($_.Exception.Message)", "エラー", "OK", "Error")
+                Write-Host "⚠️ $($module.Name) モジュール読み込みエラー: $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-EarlyLog "$($module.Name) モジュール読み込みエラー: $($_.Exception.Message)" "WARNING"
+                
+                # フォールバック: ドットソーシングで読み込み試行
+                try {
+                    . $module.Path
+                    Write-Host "✅ $($module.Name) ドットソーシングで読み込み完了" -ForegroundColor Green
+                    Write-EarlyLog "$($module.Name) ドットソーシング読み込み成功"
+                } catch {
+                    Write-Host "❌ $($module.Name) ドットソーシング読み込み失敗" -ForegroundColor Red
+                    Write-EarlyLog "$($module.Name) ドットソーシング読み込み失敗: $($_.Exception.Message)" "ERROR"
+                }
             }
+        } else {
+            Write-Host "⚠️ $($module.Name) モジュールファイルが見つかりません: $($module.Path)" -ForegroundColor Yellow
+            Write-EarlyLog "$($module.Name) モジュールファイルが見つかりません: $($module.Path)" "WARNING"
         }
-        
-        Write-Host "✅ Export-DataToFiles 関数をグローバルスコープで定義完了" -ForegroundColor Green
     }
 } catch {
-    Write-Host "❌ RealM365DataProvider モジュール読み込みエラー: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "ダミーデータモードで動作します" -ForegroundColor Yellow
+    Write-Host "❌ モジュール読み込み処理でエラーが発生しました: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# その他の必要なモジュールをインポート
+# ProgressDisplay モジュールの読み込み（オプション）
 try {
-    Import-Module "$modulePath\ProgressDisplay.psm1" -Force -ErrorAction SilentlyContinue -Global
+    if (-not [string]::IsNullOrEmpty($modulePath)) {
+        $progressPath = Join-Path $modulePath "ProgressDisplay.psm1"
+        if (-not [string]::IsNullOrEmpty($progressPath) -and (Test-Path $progressPath)) {
+            Import-Module $progressPath -Force -DisableNameChecking -Global
+            Write-Host "✅ ProgressDisplay モジュール読み込み完了" -ForegroundColor Green
+        }
+    }
 } catch {
     # ProgressDisplay モジュールが無い場合は無視
 }
 
-# Windows Forms初期設定（PowerShell 7.x 対応）
-try {
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-    [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
-    Write-Host "✅ Windows Forms 初期化完了" -ForegroundColor Green
-} catch {
-    Write-Host "⚠️ Windows Forms 初期化警告: $($_.Exception.Message)" -ForegroundColor Yellow
+# グローバル変数は既に上部で定義済み
+
+# プログレスバー制御関数
+function Set-GuiProgress {
+    param(
+        [int]$Value = 0,
+        [string]$Status = "",
+        [switch]$Hide
+    )
+    
+    if ($Script:ProgressBar -eq $null -or $Script:ProgressLabel -eq $null) {
+        return
+    }
+    
+    try {
+        if ($Script:ProgressBar.Owner.InvokeRequired) {
+            $Script:ProgressBar.Owner.Invoke([Action]{
+                if ($Hide) {
+                    $Script:ProgressBar.Visible = $false
+                    $Script:ProgressLabel.Visible = $false
+                    $Script:ProgressBar.Value = 0
+                    $Script:ProgressLabel.Text = ""
+                } else {
+                    $Script:ProgressBar.Visible = $true
+                    $Script:ProgressLabel.Visible = $true
+                    $Script:ProgressBar.Value = [Math]::Min([Math]::Max($Value, 0), 100)
+                    $Script:ProgressLabel.Text = $Status
+                }
+            })
+        } else {
+            if ($Hide) {
+                $Script:ProgressBar.Visible = $false
+                $Script:ProgressLabel.Visible = $false
+                $Script:ProgressBar.Value = 0
+                $Script:ProgressLabel.Text = ""
+            } else {
+                $Script:ProgressBar.Visible = $true
+                $Script:ProgressLabel.Visible = $true
+                $Script:ProgressBar.Value = [Math]::Min([Math]::Max($Value, 0), 100)
+                $Script:ProgressLabel.Text = $Status
+            }
+        }
+    } catch {
+        # エラーは無視
+    }
 }
+
+# ポップアップ通知システム
+function Show-NotificationPopup {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter()]
+        [ValidateSet("INFO", "SUCCESS", "WARNING", "ERROR")]
+        [string]$Type = "INFO",
+        
+        [Parameter()]
+        [int]$Duration = 3000  # ミリ秒
+    )
+    
+    try {
+        # モダンなポップアップフォーム作成（改善されたデザイン）
+        $popup = New-Object System.Windows.Forms.Form
+        $popup.Text = "Microsoft 365管理ツール - 通知"
+        $popup.Size = New-Object System.Drawing.Size(450, 140)  # サイズを少し大きく
+        $popup.StartPosition = "Manual"
+        # 右下角に表示するための位置計算
+        $screenBounds = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+        $popup.Location = New-Object System.Drawing.Point(($screenBounds.Width - 450 - 20), ($screenBounds.Height - 140 - 20))
+        $popup.FormBorderStyle = "None"  # ボーダーレスデザイン
+        $popup.MaximizeBox = $false
+        $popup.MinimizeBox = $false
+        $popup.TopMost = $true
+        $popup.ShowInTaskbar = $false  # タスクバーに表示しない
+        
+        # モダンなグラデーション背景色設定
+        $popup.BackColor = switch ($Type) {
+            "SUCCESS" { [System.Drawing.Color]::FromArgb(230, 255, 230) }  # ライトグリーン
+            "WARNING" { [System.Drawing.Color]::FromArgb(255, 248, 220) }  # ライトオレンジ
+            "ERROR"   { [System.Drawing.Color]::FromArgb(255, 230, 230) }  # ライトレッド
+            default   { [System.Drawing.Color]::FromArgb(230, 244, 255) }  # ライトブルー
+        }
+        
+        # モダンな影付きボーダーを追加
+        $borderPanel = New-Object System.Windows.Forms.Panel
+        $borderPanel.Size = New-Object System.Drawing.Size(448, 138)
+        $borderPanel.Location = New-Object System.Drawing.Point(1, 1)
+        $borderPanel.BackColor = [System.Drawing.Color]::FromArgb(200, 200, 200)  # グレーボーダー
+        $popup.Controls.Add($borderPanel)
+        
+        $contentPanel = New-Object System.Windows.Forms.Panel
+        $contentPanel.Size = New-Object System.Drawing.Size(446, 136)
+        $contentPanel.Location = New-Object System.Drawing.Point(2, 2)
+        $contentPanel.BackColor = $popup.BackColor
+        $popup.Controls.Add($contentPanel)
+        
+        # アイコン設定
+        $icon = switch ($Type) {
+            "SUCCESS" { "✅" }
+            "WARNING" { "⚠️" }
+            "ERROR"   { "❌" }
+            default   { "ℹ️" }
+        }
+        
+        # モダンなレイアウトのラベル作成
+        # タイトルラベル
+        $titleLabel = New-Object System.Windows.Forms.Label
+        $titleLabel.Text = "Microsoft 365管理ツール"
+        $titleLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10, [System.Drawing.FontStyle]::Bold)
+        $titleLabel.Location = New-Object System.Drawing.Point(15, 10)
+        $titleLabel.Size = New-Object System.Drawing.Size(400, 20)
+        $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(64, 64, 64)
+        $contentPanel.Controls.Add($titleLabel)
+        
+        # メインメッセージラベル
+        $messageLabel = New-Object System.Windows.Forms.Label
+        $messageLabel.Text = "$icon $Message"
+        $messageLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 11, [System.Drawing.FontStyle]::Regular)
+        $messageLabel.Location = New-Object System.Drawing.Point(15, 35)
+        $messageLabel.Size = New-Object System.Drawing.Size(400, 60)
+        $messageLabel.ForeColor = switch ($Type) {
+            "SUCCESS" { [System.Drawing.Color]::FromArgb(0, 120, 0) }
+            "WARNING" { [System.Drawing.Color]::FromArgb(150, 90, 0) }
+            "ERROR"   { [System.Drawing.Color]::FromArgb(180, 0, 0) }
+            default   { [System.Drawing.Color]::FromArgb(0, 90, 150) }
+        }
+        $contentPanel.Controls.Add($messageLabel)
+        
+        # 閉じるボタンを追加
+        $closeButton = New-Object System.Windows.Forms.Button
+        $closeButton.Text = "×"
+        $closeButton.Size = New-Object System.Drawing.Size(25, 25)
+        $closeButton.Location = New-Object System.Drawing.Point(415, 5)
+        $closeButton.FlatStyle = "Flat"
+        $closeButton.FlatAppearance.BorderSize = 0
+        $closeButton.BackColor = [System.Drawing.Color]::Transparent
+        $closeButton.ForeColor = [System.Drawing.Color]::Gray
+        $closeButton.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
+        $closeButton.Cursor = "Hand"
+        $closeButton.Add_Click({ $popup.Close(); $timer.Stop() })
+        $contentPanel.Controls.Add($closeButton)
+        
+        # 改善された自動閉じタイマー（フェードアウト効果付き）
+        $timer = New-Object System.Windows.Forms.Timer
+        $timer.Interval = $Duration
+        $fadeTimer = New-Object System.Windows.Forms.Timer
+        $fadeTimer.Interval = 50  # 50msごとにフェード
+        $fadeTimer.Tag = 1.0  # 初期透明度
+        
+        $timer.Add_Tick({
+            # フェードアウト開始
+            $fadeTimer.Start()
+            $timer.Stop()
+        })
+        
+        $fadeTimer.Add_Tick({
+            $currentOpacity = [double]$fadeTimer.Tag
+            $currentOpacity -= 0.05  # 毎回5%ずつフェード
+            if ($currentOpacity -le 0) {
+                $popup.Close()
+                $fadeTimer.Stop()
+            } else {
+                $popup.Opacity = $currentOpacity
+                $fadeTimer.Tag = $currentOpacity
+            }
+        })
+        
+        $timer.Start()
+        
+        # マウスホバーでタイマー一時停止（ユーザビリティ向上）
+        $popup.Add_MouseEnter({ $timer.Stop(); $fadeTimer.Stop(); $popup.Opacity = 1.0 })
+        $popup.Add_MouseLeave({ $timer.Start() })
+        
+        # フェードインしながら表示
+        $popup.Opacity = 0.0
+        $popup.Show()
+        
+        # フェードインアニメーション
+        $fadeInTimer = New-Object System.Windows.Forms.Timer
+        $fadeInTimer.Interval = 30
+        $fadeInTimer.Tag = 0.0
+        $fadeInTimer.Add_Tick({
+            $currentOpacity = [double]$fadeInTimer.Tag
+            $currentOpacity += 0.1
+            if ($currentOpacity -ge 1.0) {
+                $popup.Opacity = 1.0
+                $fadeInTimer.Stop()
+            } else {
+                $popup.Opacity = $currentOpacity
+                $fadeInTimer.Tag = $currentOpacity
+            }
+        })
+        $fadeInTimer.Start()
+        
+    } catch {
+        # ポップアップエラーの場合はコンソール出力にフォールバック
+        Write-Host "通知: $Message" -ForegroundColor $(switch ($Type) {
+            "SUCCESS" { "Green" }
+            "WARNING" { "Yellow" }
+            "ERROR"   { "Red" }
+            default   { "Cyan" }
+        })
+    }
+}
+
+# GUI用ログ出力関数（詳細ファイルログ付き）
+function Write-GuiLog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter()]
+        [ValidateSet("INFO", "SUCCESS", "WARNING", "ERROR", "DEBUG")]
+        [string]$Level = "INFO",
+        
+        [Parameter()]
+        [switch]$ShowNotification = $false
+    )
+    
+    # デバッグ出力（コンソール）- リリース版では無効化可能
+    if ($env:GUINETLOG_DEBUG -eq "1") {
+        Write-Host "🔍 DEBUG: Write-GuiLog呼出 - $Message ($Level)" -ForegroundColor Magenta
+    }
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+    $shortTimestamp = Get-Date -Format "HH:mm:ss"
+    $prefix = switch ($Level) {
+        "INFO"    { "ℹ️" }
+        "SUCCESS" { "✅" }
+        "WARNING" { "⚠️" }
+        "ERROR"   { "❌" }
+        "DEBUG"   { "🔍" }
+        "default" { "📝" }
+    }
+    
+    $logEntry = "[$shortTimestamp] $prefix $Message`r`n"
+    $detailedLogEntry = "[$timestamp] [$Level] $Message"
+    
+    # 詳細ログファイルに常に出力
+    try {
+        if ($Script:GuiDetailLogPath) {
+            Add-Content -Path $Script:GuiDetailLogPath -Value $detailedLogEntry -Encoding UTF8 -Force
+        }
+    } catch {
+        # ファイル出力エラーは無視
+    }
+    
+    # エラーレベルの場合は専用エラーログファイルにも出力
+    if ($Level -eq "ERROR" -or $Level -eq "WARNING") {
+        try {
+            if ($Script:GuiErrorLogPath) {
+                Add-Content -Path $Script:GuiErrorLogPath -Value $detailedLogEntry -Encoding UTF8 -Force
+            }
+        } catch {
+            # ファイル出力エラーは無視
+        }
+    }
+    
+    # GUIリッチテキストボックスへの出力（詳細実行ログタブ）
+    if ($Script:LogTextBox -ne $null) {
+        try {
+            # カラーコーディング設定
+            $textColor = switch ($Level) {
+                "INFO"    { [System.Drawing.Color]::Cyan }
+                "SUCCESS" { [System.Drawing.Color]::LimeGreen }
+                "WARNING" { [System.Drawing.Color]::Orange }
+                "ERROR"   { [System.Drawing.Color]::Red }
+                "DEBUG"   { [System.Drawing.Color]::Magenta }
+                default   { [System.Drawing.Color]::LightGray }
+            }
+            
+            # スレッドセーフなUIアップデート（改善されたパフォーマンス）
+            $updateAction = [Action]{
+                # カラー付きテキストをより効率的に追加
+                $Script:LogTextBox.SelectionStart = $Script:LogTextBox.Text.Length
+                $Script:LogTextBox.SelectionLength = 0
+                $Script:LogTextBox.SelectionColor = $textColor
+                $Script:LogTextBox.SelectedText = $logEntry
+                
+                # 自動スクロール（最新ログを表示）
+                $Script:LogTextBox.SelectionStart = $Script:LogTextBox.Text.Length
+                $Script:LogTextBox.ScrollToCaret()
+                
+                # パフォーマンス向上：長すぎるログをトリムム（10000行制限）
+                if ($Script:LogTextBox.Lines.Count -gt 10000) {
+                    $lines = $Script:LogTextBox.Lines
+                    $keepLines = $lines[-5000..-1]  # 最後の5000行を保持
+                    $Script:LogTextBox.Text = ($keepLines -join "`r`n") + "`r`n"
+                    $Script:LogTextBox.SelectionStart = $Script:LogTextBox.Text.Length
+                }
+            }
+            
+            if ($Script:LogTextBox.InvokeRequired) {
+                $Script:LogTextBox.Invoke($updateAction)
+            } else {
+                $updateAction.Invoke()
+            }
+        } catch {
+            # GUI出力エラーは無視してコンソールに出力
+            $color = switch ($Level) {
+                "INFO"    { "Cyan" }
+                "SUCCESS" { "Green" }
+                "WARNING" { "Yellow" }
+                "ERROR"   { "Red" }
+                "DEBUG"   { "Magenta" }
+                default   { "White" }
+            }
+            Write-Host "[$shortTimestamp] $prefix $Message" -ForegroundColor $color
+        }
+    } else {
+        # TextBoxが未初期化の場合はコンソール出力
+        $color = switch ($Level) {
+            "INFO"    { "Cyan" }
+            "SUCCESS" { "Green" }
+            "WARNING" { "Yellow" }
+            "ERROR"   { "Red" }
+            "DEBUG"   { "Magenta" }
+            default   { "White" }
+        }
+        Write-Host "[$shortTimestamp] $prefix $Message" -ForegroundColor $color
+    }
+    
+    # プロンプトタブへの効率的な出力（PowerShellプロンプトタブ）
+    if ($Script:PromptOutputTextBox -ne $null) {
+        if ($env:GUINETLOG_DEBUG -eq "1") {
+            Write-Host "🔍 DEBUG: プロンプトタブに出力中 - $Message" -ForegroundColor Yellow
+        }
+        try {
+            $promptUpdateAction = [Action]{
+                $Script:PromptOutputTextBox.AppendText($logEntry)
+                $Script:PromptOutputTextBox.SelectionStart = $Script:PromptOutputTextBox.Text.Length
+                $Script:PromptOutputTextBox.ScrollToCaret()
+                
+                # プロンプトタブも同様にログトリミング適用
+                if ($Script:PromptOutputTextBox.Lines.Count -gt 8000) {
+                    $lines = $Script:PromptOutputTextBox.Lines
+                    $keepLines = $lines[-4000..-1]  # 最後の4000行を保持
+                    $Script:PromptOutputTextBox.Text = ($keepLines -join "`r`n") + "`r`n"
+                    $Script:PromptOutputTextBox.SelectionStart = $Script:PromptOutputTextBox.Text.Length
+                }
+            }
+            
+            if ($Script:PromptOutputTextBox.InvokeRequired) {
+                $Script:PromptOutputTextBox.Invoke($promptUpdateAction)
+            } else {
+                $promptUpdateAction.Invoke()
+            }
+            
+            if ($env:GUINETLOG_DEBUG -eq "1") {
+                Write-Host "✅ DEBUG: プロンプトタブ出力成功" -ForegroundColor Green
+            }
+        } catch {
+            if ($env:GUINETLOG_DEBUG -eq "1") {
+                Write-Host "❌ DEBUG: プロンプトタブ出力エラー - $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+    } elseif ($env:GUINETLOG_DEBUG -eq "1") {
+        Write-Host "❌ DEBUG: Script:PromptOutputTextBox が null" -ForegroundColor Red
+    }
+    
+    # ポップアップ通知表示（要求があった場合）
+    if ($ShowNotification) {
+        Show-NotificationPopup -Message $Message -Type $Level
+    }
+}
+
+# GUI用エラーログ出力関数
+function Write-GuiErrorLog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter()]
+        [ValidateSet("INFO", "WARNING", "ERROR", "CRITICAL")]
+        [string]$Level = "ERROR"
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+    $shortTimestamp = Get-Date -Format "HH:mm:ss"
+    $prefix = switch ($Level) {
+        "INFO"     { "ℹ️" }
+        "WARNING"  { "⚠️" }
+        "ERROR"    { "❌" }
+        "CRITICAL" { "🚨" }
+        default    { "❗" }
+    }
+    
+    $errorEntry = "[$shortTimestamp] $prefix $Message`r`n"
+    $detailedErrorEntry = "[$timestamp] [$Level] $Message"
+    
+    # エラー専用ログファイルに常に出力
+    try {
+        if ($Script:GuiErrorLogPath) {
+            Add-Content -Path $Script:GuiErrorLogPath -Value $detailedErrorEntry -Encoding UTF8 -Force
+        }
+    } catch {
+        # ファイル出力エラーは無視
+    }
+    
+    # 詳細ログファイルにも出力
+    try {
+        if ($Script:GuiDetailLogPath) {
+            Add-Content -Path $Script:GuiDetailLogPath -Value $detailedErrorEntry -Encoding UTF8 -Force
+        }
+    } catch {
+        # ファイル出力エラーは無視
+    }
+    
+    # GUIエラーログテキストボックスへの出力
+    if ($Script:ErrorLogTextBox -ne $null) {
+        try {
+            # UIスレッドで実行する必要がある
+            if ($Script:ErrorLogTextBox.InvokeRequired) {
+                $Script:ErrorLogTextBox.Invoke([Action]{
+                    $Script:ErrorLogTextBox.AppendText($errorEntry)
+                    $Script:ErrorLogTextBox.SelectionStart = $Script:ErrorLogTextBox.Text.Length
+                    $Script:ErrorLogTextBox.ScrollToCaret()
+                })
+            } else {
+                $Script:ErrorLogTextBox.AppendText($errorEntry)
+                $Script:ErrorLogTextBox.SelectionStart = $Script:ErrorLogTextBox.Text.Length
+                $Script:ErrorLogTextBox.ScrollToCaret()
+            }
+        } catch {
+            # GUI出力エラーは無視してコンソールに出力
+            Write-Host "[$shortTimestamp] $prefix $Message" -ForegroundColor Red
+        }
+    } else {
+        # TextBoxが未初期化の場合はコンソール出力
+        Write-Host "[$shortTimestamp] $prefix $Message" -ForegroundColor Red
+    }
+    
+    # 通常のGUIログにも出力（重複を避けるため、Write-GuiLogは呼ばずに直接処理）
+    if ($Level -in @("WARNING", "ERROR", "CRITICAL") -and $Script:LogTextBox -ne $null) {
+        try {
+            if ($Script:LogTextBox.InvokeRequired) {
+                $Script:LogTextBox.Invoke([Action]{
+                    $Script:LogTextBox.AppendText($errorEntry)
+                    $Script:LogTextBox.SelectionStart = $Script:LogTextBox.Text.Length
+                    $Script:LogTextBox.ScrollToCaret()
+                })
+            } else {
+                $Script:LogTextBox.AppendText($errorEntry)
+                $Script:LogTextBox.SelectionStart = $Script:LogTextBox.Text.Length
+                $Script:LogTextBox.ScrollToCaret()
+            }
+        } catch {
+            # エラーは無視
+        }
+    }
+}
+
+# Windows Forms初期設定は上部で完了済み
+
+# Windows Forms初期設定は上部で完了済み
 
 # モジュール読み込み完了後にメイン関数を定義済み（グローバルスコープ）
 
-# Export-DataToFiles関数もグローバルスコープで定義済み
+# Export-DataToFiles関数の定義
+function Export-DataToFiles {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Data,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName
+    )
+    
+    try {
+        Write-GuiLog "ファイル出力処理開始: $ReportName" "INFO"
+        
+        # タイムスタンプ付きファイル名を生成
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $safeReportName = $ReportName -replace '[^\w\-_]', '_'
+        
+        # Reports ディレクトリを作成
+        $reportsDir = Join-Path $Script:ToolRoot "Reports"
+        if (-not (Test-Path $reportsDir)) {
+            New-Item -ItemType Directory -Path $reportsDir -Force | Out-Null
+        }
+        
+        # カテゴリ別サブディレクトリを作成
+        $categoryDir = switch -Regex ($ReportName) {
+            "日次|Daily" { Join-Path $reportsDir "Daily" }
+            "週次|Weekly" { Join-Path $reportsDir "Weekly" }
+            "月次|Monthly" { Join-Path $reportsDir "Monthly" }
+            "年次|Yearly" { Join-Path $reportsDir "Yearly" }
+            "ライセンス|License" { Join-Path $reportsDir "Analysis\License" }
+            "使用状況|Usage" { Join-Path $reportsDir "Analysis\Usage" }
+            "パフォーマンス|Performance" { Join-Path $reportsDir "Analysis\Performance" }
+            "セキュリティ|Security" { Join-Path $reportsDir "Analysis\Security" }
+            "権限|Permission" { Join-Path $reportsDir "Analysis\Permission" }
+            "ユーザー|User|MFA|条件付き|サインイン" { Join-Path $reportsDir "EntraIDManagement" }
+            "メール|Mail|Exchange" { Join-Path $reportsDir "ExchangeOnlineManagement" }
+            "Teams|会議" { Join-Path $reportsDir "TeamsManagement" }
+            "OneDrive|ストレージ|共有|同期" { Join-Path $reportsDir "OneDriveManagement" }
+            default { Join-Path $reportsDir "General" }
+        }
+        
+        if (-not (Test-Path $categoryDir)) {
+            New-Item -ItemType Directory -Path $categoryDir -Force | Out-Null
+        }
+        
+        # ファイルパスを生成
+        $csvPath = Join-Path $categoryDir "${safeReportName}_${timestamp}.csv"
+        $htmlPath = Join-Path $categoryDir "${safeReportName}_${timestamp}.html"
+        
+        # CSVファイルを出力（UTF8 BOM付き）
+        Write-GuiLog "CSVファイル出力中: $csvPath" "INFO"
+        $Data | Export-Csv -Path $csvPath -Encoding UTF8BOM -NoTypeInformation -Force
+        Write-GuiLog "CSVファイル出力完了" "SUCCESS"
+        
+        # HTMLファイルを出力
+        Write-GuiLog "HTMLファイル出力中: $htmlPath" "INFO"
+        
+        # HTML生成関数の存在確認とフォールバック
+        try {
+            if (Get-Command Generate-EnhancedHTMLReport -ErrorAction SilentlyContinue) {
+                $htmlContent = Generate-EnhancedHTMLReport -Data $Data -ReportTitle $ReportName
+            } else {
+                Write-GuiLog "Generate-EnhancedHTMLReport関数が見つかりません。基本HTMLを生成します。" "WARNING"
+                $htmlContent = Generate-BasicHTMLReport -Data $Data -ReportTitle $ReportName
+            }
+            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
+            Write-GuiLog "HTMLファイル出力完了" "SUCCESS"
+        } catch {
+            Write-GuiLog "HTML生成エラー: $($_.Exception.Message)" "ERROR"
+            # フォールバック: 基本的なHTMLテーブルを生成
+            $basicHtml = Generate-FallbackHTML -Data $Data -ReportTitle $ReportName
+            $basicHtml | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
+            Write-GuiLog "フォールバックHTMLファイル出力完了" "SUCCESS"
+        }
+        
+        # 設定に基づいてファイルを自動表示
+        $config = Get-AppSettings
+        $autoOpenFiles = $config.GUI.AutoOpenFiles
+        $showPopupNotifications = $config.GUI.ShowPopupNotifications
+        
+        if ($autoOpenFiles -eq $true) {
+            Write-GuiLog "ファイル自動表示開始" "INFO"
+            
+            # HTMLファイルを優先的に開く
+            try {
+                if (Test-Path $htmlPath) {
+                    if ($IsWindows -or $env:OS -like "*Windows*") {
+                        Start-Process $htmlPath -ErrorAction Stop
+                        Write-GuiLog "HTMLファイルを開きました: $htmlPath" "SUCCESS"
+                    } else {
+                        # Linux/macOS対応
+                        if (Get-Command xdg-open -ErrorAction SilentlyContinue) {
+                            & xdg-open $htmlPath
+                        } elseif (Get-Command open -ErrorAction SilentlyContinue) {
+                            & open $htmlPath
+                        }
+                        Write-GuiLog "HTMLファイルを開きました (Linux/macOS): $htmlPath" "SUCCESS"
+                    }
+                }
+            } catch {
+                Write-GuiLog "HTMLファイルの表示に失敗: $($_.Exception.Message)" "WARNING"
+                Write-GuiErrorLog "HTMLファイル表示エラー: $($_.Exception.Message)" "ERROR"
+            }
+            
+            # CSVファイルも開く（オプション）
+            try {
+                if (Test-Path $csvPath -and $config.GUI.AlsoOpenCSV -eq $true) {
+                    if ($IsWindows -or $env:OS -like "*Windows*") {
+                        Start-Process $csvPath -ErrorAction Stop
+                        Write-GuiLog "CSVファイルを開きました: $csvPath" "SUCCESS"
+                    }
+                }
+            } catch {
+                Write-GuiLog "CSVファイルの表示に失敗: $($_.Exception.Message)" "WARNING"
+            }
+        }
+        
+        # ポップアップ通知の代わりにプロンプトタブに表示
+        if ($showPopupNotifications -eq $true) {
+            Write-GuiLog "レポートが正常に生成されました: HTML=$htmlPath, CSV=$csvPath" "SUCCESS"
+            if ($Script:PromptOutputTextBox -ne $null) {
+                $Script:PromptOutputTextBox.AppendText("🎉 レポート生成完了`r`n")
+                $Script:PromptOutputTextBox.AppendText("📄 HTML: $htmlPath`r`n")
+                $Script:PromptOutputTextBox.AppendText("📊 CSV: $csvPath`r`n`r`n")
+                $Script:PromptOutputTextBox.ScrollToCaret()
+            }
+        }
+        
+        Write-GuiLog "ファイル出力処理完了: HTML=$htmlPath, CSV=$csvPath" "SUCCESS"
+        
+        return @{
+            CSVPath = $csvPath
+            HTMLPath = $htmlPath
+            Success = $true
+        }
+        
+    } catch {
+        $errorMsg = "ファイル出力エラー: $($_.Exception.Message)"
+        Write-GuiLog $errorMsg "ERROR"
+        Write-GuiErrorLog $errorMsg "ERROR"
+        
+        return @{
+            CSVPath = $null
+            HTMLPath = $null
+            Success = $false
+            Error = $_.Exception.Message
+        }
+    }
+}
+
+# アプリケーション設定取得関数
+function Get-AppSettings {
+    try {
+        $configPath = Join-Path $Script:ToolRoot "Config\appsettings.json"
+        if (Test-Path $configPath) {
+            $configContent = Get-Content $configPath -Raw -Encoding UTF8
+            $config = $configContent | ConvertFrom-Json
+            return $config
+        } else {
+            # デフォルト設定を返す
+            return @{
+                GUI = @{
+                    AutoOpenFiles = $true
+                    ShowPopupNotifications = $true
+                    AlsoOpenCSV = $false
+                }
+            }
+        }
+    } catch {
+        Write-GuiLog "設定ファイル読み込みエラー、デフォルト設定を使用: $($_.Exception.Message)" "WARNING"
+        return @{
+            GUI = @{
+                AutoOpenFiles = $true
+                ShowPopupNotifications = $true
+                AlsoOpenCSV = $false
+            }
+        }
+    }
+}
+
+# フォールバック用HTML生成関数
+function Generate-BasicHTMLReport {
+    param(
+        [object[]]$Data,
+        [string]$ReportTitle
+    )
+    
+    if (-not $Data -or $Data.Count -eq 0) {
+        return Generate-FallbackHTML -Data @() -ReportTitle $ReportTitle
+    }
+    
+    $properties = $Data[0].PSObject.Properties.Name
+    $timestamp = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
+    
+    $html = @"
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$ReportTitle</title>
+    <style>
+        body { font-family: 'Yu Gothic UI', 'Hiragino Kaku Gothic ProN', sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .title { color: #0078d4; font-size: 24px; font-weight: bold; }
+        .timestamp { color: #666; font-size: 14px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .summary { background-color: #e3f2fd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">📊 $ReportTitle</div>
+        <div class="timestamp">生成日時: $timestamp</div>
+    </div>
+    
+    <div class="summary">
+        <strong>📈 データサマリー</strong><br>
+        総件数: $($Data.Count) 件<br>
+        データソース: Microsoft 365 統合管理ツール
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+"@
+    
+    foreach ($prop in $properties) {
+        $html += "                <th>$prop</th>`n"
+    }
+    
+    $html += @"
+            </tr>
+        </thead>
+        <tbody>
+"@
+    
+    foreach ($item in $Data) {
+        $html += "            <tr>`n"
+        foreach ($prop in $properties) {
+            $value = $item.$prop ?? "N/A"
+            $html += "                <td>$value</td>`n"
+        }
+        $html += "            </tr>`n"
+    }
+    
+    $html += @"
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+        🚀 Microsoft 365統合管理ツール により生成
+    </div>
+</body>
+</html>
+"@
+    
+    return $html
+}
+
+function Generate-FallbackHTML {
+    param(
+        [object[]]$Data,
+        [string]$ReportTitle
+    )
+    
+    $timestamp = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
+    $dataCount = if ($Data) { $Data.Count } else { 0 }
+    
+    return @"
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$ReportTitle - フォールバック</title>
+    <style>
+        body { font-family: 'Yu Gothic UI', sans-serif; margin: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px; }
+        .title { color: #0078d4; font-size: 24px; margin-bottom: 20px; }
+        .message { color: #666; font-size: 16px; line-height: 1.6; }
+        .info { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">📊 $ReportTitle</div>
+        <div class="info">
+            <strong>⚠️ レポート生成完了</strong><br>
+            データ件数: $dataCount 件<br>
+            生成日時: $timestamp<br><br>
+            CSVファイルで詳細データをご確認ください。
+        </div>
+        <div class="message">
+            このレポートは基本モードで生成されました。<br>
+            詳細な分析結果は同時に生成されたCSVファイルをご確認ください。
+        </div>
+    </div>
+</body>
+</html>
+"@
+}
+
+# PowerShellコマンド実行関数
+function Invoke-PowerShellCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+        
+        [Parameter()]
+        [System.Windows.Forms.TextBox]$OutputTextBox
+    )
+    
+    try {
+        Write-GuiLog "PowerShellコマンド実行開始: $Command" "INFO"
+        
+        # 出力先の決定
+        $targetTextBox = if ($OutputTextBox) { $OutputTextBox } else { $Script:LogTextBox }
+        
+        if ($targetTextBox) {
+            # プロンプト形式で入力コマンドを表示
+            $promptEntry = "PS C:\> $Command`r`n"
+            if ($targetTextBox.InvokeRequired) {
+                $targetTextBox.Invoke([Action]{
+                    $targetTextBox.AppendText($promptEntry)
+                    $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                    $targetTextBox.ScrollToCaret()
+                })
+            } else {
+                $targetTextBox.AppendText($promptEntry)
+                $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                $targetTextBox.ScrollToCaret()
+            }
+        }
+        
+        # PowerShellコマンドを実行
+        $output = ""
+        $errorOutput = ""
+        
+        try {
+            # コマンドを実行して結果を取得
+            $result = Invoke-Expression $Command 2>&1
+            
+            if ($result) {
+                foreach ($item in $result) {
+                    if ($item -is [System.Management.Automation.ErrorRecord]) {
+                        $errorOutput += "$item`r`n"
+                    } else {
+                        $output += "$item`r`n"
+                    }
+                }
+            }
+        } catch {
+            $errorOutput = "実行エラー: $($_.Exception.Message)`r`n"
+        }
+        
+        # 結果をテキストボックスに表示
+        if ($targetTextBox) {
+            $resultText = ""
+            if ($output) {
+                $resultText += $output
+            }
+            if ($errorOutput) {
+                $resultText += "エラー: $errorOutput"
+                Write-GuiErrorLog "PowerShellコマンドエラー: $errorOutput" "ERROR"
+            }
+            if (-not $output -and -not $errorOutput) {
+                $resultText = "(出力なし)`r`n"
+            }
+            
+            # 結果を表示
+            if ($targetTextBox.InvokeRequired) {
+                $targetTextBox.Invoke([Action]{
+                    $targetTextBox.AppendText($resultText)
+                    $targetTextBox.AppendText("`r`n")
+                    $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                    $targetTextBox.ScrollToCaret()
+                })
+            } else {
+                $targetTextBox.AppendText($resultText)
+                $targetTextBox.AppendText("`r`n")
+                $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                $targetTextBox.ScrollToCaret()
+            }
+        }
+        
+        # コマンド履歴に追加
+        if ($Command.Trim() -ne "" -and $Script:CommandHistory -notcontains $Command) {
+            $Script:CommandHistory += $Command
+            # 履歴の上限を50に設定
+            if ($Script:CommandHistory.Count -gt 50) {
+                $Script:CommandHistory = $Script:CommandHistory[-50..-1]
+            }
+        }
+        $Script:HistoryIndex = -1
+        
+        Write-GuiLog "PowerShellコマンド実行完了: $Command" "SUCCESS"
+        
+    } catch {
+        $errorMsg = "PowerShellコマンド実行エラー: $($_.Exception.Message)"
+        Write-GuiLog $errorMsg "ERROR"
+        Write-GuiErrorLog $errorMsg "ERROR"
+        
+        if ($targetTextBox) {
+            $errorText = "実行エラー: $($_.Exception.Message)`r`n`r`n"
+            if ($targetTextBox.InvokeRequired) {
+                $targetTextBox.Invoke([Action]{
+                    $targetTextBox.AppendText($errorText)
+                    $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                    $targetTextBox.ScrollToCaret()
+                })
+            } else {
+                $targetTextBox.AppendText($errorText)
+                $targetTextBox.SelectionStart = $targetTextBox.Text.Length
+                $targetTextBox.ScrollToCaret()
+            }
+        }
+    }
+}
+
+# コマンド履歴ナビゲーション関数
+function Get-CommandFromHistory {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Previous", "Next")]
+        [string]$Direction
+    )
+    
+    if ($Script:CommandHistory.Count -eq 0) {
+        return ""
+    }
+    
+    if ($Direction -eq "Previous") {
+        if ($Script:HistoryIndex -eq -1) {
+            $Script:HistoryIndex = $Script:CommandHistory.Count - 1
+        } elseif ($Script:HistoryIndex -gt 0) {
+            $Script:HistoryIndex--
+        }
+    } else {  # Next
+        if ($Script:HistoryIndex -ne -1 -and $Script:HistoryIndex -lt ($Script:CommandHistory.Count - 1)) {
+            $Script:HistoryIndex++
+        } else {
+            $Script:HistoryIndex = -1
+            return ""
+        }
+    }
+    
+    if ($Script:HistoryIndex -ge 0 -and $Script:HistoryIndex -lt $Script:CommandHistory.Count) {
+        return $Script:CommandHistory[$Script:HistoryIndex]
+    }
+    
+    return ""
+}
 
 # Generate-HTMLReport関数は削除し、HTMLTemplateEngine.psm1のGenerate-EnhancedHTMLReportを使用
 
@@ -274,25 +1178,53 @@ function New-MainForm {
     [OutputType([System.Windows.Forms.Form])]
     param()
     
-    # メインフォーム作成（PowerShell 7.x 対応・出力制御版）
+    Write-EarlyLog "メインフォーム作成開始"
+    # メインフォーム作成（移動可能・リサイズ対応版）
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "🚀 Microsoft 365統合管理ツール - 完全版"
-    $form.Size = New-Object System.Drawing.Size(1200, 800)
+    # 改善されたフォーム設定（ユーザビリティ向上）
+    $form.Text = "🚀 Microsoft 365統合管理ツール - 完全版 v2.0"
+    $form.Size = New-Object System.Drawing.Size(1450, 950)  # サイズを少し大きくして操作性向上
+    $form.MinimumSize = New-Object System.Drawing.Size(1200, 800)  # 最小サイズ制限
     $form.StartPosition = "CenterScreen"
-    $form.FormBorderStyle = "FixedDialog"
+    $form.FormBorderStyle = "Sizable"
     $form.MaximizeBox = $true
     $form.MinimizeBox = $true
-    $form.BackColor = [System.Drawing.Color]::FromArgb(245, 247, 250)
+    $form.BackColor = [System.Drawing.Color]::FromArgb(248, 249, 250)  # より明るい背景色
+    $form.WindowState = "Normal"
+    $form.KeyPreview = $true  # キーボードショートカット有効化
     
-    # メインタイトル
+    # アイコン設定（利用可能な場合）
+    try {
+        # Microsoftのテーマカラーを使用
+        $form.Icon = [System.Drawing.SystemIcons]::Information
+    } catch {
+        # アイコン設定失敗時は無視
+    }
+    
+    # 改善されたメインタイトル（グラデーション背景付き）
+    $titlePanel = New-Object System.Windows.Forms.Panel
+    $titlePanel.Size = New-Object System.Drawing.Size(1420, 50)
+    $titlePanel.Location = New-Object System.Drawing.Point(10, 5)
+    $titlePanel.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+    $form.Controls.Add($titlePanel)
+    
     $titleLabel = New-Object System.Windows.Forms.Label
-    $titleLabel.Text = "🏢 Microsoft 365統合管理ツール - 完全版"
-    $titleLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 18, [System.Drawing.FontStyle]::Bold)
-    $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
-    $titleLabel.Location = New-Object System.Drawing.Point(20, 10)
-    $titleLabel.Size = New-Object System.Drawing.Size(1000, 40)
+    $titleLabel.Text = "🏢 Microsoft 365統合管理ツール - 完全版 v2.0"
+    $titleLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 16, [System.Drawing.FontStyle]::Bold)
+    $titleLabel.ForeColor = [System.Drawing.Color]::White
+    $titleLabel.Location = New-Object System.Drawing.Point(0, 0)
+    $titleLabel.Size = New-Object System.Drawing.Size(1420, 50)
     $titleLabel.TextAlign = "MiddleCenter"
-    $form.Controls.Add($titleLabel)
+    $titlePanel.Controls.Add($titleLabel)
+    
+    # バージョン情報ラベル
+    $versionLabel = New-Object System.Windows.Forms.Label
+    $versionLabel.Text = "PowerShell $($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor) | $(Get-Date -Format 'yyyy-MM-dd')"
+    $versionLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 8)
+    $versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+    $versionLabel.Location = New-Object System.Drawing.Point(1200, 30)
+    $versionLabel.Size = New-Object System.Drawing.Size(200, 15)
+    $titlePanel.Controls.Add($versionLabel)
     
     # 接続状態表示
     $connectionLabel = New-Object System.Windows.Forms.Label
@@ -310,11 +1242,11 @@ function New-MainForm {
             $connectionLabel.Text = "✅ Microsoft 365 認証済み - リアルデータを取得します"
             $connectionLabel.ForeColor = [System.Drawing.Color]::Green
         } else {
-            $connectionLabel.Text = "⚠️ Microsoft 365 未認証 - ダミーデータを使用します"
+            $connectionLabel.Text = "⚠️ Microsoft 365 未認証 - 認証が必要です"
             $connectionLabel.ForeColor = [System.Drawing.Color]::Orange
         }
     } catch {
-        $connectionLabel.Text = "❌ Microsoft 365 接続確認エラー - ダミーデータを使用します"
+        $connectionLabel.Text = "❌ Microsoft 365 接続確認エラーが発生しました"
         $connectionLabel.ForeColor = [System.Drawing.Color]::Red
         $Script:M365Connected = $false
     }
@@ -333,47 +1265,104 @@ function New-MainForm {
     # スクリプトブロック内での変数スコープ問題を解決するため、ローカル変数を作成
     $btnConnect = $connectButton
     $lblConnection = $connectionLabel
+    # プロンプトタブ参照は実行時に取得（遅延参照）
     
     $connectButton.Add_Click({
         try {
             $btnConnect.Text = "🔄 接続中..."
             $btnConnect.Enabled = $false
             
+            # プロンプトタブに認証ログを表示（実行時参照）
+            $promptOutputRef = $Script:PromptOutputTextBox
+            if ($promptOutputRef -ne $null) {
+                $promptOutputRef.AppendText("PS C:\> Connect-M365Services`r`n")
+                $promptOutputRef.AppendText("🔑 Microsoft 365 サービスに接続中...`r`n")
+                $promptOutputRef.AppendText("🔍 DEBUG: プロンプトタブ初期化完了`r`n")
+                $promptOutputRef.SelectionStart = $promptOutputRef.Text.Length
+                $promptOutputRef.ScrollToCaret()
+                Write-Host "✅ DEBUG: プロンプトタブ参照成功" -ForegroundColor Green
+            } else {
+                Write-Host "❌ DEBUG: 実行時promptOutputRef が null です" -ForegroundColor Red
+            }
+            
             # 関数の存在確認とモジュールの再読み込み
             if (-not (Get-Command Connect-M365Services -ErrorAction SilentlyContinue)) {
                 $modulePath = Join-Path $PSScriptRoot "..\Scripts\Common"
                 Import-Module "$modulePath\RealM365DataProvider.psm1" -Force -DisableNameChecking -Global
+                if ($promptOutputRef -ne $null) {
+                    $promptOutputRef.AppendText("認証モジュールを再読み込みしました`r`n")
+                    $promptOutputRef.ScrollToCaret()
+                }
             }
             
+            if ($promptOutputRef -ne $null) {
+                $promptOutputRef.AppendText("🔑 Microsoft Graph に非対話型で接続中...`r`n")
+                $promptOutputRef.AppendText("ℹ️ .envファイルから認証情報を読み込み中...`r`n")
+                $promptOutputRef.ScrollToCaret()
+            }
+            
+            # 認証実行
             $authResult = Connect-M365Services
+            
+            # 接続結果の処理
             if ($authResult.GraphConnected) {
                 $lblConnection.Text = "✅ Microsoft 365 接続成功 - リアルデータを取得します"
                 $lblConnection.ForeColor = [System.Drawing.Color]::Green
                 $Script:M365Connected = $true
-                [System.Windows.Forms.MessageBox]::Show("Microsoft 365 への接続に成功しました。", "接続成功", "OK", "Information")
+                
+                if ($promptOutputRef -ne $null) {
+                    $promptOutputRef.AppendText("`r`n✅ Microsoft 365への接続に成功しました`r`n")
+                    $promptOutputRef.AppendText("認証完了 - 全ての機能が利用可能です`r`n`r`n")
+                    $promptOutputRef.ScrollToCaret()
+                }
+                
+                # ポップアップの代わりにプロンプトタブに成功メッセージを表示
             } else {
-                $lblConnection.Text = "❌ Microsoft 365 接続失敗 - ダミーデータを使用します"
+                $lblConnection.Text = "❌ Microsoft 365 接続失敗"
                 $lblConnection.ForeColor = [System.Drawing.Color]::Red
                 $Script:M365Connected = $false
-                [System.Windows.Forms.MessageBox]::Show("Microsoft 365 への接続に失敗しました。", "接続失敗", "OK", "Warning")
+                
+                if ($promptOutputRef -ne $null) {
+                    $promptOutputRef.AppendText("`r`n❌ Microsoft 365への接続に失敗しました`r`n")
+                    $promptOutputRef.AppendText("認証エラー: 認証情報を確認してください`r`n`r`n")
+                    $promptOutputRef.ScrollToCaret()
+                }
+                
+                # ポップアップの代わりにエラーログタブとプロンプトタブに表示
+                try { Write-GuiErrorLog "Microsoft 365接続失敗: 認証エラーまたはネットワークエラー" "ERROR" } catch { }
             }
         } catch {
-            $lblConnection.Text = "❌ Microsoft 365 接続エラー - ダミーデータを使用します"
+            $lblConnection.Text = "❌ Microsoft 365 接続エラーが発生しました"
             $lblConnection.ForeColor = [System.Drawing.Color]::Red
             $Script:M365Connected = $false
-            [System.Windows.Forms.MessageBox]::Show("接続エラー: $($_.Exception.Message)", "エラー", "OK", "Error")
+            
+            if ($promptOutputRef -ne $null) {
+                $promptOutputRef.AppendText("`r`n❌ 接続エラーが発生しました`r`n")
+                $promptOutputRef.AppendText("エラー詳細: $($_.Exception.Message)`r`n`r`n")
+                $promptOutputRef.ScrollToCaret()
+            }
+            
+            # ポップアップの代わりにエラーログタブとプロンプトタブに表示
+            try { Write-GuiErrorLog "接続エラー詳細: $($_.Exception.Message)" "CRITICAL" } catch { }
+            try { Write-GuiErrorLog "エラータイプ: $($_.Exception.GetType().Name)" "ERROR" } catch { }
         } finally {
             $btnConnect.Text = "🔑 Microsoft 365 に接続（非対話型）"
             $btnConnect.Enabled = $true
+            
+            if ($promptOutputRef -ne $null) {
+                $promptOutputRef.AppendText("接続処理が完了しました`r`n`r`n")
+                $promptOutputRef.ScrollToCaret()
+            }
         }
     }.GetNewClosure())
     $form.Controls.Add($connectButton)
     
-    # タブコントロール作成
+    # タブコントロール作成（上半分）
     $tabControl = New-Object System.Windows.Forms.TabControl
     $tabControl.Location = New-Object System.Drawing.Point(20, 130)
-    $tabControl.Size = New-Object System.Drawing.Size(1150, 600)
+    $tabControl.Size = New-Object System.Drawing.Size(1350, 370)  # 高さを370に調整
     $tabControl.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10)
+    $tabControl.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     
     # 1. 定期レポートタブ
     $regularTab = New-Object System.Windows.Forms.TabPage
@@ -419,26 +1408,366 @@ function New-MainForm {
     
     $form.Controls.Add($tabControl)
     
+    # 詳細ログエリア（タブ形式、下半分）+ プロンプト機能
+    $logTabControl = New-Object System.Windows.Forms.TabControl
+    $logTabControl.Location = New-Object System.Drawing.Point(20, 510)  # Y位置を510に調整
+    $logTabControl.Size = New-Object System.Drawing.Size(1350, 370)     # 高さを370に調整
+    $logTabControl.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9)
+    $logTabControl.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    
+    # 実行ログタブ
+    $executionLogTab = New-Object System.Windows.Forms.TabPage
+    $executionLogTab.Text = "📋 詳細実行ログ + プロンプト"
+    $executionLogTab.BackColor = [System.Drawing.Color]::White
+    
+    # エラーログタブ
+    $errorLogTab = New-Object System.Windows.Forms.TabPage
+    $errorLogTab.Text = "❌ 詳細エラーログ"
+    $errorLogTab.BackColor = [System.Drawing.Color]::White
+    
+    # PowerShellプロンプトタブ
+    $promptTab = New-Object System.Windows.Forms.TabPage
+    $promptTab.Text = "💻 PowerShellプロンプト"
+    $promptTab.BackColor = [System.Drawing.Color]::White
+    
+    # 実行ログリッチテキストボックス（カラーコーディング対応）
+    $Script:LogTextBox = New-Object System.Windows.Forms.RichTextBox
+    $Script:LogTextBox.Multiline = $true
+    $Script:LogTextBox.ScrollBars = "Vertical"
+    $Script:LogTextBox.Location = New-Object System.Drawing.Point(5, 5)
+    $Script:LogTextBox.Size = New-Object System.Drawing.Size(1300, 250)  # 高さを250に調整（プロンプト分を確保）
+    $Script:LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+    $Script:LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $Script:LogTextBox.ForeColor = [System.Drawing.Color]::LimeGreen
+    $Script:LogTextBox.ReadOnly = $false  # コピー可能に設定
+    $Script:LogTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $Script:LogTextBox.DetectUrls = $false  # URL検出を無効化（パフォーマンス向上）
+    
+    # プロンプト入力ラベル
+    $promptLabel = New-Object System.Windows.Forms.Label
+    $promptLabel.Text = "💻 PowerShell コマンド入力:"
+    $promptLabel.Location = New-Object System.Drawing.Point(5, 265)
+    $promptLabel.Size = New-Object System.Drawing.Size(200, 20)
+    $promptLabel.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9, [System.Drawing.FontStyle]::Bold)
+    $promptLabel.ForeColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
+    $promptLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
+    
+    # プロンプト入力テキストボックス
+    $Script:PromptTextBox = New-Object System.Windows.Forms.TextBox
+    $Script:PromptTextBox.Location = New-Object System.Drawing.Point(5, 290)
+    $Script:PromptTextBox.Size = New-Object System.Drawing.Size(1100, 25)
+    $Script:PromptTextBox.Font = New-Object System.Drawing.Font("Consolas", 10)
+    $Script:PromptTextBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $Script:PromptTextBox.ForeColor = [System.Drawing.Color]::White
+    $Script:PromptTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    
+    # Enterキーでコマンド実行、上下キーで履歴ナビゲーション
+    $Script:PromptTextBox.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $command = $sender.Text.Trim()
+            if ($command -ne "") {
+                Invoke-PowerShellCommand -Command $command -OutputTextBox $Script:LogTextBox
+                $sender.Clear()
+            }
+            $e.Handled = $true
+        } elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Up) {
+            $historyCommand = Get-CommandFromHistory -Direction "Previous"
+            if ($historyCommand -ne "") {
+                $sender.Text = $historyCommand
+                $sender.SelectionStart = $sender.Text.Length
+            }
+            $e.Handled = $true
+        } elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Down) {
+            $historyCommand = Get-CommandFromHistory -Direction "Next"
+            $sender.Text = $historyCommand
+            $sender.SelectionStart = $sender.Text.Length
+            $e.Handled = $true
+        }
+    })
+    
+    # プロンプト実行ボタン
+    $promptExecuteButton = New-Object System.Windows.Forms.Button
+    $promptExecuteButton.Text = "▶️ 実行"
+    $promptExecuteButton.Location = New-Object System.Drawing.Point(1115, 290)
+    $promptExecuteButton.Size = New-Object System.Drawing.Size(80, 25)
+    $promptExecuteButton.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9, [System.Drawing.FontStyle]::Bold)
+    $promptExecuteButton.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
+    $promptExecuteButton.ForeColor = [System.Drawing.Color]::White
+    $promptExecuteButton.FlatStyle = "Flat"
+    $promptExecuteButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+    $promptExecuteButton.Add_Click({
+        $command = $Script:PromptTextBox.Text.Trim()
+        if ($command -ne "") {
+            Invoke-PowerShellCommand -Command $command -OutputTextBox $Script:LogTextBox
+            $Script:PromptTextBox.Clear()
+        }
+    })
+    
+    # 実行ログクリアボタン（位置調整）
+    $clearExecutionLogButton = New-Object System.Windows.Forms.Button
+    $clearExecutionLogButton.Text = "🗑️ ログクリア"
+    $clearExecutionLogButton.Location = New-Object System.Drawing.Point(1205, 290)
+    $clearExecutionLogButton.Size = New-Object System.Drawing.Size(100, 25)
+    $clearExecutionLogButton.Font = New-Object System.Drawing.Font("Yu Gothic UI", 8)
+    $clearExecutionLogButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+    $clearExecutionLogButton.Add_Click({
+        $Script:LogTextBox.Clear()
+        try { Write-GuiLog "実行ログがクリアされました。" "INFO" } catch { }
+    })
+    
+    # エラーログテキストボックス
+    $Script:ErrorLogTextBox = New-Object System.Windows.Forms.TextBox
+    $Script:ErrorLogTextBox.Multiline = $true
+    $Script:ErrorLogTextBox.ScrollBars = "Vertical"
+    $Script:ErrorLogTextBox.Location = New-Object System.Drawing.Point(5, 5)
+    $Script:ErrorLogTextBox.Size = New-Object System.Drawing.Size(1300, 310)  # 高さを310に調整
+    $Script:ErrorLogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+    $Script:ErrorLogTextBox.BackColor = [System.Drawing.Color]::FromArgb(50, 20, 20)
+    $Script:ErrorLogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(255, 100, 100)
+    $Script:ErrorLogTextBox.ReadOnly = $false  # コピー可能に設定
+    $Script:ErrorLogTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    
+    # エラーログクリアボタン
+    $clearErrorLogButton = New-Object System.Windows.Forms.Button
+    $clearErrorLogButton.Text = "🗑️ エラーログクリア"
+    $clearErrorLogButton.Location = New-Object System.Drawing.Point(1180, 320)
+    $clearErrorLogButton.Size = New-Object System.Drawing.Size(120, 25)
+    $clearErrorLogButton.Font = New-Object System.Drawing.Font("Yu Gothic UI", 8)
+    $clearErrorLogButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+    $clearErrorLogButton.Add_Click({
+        $Script:ErrorLogTextBox.Clear()
+        try { Write-GuiErrorLog "エラーログがクリアされました。" "INFO" } catch { }
+    })
+    
+    # PowerShellプロンプト専用エリア
+    $Script:PromptOutputTextBox = New-Object System.Windows.Forms.TextBox
+    # モジュールからもアクセスできるようにグローバル変数として設定
+    $Global:PromptOutputTextBox = $Script:PromptOutputTextBox
+    $Script:PromptOutputTextBox.Multiline = $true
+    $Script:PromptOutputTextBox.ScrollBars = "Vertical"
+    $Script:PromptOutputTextBox.Location = New-Object System.Drawing.Point(5, 5)
+    $Script:PromptOutputTextBox.Size = New-Object System.Drawing.Size(1300, 250)
+    $Script:PromptOutputTextBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+    $Script:PromptOutputTextBox.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 50)
+    $Script:PromptOutputTextBox.ForeColor = [System.Drawing.Color]::Cyan
+    $Script:PromptOutputTextBox.ReadOnly = $false
+    $Script:PromptOutputTextBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    
+    # プロンプト専用入力エリア
+    $promptLabel2 = New-Object System.Windows.Forms.Label
+    $promptLabel2.Text = "💻 PowerShell コマンド:"
+    $promptLabel2.Location = New-Object System.Drawing.Point(5, 265)
+    $promptLabel2.Size = New-Object System.Drawing.Size(200, 20)
+    $promptLabel2.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9, [System.Drawing.FontStyle]::Bold)
+    $promptLabel2.ForeColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
+    $promptLabel2.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
+    
+    $Script:PromptTextBox2 = New-Object System.Windows.Forms.TextBox
+    $Script:PromptTextBox2.Location = New-Object System.Drawing.Point(5, 290)
+    $Script:PromptTextBox2.Size = New-Object System.Drawing.Size(1050, 25)
+    $Script:PromptTextBox2.Font = New-Object System.Drawing.Font("Consolas", 10)
+    $Script:PromptTextBox2.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $Script:PromptTextBox2.ForeColor = [System.Drawing.Color]::White
+    $Script:PromptTextBox2.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    
+    # Enterキーでコマンド実行、上下キーで履歴ナビゲーション（プロンプト専用タブ）
+    $Script:PromptTextBox2.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $command = $sender.Text.Trim()
+            if ($command -ne "") {
+                Invoke-PowerShellCommand -Command $command -OutputTextBox $Script:PromptOutputTextBox
+                $sender.Clear()
+            }
+            $e.Handled = $true
+        } elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Up) {
+            $historyCommand = Get-CommandFromHistory -Direction "Previous"
+            if ($historyCommand -ne "") {
+                $sender.Text = $historyCommand
+                $sender.SelectionStart = $sender.Text.Length
+            }
+            $e.Handled = $true
+        } elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Down) {
+            $historyCommand = Get-CommandFromHistory -Direction "Next"
+            $sender.Text = $historyCommand
+            $sender.SelectionStart = $sender.Text.Length
+            $e.Handled = $true
+        }
+    })
+    
+    $promptExecuteButton2 = New-Object System.Windows.Forms.Button
+    $promptExecuteButton2.Text = "▶️ 実行"
+    $promptExecuteButton2.Location = New-Object System.Drawing.Point(1065, 290)
+    $promptExecuteButton2.Size = New-Object System.Drawing.Size(80, 25)
+    $promptExecuteButton2.Font = New-Object System.Drawing.Font("Yu Gothic UI", 9, [System.Drawing.FontStyle]::Bold)
+    $promptExecuteButton2.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
+    $promptExecuteButton2.ForeColor = [System.Drawing.Color]::White
+    $promptExecuteButton2.FlatStyle = "Flat"
+    $promptExecuteButton2.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+    $promptExecuteButton2.Add_Click({
+        $command = $Script:PromptTextBox2.Text.Trim()
+        if ($command -ne "") {
+            Invoke-PowerShellCommand -Command $command -OutputTextBox $Script:PromptOutputTextBox
+            $Script:PromptTextBox2.Clear()
+        }
+    })
+    
+    $clearPromptButton = New-Object System.Windows.Forms.Button
+    $clearPromptButton.Text = "🗑️ プロンプトクリア"
+    $clearPromptButton.Location = New-Object System.Drawing.Point(1155, 290)
+    $clearPromptButton.Size = New-Object System.Drawing.Size(140, 25)
+    $clearPromptButton.Font = New-Object System.Drawing.Font("Yu Gothic UI", 8)
+    $clearPromptButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+    $clearPromptButton.Add_Click({
+        $Script:PromptOutputTextBox.Clear()
+        try { Write-GuiLog "プロンプト出力がクリアされました。" "INFO" } catch { }
+    })
+    
+    # タブにコントロールを追加
+    $executionLogTab.Controls.Add($Script:LogTextBox)
+    $executionLogTab.Controls.Add($promptLabel)
+    $executionLogTab.Controls.Add($Script:PromptTextBox)
+    $executionLogTab.Controls.Add($promptExecuteButton)
+    $executionLogTab.Controls.Add($clearExecutionLogButton)
+    
+    $errorLogTab.Controls.Add($Script:ErrorLogTextBox)
+    $errorLogTab.Controls.Add($clearErrorLogButton)
+    
+    $promptTab.Controls.Add($Script:PromptOutputTextBox)
+    $promptTab.Controls.Add($promptLabel2)
+    $promptTab.Controls.Add($Script:PromptTextBox2)
+    $promptTab.Controls.Add($promptExecuteButton2)
+    $promptTab.Controls.Add($clearPromptButton)
+    
+    # タブをタブコントロールに追加
+    $logTabControl.TabPages.Add($executionLogTab)
+    $logTabControl.TabPages.Add($errorLogTab)
+    $logTabControl.TabPages.Add($promptTab)
+    $form.Controls.Add($logTabControl)
+    
     # ステータスバー
     $statusStrip = New-Object System.Windows.Forms.StatusStrip
     $statusLabel = New-Object System.Windows.Forms.ToolStripStatusLabel
     $statusLabel.Text = "準備完了 - Microsoft 365統合管理ツール"
+    $statusLabel.Spring = $true  # 残りのスペースを使用
+    $statusLabel.TextAlign = "MiddleLeft"
+    
+    # プログレスバーの追加
+    $Script:ProgressBar = New-Object System.Windows.Forms.ToolStripProgressBar
+    $Script:ProgressBar.Size = New-Object System.Drawing.Size(200, 18)
+    $Script:ProgressBar.Style = "Continuous"
+    $Script:ProgressBar.Visible = $false
+    
+    # プログレスラベルの追加
+    $Script:ProgressLabel = New-Object System.Windows.Forms.ToolStripStatusLabel
+    $Script:ProgressLabel.Text = ""
+    $Script:ProgressLabel.Width = 150
+    $Script:ProgressLabel.Visible = $false
+    
     $statusStrip.Items.Add($statusLabel)
+    $statusStrip.Items.Add($Script:ProgressBar)
+    $statusStrip.Items.Add($Script:ProgressLabel)
     $form.Controls.Add($statusStrip)
     
+    # キーボードショートカット機能を追加（ユーザビリティ向上）
+    $form.Add_KeyDown({
+        param($sender, $e)
+        # Ctrl+R: リアルタイムログクリア
+        if ($e.Control -and $e.KeyCode -eq "R") {
+            try {
+                if ($Script:LogTextBox -ne $null) {
+                    $Script:LogTextBox.Clear()
+                    Write-GuiLog "リアルタイムログをクリアしました (Ctrl+R)" "INFO"
+                }
+            } catch { }
+            $e.Handled = $true
+        }
+        # Ctrl+T: タブ切り替え
+        elseif ($e.Control -and $e.KeyCode -eq "T") {
+            try {
+                $currentIndex = $tabControl.SelectedIndex
+                $nextIndex = ($currentIndex + 1) % $tabControl.TabCount
+                $tabControl.SelectedIndex = $nextIndex
+                Write-GuiLog "タブ切り替え: $($tabControl.SelectedTab.Text) (Ctrl+T)" "INFO"
+            } catch { }
+            $e.Handled = $true
+        }
+        # F5: リフレッシュ
+        elseif ($e.KeyCode -eq "F5") {
+            try {
+                Write-GuiLog "アプリケーションリフレッシュ (F5)" "INFO"
+                # 接続状態を再確認
+                if ($connectionLabel -ne $null) {
+                    try {
+                        if ($Script:M365Connected) {
+                            $connectionLabel.Text = "✅ Microsoft 365 認証済み - リアルデータを取得します"
+                            $connectionLabel.ForeColor = [System.Drawing.Color]::Green
+                        } else {
+                            $connectionLabel.Text = "⚠️ Microsoft 365 未認証 - 認証が必要です"
+                            $connectionLabel.ForeColor = [System.Drawing.Color]::Orange
+                        }
+                    } catch { }
+                }
+            } catch { }
+            $e.Handled = $true
+        }
+        # Ctrl+Q: アプリケーション終了
+        elseif ($e.Control -and $e.KeyCode -eq "Q") {
+            $form.Close()
+            $e.Handled = $true
+        }
+    })
+    
+    # 初期化完了メッセージをログに出力（遅延実行）
+    $form.Add_Shown({
+        try {
+            if ($Script:LogTextBox -ne $null) {
+                try { Write-GuiLog "Microsoft 365統合管理ツール完全版 v2.0 GUI 初期化完了" "SUCCESS" } catch { }
+                try { Write-GuiLog "リアルタイムログ機能が有効になりました" "INFO" } catch { }
+                try { Write-GuiLog "Windows Forms 初期化完了" "SUCCESS" } catch { }
+                try { Write-GuiLog "キーボードショートカット: Ctrl+R(ログクリア), Ctrl+T(タブ切り替え), F5(リフレッシュ), Ctrl+Q(終了)" "INFO" } catch { }
+            }
+        } catch {
+            Write-Host "ログ初期化エラー: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    })
+    
+    # アプリケーション終了時のクリーンアップ
+    $form.Add_FormClosing({
+        try {
+            Write-GuiLog "Microsoft 365管理ツールを終了します..." "INFO"
+            # メモリクリーンアップ
+            if ($Script:LogTextBox -ne $null) {
+                $Script:LogTextBox.Dispose()
+            }
+            if ($Script:ErrorLogTextBox -ne $null) {
+                $Script:ErrorLogTextBox.Dispose()
+            }
+            if ($Script:PromptOutputTextBox -ne $null) {
+                $Script:PromptOutputTextBox.Dispose()
+            }
+        } catch {
+            # エラーを無視して終了
+        }
+    })
+    
     # フォームオブジェクトのみを返す（配列にしない）
+    Write-EarlyLog "メインフォーム作成完了"
     return $form
 }
 
 function Add-RegularReportsButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 3列3行レイアウト（スペース効率向上）
     $buttons = @(
-        @{ Text = "📅 日次レポート"; Action = "DailyReport"; X = 20; Y = 20 },
-        @{ Text = "📊 週次レポート"; Action = "WeeklyReport"; X = 220; Y = 20 },
-        @{ Text = "📈 月次レポート"; Action = "MonthlyReport"; X = 420; Y = 20 },
-        @{ Text = "📆 年次レポート"; Action = "YearlyReport"; X = 620; Y = 20 },
-        @{ Text = "🧪 テスト実行"; Action = "TestExecution"; X = 820; Y = 20 }
+        @{ Text = "📅 日次レポート"; Action = "DailyReport"; X = 15; Y = 15 },
+        @{ Text = "📊 週次レポート"; Action = "WeeklyReport"; X = 215; Y = 15 },
+        @{ Text = "📈 月次レポート"; Action = "MonthlyReport"; X = 415; Y = 15 },
+        @{ Text = "📆 年次レポート"; Action = "YearlyReport"; X = 15; Y = 75 },
+        @{ Text = "🧪 テスト実行"; Action = "TestExecution"; X = 215; Y = 75 },
+        @{ Text = "📋 最新日次レポート表示"; Action = "ShowLatestDailyReport"; X = 415; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -450,12 +1779,13 @@ function Add-RegularReportsButtons {
 function Add-AnalyticsReportsButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 3列2行レイアウト（視覚バランス向上）
     $buttons = @(
-        @{ Text = "📊 ライセンス分析"; Action = "LicenseAnalysis"; X = 20; Y = 20 },
-        @{ Text = "📈 使用状況分析"; Action = "UsageAnalysis"; X = 220; Y = 20 },
-        @{ Text = "⚡ パフォーマンス分析"; Action = "PerformanceAnalysis"; X = 420; Y = 20 },
-        @{ Text = "🛡️ セキュリティ分析"; Action = "SecurityAnalysis"; X = 620; Y = 20 },
-        @{ Text = "🔍 権限監査"; Action = "PermissionAudit"; X = 820; Y = 20 }
+        @{ Text = "📊 ライセンス分析"; Action = "LicenseAnalysis"; X = 15; Y = 15 },
+        @{ Text = "📈 使用状況分析"; Action = "UsageAnalysis"; X = 215; Y = 15 },
+        @{ Text = "⚡ パフォーマンス分析"; Action = "PerformanceAnalysis"; X = 415; Y = 15 },
+        @{ Text = "🛡️ セキュリティ分析"; Action = "SecurityAnalysis"; X = 15; Y = 75 },
+        @{ Text = "🔍 権限監査"; Action = "PermissionAudit"; X = 215; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -467,11 +1797,12 @@ function Add-AnalyticsReportsButtons {
 function Add-EntraIDButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 2列2行レイアウト（中央寄せ配置）
     $buttons = @(
-        @{ Text = "👥 ユーザー一覧"; Action = "UserList"; X = 20; Y = 20 },
-        @{ Text = "🔐 MFA状況"; Action = "MFAStatus"; X = 220; Y = 20 },
-        @{ Text = "🛡️ 条件付きアクセス"; Action = "ConditionalAccess"; X = 420; Y = 20 },
-        @{ Text = "📝 サインインログ"; Action = "SignInLogs"; X = 620; Y = 20 }
+        @{ Text = "👥 ユーザー一覧"; Action = "UserList"; X = 50; Y = 15 },
+        @{ Text = "🔐 MFA状況"; Action = "MFAStatus"; X = 280; Y = 15 },
+        @{ Text = "🛡️ 条件付きアクセス"; Action = "ConditionalAccess"; X = 50; Y = 75 },
+        @{ Text = "📝 サインインログ"; Action = "SignInLogs"; X = 280; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -483,11 +1814,12 @@ function Add-EntraIDButtons {
 function Add-ExchangeButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 2列2行レイアウト（中央寄せ配置）
     $buttons = @(
-        @{ Text = "📧 メールボックス管理"; Action = "MailboxManagement"; X = 20; Y = 20 },
-        @{ Text = "🔄 メールフロー分析"; Action = "MailFlowAnalysis"; X = 220; Y = 20 },
-        @{ Text = "🛡️ スパム対策分析"; Action = "SpamProtectionAnalysis"; X = 420; Y = 20 },
-        @{ Text = "📬 配信分析"; Action = "MailDeliveryAnalysis"; X = 620; Y = 20 }
+        @{ Text = "📧 メールボックス管理"; Action = "MailboxManagement"; X = 50; Y = 15 },
+        @{ Text = "🔄 メールフロー分析"; Action = "MailFlowAnalysis"; X = 280; Y = 15 },
+        @{ Text = "🛡️ スパム対策分析"; Action = "SpamProtectionAnalysis"; X = 50; Y = 75 },
+        @{ Text = "📬 配信分析"; Action = "MailDeliveryAnalysis"; X = 280; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -499,11 +1831,12 @@ function Add-ExchangeButtons {
 function Add-TeamsButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 2列2行レイアウト（中央寄せ配置）
     $buttons = @(
-        @{ Text = "💬 Teams使用状況"; Action = "TeamsUsage"; X = 20; Y = 20 },
-        @{ Text = "⚙️ Teams設定分析"; Action = "TeamsSettingsAnalysis"; X = 220; Y = 20 },
-        @{ Text = "📹 会議品質分析"; Action = "MeetingQualityAnalysis"; X = 420; Y = 20 },
-        @{ Text = "📱 アプリ分析"; Action = "TeamsAppAnalysis"; X = 620; Y = 20 }
+        @{ Text = "💬 Teams使用状況"; Action = "TeamsUsage"; X = 50; Y = 15 },
+        @{ Text = "⚙️ Teams設定分析"; Action = "TeamsSettingsAnalysis"; X = 280; Y = 15 },
+        @{ Text = "📹 会議品質分析"; Action = "MeetingQualityAnalysis"; X = 50; Y = 75 },
+        @{ Text = "📱 アプリ分析"; Action = "TeamsAppAnalysis"; X = 280; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -515,11 +1848,12 @@ function Add-TeamsButtons {
 function Add-OneDriveButtons {
     param([System.Windows.Forms.TabPage]$TabPage)
     
+    # 最適化されたレスポンシブ配置: 2列2行レイアウト（中央寄せ配置）
     $buttons = @(
-        @{ Text = "💾 ストレージ分析"; Action = "StorageAnalysis"; X = 20; Y = 20 },
-        @{ Text = "🤝 共有分析"; Action = "SharingAnalysis"; X = 220; Y = 20 },
-        @{ Text = "🔄 同期エラー分析"; Action = "SyncErrorAnalysis"; X = 420; Y = 20 },
-        @{ Text = "🌐 外部共有分析"; Action = "ExternalSharingAnalysis"; X = 620; Y = 20 }
+        @{ Text = "💾 ストレージ分析"; Action = "StorageAnalysis"; X = 50; Y = 15 },
+        @{ Text = "🤝 共有分析"; Action = "SharingAnalysis"; X = 280; Y = 15 },
+        @{ Text = "🔄 同期エラー分析"; Action = "SyncErrorAnalysis"; X = 50; Y = 75 },
+        @{ Text = "🌐 外部共有分析"; Action = "ExternalSharingAnalysis"; X = 280; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -539,12 +1873,42 @@ function Create-ActionButton {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $Text
     $button.Location = New-Object System.Drawing.Point($X, $Y)
-    $button.Size = New-Object System.Drawing.Size(180, 50)
+    $button.Size = New-Object System.Drawing.Size(190, 50)  # 幅を10px拡張してテキストの読みやすさ向上
     $button.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10, [System.Drawing.FontStyle]::Bold)
-    $button.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)
+    # モダンなボタンスタイリング
+    $button.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)  # わずかに明るい青
     $button.ForeColor = [System.Drawing.Color]::White
     $button.FlatStyle = "Flat"
+    $button.FlatAppearance.BorderSize = 1
+    $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
     $button.Cursor = "Hand"
+    
+    # ホバー効果の追加
+    $originalColor = $button.BackColor
+    $hoverColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
+    $clickColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
+    
+    $button.Add_MouseEnter({
+        $this.BackColor = $hoverColor
+    })
+    
+    $button.Add_MouseLeave({
+        if ($this.Enabled) {
+            $this.BackColor = $originalColor
+        }
+    })
+    
+    $button.Add_MouseDown({
+        $this.BackColor = $clickColor
+    })
+    
+    $button.Add_MouseUp({
+        if ($this.ClientRectangle.Contains($this.PointToClient([System.Windows.Forms.Cursor]::Position))) {
+            $this.BackColor = $hoverColor
+        } else {
+            $this.BackColor = $originalColor
+        }
+    })
     
     # スコープ問題を解決するため、インライン処理を実装
     $btnRef = $button
@@ -558,24 +1922,193 @@ function Create-ActionButton {
             $originalText = $sender.Text
             $sender.Text = "🔄 処理中..."
             $sender.Enabled = $false
+            try { Write-GuiLog "レポート生成を開始: $originalText" "INFO" } catch { }
             
+            # プログレスバー表示
+            Set-GuiProgress -Value 0 -Status "データ取得中..."
+            
+            # 同期実行に変更（デバッグしやすくするため）
             try {
-                # ダミーデータを生成
-                $data = Get-ReportDataFromProvider -DataType "DailyReport"
-                $reportName = "$actionRefレポート"
+                # データを取得
+                Set-GuiProgress -Value 20 -Status "データ処理中..."
+                $data = switch ($actionRef) {
+                    # 定期レポート
+                    "DailyReport" { 
+                        try { Write-GuiLog "日次レポートデータ取得開始" "INFO" } catch { }
+                        Get-M365DailyReport
+                    }
+                    "WeeklyReport" { 
+                        try { Write-GuiLog "週次レポートデータ取得開始" "INFO" } catch { }
+                        Get-M365WeeklyReport
+                    }
+                    "MonthlyReport" { 
+                        try { Write-GuiLog "月次レポートデータ取得開始" "INFO" } catch { }
+                        Get-M365MonthlyReport
+                    }
+                    "YearlyReport" { 
+                        try { Write-GuiLog "年次レポートデータ取得開始" "INFO" } catch { }
+                        Get-M365YearlyReport
+                    }
+                    "TestExecution" { 
+                        try { Write-GuiLog "テスト実行開始" "INFO" } catch { }
+                        Get-M365TestExecution
+                    }
+                    "ShowLatestDailyReport" { 
+                        try { Write-GuiLog "最新日次レポート表示開始" "INFO" } catch { }
+                        Get-M365DailyReport
+                    }
+                    
+                    # 分析レポート
+                    "LicenseAnalysis" { 
+                        try { Write-GuiLog "ライセンス分析データ取得開始" "INFO" } catch { }
+                        Get-M365LicenseAnalysis
+                    }
+                    "UsageAnalysis" { 
+                        try { Write-GuiLog "使用状況分析データ取得開始" "INFO" } catch { }
+                        Get-M365UsageAnalysis
+                    }
+                    "PerformanceAnalysis" { 
+                        try { Write-GuiLog "パフォーマンス分析データ取得開始" "INFO" } catch { }
+                        Get-M365PerformanceAnalysis
+                    }
+                    "SecurityAnalysis" { 
+                        try { Write-GuiLog "セキュリティ分析データ取得開始" "INFO" } catch { }
+                        Get-M365SecurityAnalysis
+                    }
+                    "PermissionAudit" { 
+                        try { Write-GuiLog "権限監査データ取得開始" "INFO" } catch { }
+                        Get-M365PermissionAudit
+                    }
+                    
+                    # Entra ID管理
+                    "UserList" { 
+                        try { Write-GuiLog "ユーザー一覧データ取得開始" "INFO" } catch { }
+                        Get-M365AllUsers
+                    }
+                    "MFAStatus" { 
+                        try { Write-GuiLog "MFA状況データ取得開始" "INFO" } catch { }
+                        Get-M365MFAStatus
+                    }
+                    "ConditionalAccess" { 
+                        try { Write-GuiLog "条件付きアクセスデータ取得開始" "INFO" } catch { }
+                        Get-M365ConditionalAccess
+                    }
+                    "SignInLogs" { 
+                        try { Write-GuiLog "サインインログデータ取得開始" "INFO" } catch { }
+                        Get-M365SignInLogs
+                    }
+                    
+                    # Exchange Online管理
+                    "MailboxManagement" { 
+                        try { Write-GuiLog "メールボックス管理データ取得開始" "INFO" } catch { }
+                        Get-M365MailboxAnalysis
+                    }
+                    "MailFlowAnalysis" { 
+                        try { Write-GuiLog "メールフロー分析データ取得開始" "INFO" } catch { }
+                        Get-M365MailFlowAnalysis
+                    }
+                    "SpamProtectionAnalysis" { 
+                        try { Write-GuiLog "スパム対策分析データ取得開始" "INFO" } catch { }
+                        Get-M365SpamProtectionAnalysis
+                    }
+                    "MailDeliveryAnalysis" { 
+                        try { Write-GuiLog "配信分析データ取得開始" "INFO" } catch { }
+                        Get-M365MailDeliveryAnalysis
+                    }
+                    
+                    # Teams管理
+                    "TeamsUsage" { 
+                        try { Write-GuiLog "Teams使用状況データ取得開始" "INFO" } catch { }
+                        Get-M365TeamsUsage
+                    }
+                    "TeamsSettingsAnalysis" { 
+                        try { Write-GuiLog "Teams設定分析データ取得開始" "INFO" } catch { }
+                        Get-M365TeamsSettings
+                    }
+                    "MeetingQualityAnalysis" { 
+                        try { Write-GuiLog "会議品質分析データ取得開始" "INFO" } catch { }
+                        Get-M365MeetingQuality
+                    }
+                    "TeamsAppAnalysis" { 
+                        try { Write-GuiLog "Teamsアプリ分析データ取得開始" "INFO" } catch { }
+                        Get-M365TeamsAppAnalysis
+                    }
+                    
+                    # OneDrive管理
+                    "StorageAnalysis" { 
+                        try { Write-GuiLog "ストレージ分析データ取得開始" "INFO" } catch { }
+                        Get-M365OneDriveAnalysis
+                    }
+                    "SharingAnalysis" { 
+                        try { Write-GuiLog "共有分析データ取得開始" "INFO" } catch { }
+                        Get-M365SharingAnalysis
+                    }
+                    "SyncErrorAnalysis" { 
+                        try { Write-GuiLog "同期エラー分析データ取得開始" "INFO" } catch { }
+                        Get-M365SyncErrorAnalysis
+                    }
+                    "ExternalSharingAnalysis" { 
+                        try { Write-GuiLog "外部共有分析データ取得開始" "INFO" } catch { }
+                        Get-M365ExternalSharingAnalysis
+                    }
+                    
+                    default { 
+                        try { Write-GuiLog "未対応のアクション: $actionRef - サンプルデータを生成" "WARNING" } catch { }
+                        @([PSCustomObject]@{ 
+                            Message = "サンプルデータ（未対応アクション: $actionRef）"
+                            Type = $actionRef
+                            GeneratedAt = Get-Date
+                            Status = "Fallback"
+                        })
+                    }
+                }
                 
-                # データをファイルにエクスポート
-                Export-DataToFiles -Data $data -ReportName $reportName
-                
-                # 成功メッセージ
-                [System.Windows.Forms.MessageBox]::Show("$reportNameが正常に生成されました。", "成功", "OK", "Information")
-            }
-            catch {
-                [System.Windows.Forms.MessageBox]::Show("エラーが発生しました: $($_.Exception.Message)", "エラー", "OK", "Error")
-            }
-            finally {
+                # 処理完了時の処理を直接実行
+                if ($data -and $data.Count -gt 0) {
+                    $reportName = "$actionRefレポート"
+                    try { Write-GuiLog "データ取得完了: $($data.Count) 件のレコード" "SUCCESS" } catch { }
+                    
+                    # データをファイルにエクスポート
+                    Set-GuiProgress -Value 60 -Status "レポート生成中..."
+                    Export-DataToFiles -Data $data -ReportName $reportName
+                    try { Write-GuiLog "レポートファイル出力完了: $reportName" "SUCCESS" } catch { }
+                    
+                    # 成功メッセージをログとプロンプトタブに表示
+                    Set-GuiProgress -Value 100 -Status "完了"
+                    try { Write-GuiLog "$reportName が正常に生成されました" "SUCCESS" -ShowNotification } catch { }
+                    if ($Script:PromptOutputTextBox -ne $null) {
+                        $Script:PromptOutputTextBox.AppendText("✅ $reportName が正常に生成されました`r`n")
+                        $Script:PromptOutputTextBox.AppendText("📁 ファイルが自動的に開かれます`r`n`r`n")
+                        $Script:PromptOutputTextBox.ScrollToCaret()
+                    }
+                    
+                    # プログレスバーを非表示（2秒後）
+                    Start-Sleep -Milliseconds 2000
+                    Set-GuiProgress -Hide
+                } else {
+                    Set-GuiProgress -Hide  # プログレスバーを非表示
+                    try { Write-GuiLog "データ取得に失敗しました" "WARNING" -ShowNotification } catch { }
+                    try { Write-GuiErrorLog "データ取得失敗: $reportName" "WARNING" } catch { }
+                    if ($Script:PromptOutputTextBox -ne $null) {
+                        $Script:PromptOutputTextBox.AppendText("⚠️ データの取得に失敗しました: $reportName`r`n")
+                        $Script:PromptOutputTextBox.AppendText("💡 認証状況やネットワーク接続を確認してください`r`n`r`n")
+                        $Script:PromptOutputTextBox.ScrollToCaret()
+                    }
+                }
+            } catch {
+                try { Write-GuiLog "レポート生成エラー: $($_.Exception.Message)" "ERROR" -ShowNotification } catch { }
+                try { Write-GuiErrorLog "レポート生成エラー詳細: $($_.Exception.Message)" "ERROR" } catch { }
+                if ($Script:PromptOutputTextBox -ne $null) {
+                    $Script:PromptOutputTextBox.AppendText("❌ レポート生成エラーが発生しました`r`n")
+                    $Script:PromptOutputTextBox.AppendText("🔍 エラー詳細: $($_.Exception.Message)`r`n`r`n")
+                    $Script:PromptOutputTextBox.ScrollToCaret()
+                }
+            } finally {
                 $sender.Text = $originalText
                 $sender.Enabled = $true
+                $sender.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)  # 元の色に戻す
+                Set-GuiProgress -Hide  # プログレスバーを非表示
+                try { Write-GuiLog "レポート生成処理完了" "INFO" } catch { }
             }
         }
     }.GetNewClosure())
@@ -594,6 +2127,7 @@ function Execute-ReportAction {
         $originalText = $Button.Text
         $Button.Text = "🔄 処理中..."
         $Button.Enabled = $false
+        $Button.BackColor = [System.Drawing.Color]::FromArgb(108, 117, 125)  # グレーアウト色
     } else {
         $originalText = "ボタン"
         Write-Host "警告: ボタンオブジェクトが有効ではありません" -ForegroundColor Yellow
@@ -623,6 +2157,64 @@ function Execute-ReportAction {
             "TestExecution" {
                 $data = Get-ReportDataFromProvider -DataType "TestExecution"
                 $reportName = "テスト実行結果"
+            }
+            "ShowLatestDailyReport" {
+                # 最新の日次レポートHTMLファイルを検索して表示
+                $reportsPath = Join-Path $PSScriptRoot "..\Reports\Daily"
+                if (Test-Path $reportsPath) {
+                    $latestReport = Get-ChildItem -Path $reportsPath -Filter "*.html" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                    if ($latestReport) {
+                        # ポップアップの代わりにプロンプトタブに表示
+                        if ($Script:PromptOutputTextBox -ne $null) {
+                            $Script:PromptOutputTextBox.AppendText("📋 最新の日次レポートを表示します`r`n")
+                            $Script:PromptOutputTextBox.AppendText("📁 ファイル: $($latestReport.FullName)`r`n`r`n")
+                            $Script:PromptOutputTextBox.ScrollToCaret()
+                        }
+                        
+                        # プラットフォーム別でHTMLファイルを開く
+                        if ($IsLinux) {
+                            $browserOpened = $false
+                            $browsers = @('google-chrome', 'firefox', 'chromium-browser', 'xdg-open')
+                            foreach ($browser in $browsers) {
+                                if (Get-Command $browser -ErrorAction SilentlyContinue) {
+                                    & $browser $latestReport.FullName 2>/dev/null &
+                                    $browserOpened = $true
+                                    break
+                                }
+                            }
+                            if (-not $browserOpened) {
+                                # ポップアップの代わりにエラーログとプロンプトタブに表示
+                                try { Write-GuiErrorLog "ブラウザが見つかりません: $($latestReport.FullName)" "WARNING" } catch { }
+                                if ($Script:PromptOutputTextBox -ne $null) {
+                                    $Script:PromptOutputTextBox.AppendText("⚠️ ブラウザが見つかりません`r`n")
+                                    $Script:PromptOutputTextBox.AppendText("💻 手動でファイルを開いてください: $($latestReport.FullName)`r`n`r`n")
+                                    $Script:PromptOutputTextBox.ScrollToCaret()
+                                }
+                            }
+                        } else {
+                            Start-Process $latestReport.FullName
+                        }
+                        return
+                    } else {
+                        # ポップアップの代わりにエラーログとプロンプトタブに表示
+                        try { Write-GuiErrorLog "日次レポートが見つかりません" "WARNING" } catch { }
+                        if ($Script:PromptOutputTextBox -ne $null) {
+                            $Script:PromptOutputTextBox.AppendText("⚠️ 日次レポートが見つかりません`r`n")
+                            $Script:PromptOutputTextBox.AppendText("💡 先に日次レポートを生成してください`r`n`r`n")
+                            $Script:PromptOutputTextBox.ScrollToCaret()
+                        }
+                        return
+                    }
+                } else {
+                    # ポップアップの代わりにエラーログとプロンプトタブに表示
+                    try { Write-GuiErrorLog "日次レポートフォルダが見つかりません: $reportsPath" "ERROR" } catch { }
+                    if ($Script:PromptOutputTextBox -ne $null) {
+                        $Script:PromptOutputTextBox.AppendText("❌ 日次レポートフォルダが見つかりません`r`n")
+                        $Script:PromptOutputTextBox.AppendText("📁 パス: $reportsPath`r`n`r`n")
+                        $Script:PromptOutputTextBox.ScrollToCaret()
+                    }
+                    return
+                }
             }
             "LicenseAnalysis" {
                 $data = Get-ReportDataFromProvider -DataType "LicenseAnalysis"
@@ -713,17 +2305,30 @@ function Execute-ReportAction {
         if ($data -and $data.Count -gt 0) {
             Export-DataToFiles -Data $data -ReportName $reportName
         } else {
-            [System.Windows.Forms.MessageBox]::Show("データの取得に失敗しました。", "エラー", "OK", "Warning")
+            # ポップアップの代わりにエラーログとプロンプトタブに表示
+            try { Write-GuiErrorLog "データの取得に失敗しました: $reportName" "WARNING" } catch { }
+            if ($Script:PromptOutputTextBox -ne $null) {
+                $Script:PromptOutputTextBox.AppendText("⚠️ データの取得に失敗しました: $reportName`r`n")
+                $Script:PromptOutputTextBox.AppendText("💡 認証状況やネットワーク接続を確認してください`r`n`r`n")
+                $Script:PromptOutputTextBox.ScrollToCaret()
+            }
         }
     }
     catch {
-        [System.Windows.Forms.MessageBox]::Show("エラーが発生しました: $($_.Exception.Message)", "エラー", "OK", "Error")
+        # ポップアップの代わりにエラーログとプロンプトタブに表示
+        try { Write-GuiErrorLog "レポート処理エラー: $($_.Exception.Message)" "ERROR" } catch { }
+        if ($Script:PromptOutputTextBox -ne $null) {
+            $Script:PromptOutputTextBox.AppendText("❌ エラーが発生しました`r`n")
+            $Script:PromptOutputTextBox.AppendText("🔍 詳細: $($_.Exception.Message)`r`n`r`n")
+            $Script:PromptOutputTextBox.ScrollToCaret()
+        }
     }
     finally {
         # ボタンオブジェクトの安全なリストア
         if ($Button -and $Button.GetType().Name -eq 'Button') {
             $Button.Text = $originalText
             $Button.Enabled = $true
+            $Button.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)  # 元の色に戻す
         }
     }
 }
@@ -734,30 +2339,42 @@ function Execute-ReportAction {
 
 try {
     Write-Host "🎯 GUI初期化中..." -ForegroundColor Cyan
+    Write-EarlyLog "GUI初期化開始"
     
     # メインフォーム作成と表示（完全出力抑制版）
+    Write-EarlyLog "フォーム作成処理開始"
     $formCreationOutput = New-MainForm
     $mainForm = $formCreationOutput | Where-Object { $_ -is [System.Windows.Forms.Form] } | Select-Object -First 1
     
     if (-not $mainForm) {
         Write-Host "❌ フォーム作成エラー: 有効なフォームが見つかりません" -ForegroundColor Red
+        Write-EarlyLog "フォーム作成エラー: 有効なフォームが見つかりません" "ERROR"
         throw "フォーム作成に失敗しました"
     }
     
     # フォーム型確認とキャスト
     if ($mainForm -is [System.Windows.Forms.Form]) {
         Write-Host "✅ GUIが正常に初期化されました" -ForegroundColor Green
+        Write-EarlyLog "GUI初期化完了 - アプリケーション実行開始"
         [System.Windows.Forms.Application]::Run($mainForm)
+        Write-EarlyLog "アプリケーション実行終了"
     } else {
         Write-Host "❌ フォーム作成エラー: 予期しない型 $($mainForm.GetType().Name)" -ForegroundColor Red
+        Write-EarlyLog "フォーム作成エラー: 予期しない型 $($mainForm.GetType().Name)" "ERROR"
         throw "フォーム作成に失敗しました"
     }
 }
 catch {
     Write-Host "❌ GUI初期化エラー: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "スタックトレース: $($_.ScriptStackTrace)" -ForegroundColor Yellow
-    [System.Windows.Forms.MessageBox]::Show("GUI初期化エラー: $($_.Exception.Message)", "エラー", "OK", "Error")
+    Write-EarlyLog "GUI初期化エラー: $($_.Exception.Message)" "ERROR"
+    Write-EarlyLog "スタックトレース: $($_.ScriptStackTrace)" "ERROR"
+    # GUI初期化エラーは重大なため、コンソールに出力（GUIが使用不可のため）
+    Write-Host "❌ GUI初期化エラー: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "💡 管理者権限でPowerShellを実行し、実行ポリシーを確認してください" -ForegroundColor Yellow
+    Write-Host "⚙️ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser" -ForegroundColor Cyan
 }
 finally {
     Write-Host "🔚 Microsoft 365統合管理ツールを終了します" -ForegroundColor Cyan
+    Write-EarlyLog "========================= GUI終了 ========================="
 }

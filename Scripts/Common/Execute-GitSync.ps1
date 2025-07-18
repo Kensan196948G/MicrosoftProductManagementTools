@@ -6,7 +6,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$RepositoryPath = "E:\MicrosoftProductManagementTools",
+    [string]$RepositoryPath = $null,
     
     [Parameter(Mandatory = $false)]
     [string]$Branch = "main",
@@ -15,8 +15,12 @@ param(
     [switch]$VerboseOutput = $false
 )
 
-# スクリプトルートパス
-$Script:ToolRoot = "E:\MicrosoftProductManagementTools"
+# スクリプトルートパスを動的に設定
+if ([string]::IsNullOrEmpty($RepositoryPath)) {
+    $Script:ToolRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+} else {
+    $Script:ToolRoot = $RepositoryPath
+}
 
 # ログファイルパス（YYYYMMDDHHMM形式でローテーション）
 $timestamp = Get-Date -Format "yyyyMMddHHmm"

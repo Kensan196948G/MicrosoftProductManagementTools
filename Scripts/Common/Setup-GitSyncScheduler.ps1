@@ -12,7 +12,7 @@ param(
     [string]$TaskName = "Microsoft365Tools-GitAutoSync",
     
     [Parameter(Mandatory = $false)]
-    [string]$RepositoryPath = "E:\MicrosoftProductManagementTools",
+    [string]$RepositoryPath = $null,
     
     [Parameter(Mandatory = $false)]
     [string]$Branch = "main",
@@ -23,6 +23,12 @@ param(
     [Parameter(Mandatory = $false)]
     [switch]$VerboseOutput = $false
 )
+
+# RepositoryPathの動的設定
+if ([string]::IsNullOrEmpty($RepositoryPath)) {
+    $RepositoryPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+    Write-Host "📂 RepositoryPathを動的に設定: $RepositoryPath" -ForegroundColor Cyan
+}
 
 # 管理者権限チェック
 function Test-Administrator {

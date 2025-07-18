@@ -1,0 +1,5 @@
+﻿"Category","TotalIssues","CriticalIssues","HighIssues","Status"
+"Security","35","0","28","Review Required"
+"Performance","41","0","3","Optimization Required"
+"Error Handling","0","0","0","Pass"
+"Overall Quality","77","0","28","Needs Improvement"

@@ -1,8 +1,8 @@
 # Exchange Online接続テストスクリプト
 # 証明書ベース認証でExchange Onlineに接続
 
-$configPath = "E:\MicrosoftProductManagementTools\Config\appsettings.json"
-$envPath = "E:\MicrosoftProductManagementTools\.env"
+$configPath = Join-Path $PSScriptRoot "..\Config\appsettings.json"
+$envPath = Join-Path $PSScriptRoot "..\.env"
 
 Write-Host "🔑 Exchange Online接続テスト開始..." -ForegroundColor Cyan
 

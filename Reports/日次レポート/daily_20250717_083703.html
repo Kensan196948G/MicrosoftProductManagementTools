@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日次レポート - Microsoft 365統合管理ツール CLI</title>
+    <style>
+        body { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .container { max-width: 1200px; margin: 0 auto; background: #2d2d30; padding: 20px; border-radius: 8px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #007acc; padding-bottom: 10px; }
+        .title { color: #007acc; font-size: 24px; margin-bottom: 5px; }
+        .timestamp { color: #808080; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #007acc; color: white; padding: 10px; text-align: left; font-size: 12px; }
+        td { padding: 8px; border-bottom: 1px solid #404040; font-size: 11px; }
+        tr:nth-child(even) { background: #252526; }
+        tr:hover { background: #2a2d2e; }
+        .footer { text-align: center; margin-top: 20px; color: #808080; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">📊 日次レポート</h1>
+            <div class="timestamp">Generated: 2025年07月17日 08:37:03 | CLI Mode</div>
+        </div>
+        
+        <p><strong>Records:</strong> 3 | <strong>Source:</strong> Microsoft 365統合管理ツール CLI</p>
+        
+        <table>
+            <thead>
+                <tr>                    <th>ServiceName</th>
+                    <th>ActiveUsersCount</th>
+                    <th>TotalActivityCount</th>
+                    <th>NewUsersCount</th>
+                    <th>ErrorCount</th>
+                    <th>ServiceStatus</th>
+                    <th>PerformanceScore</th>
+                    <th>LastCheck</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>                <tr>
+                    <td>Microsoft 365</td>
+                    <td>125</td>
+                    <td>1580</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>正常</td>
+                    <td>98</td>
+                    <td>2025-07-17 08:37:03</td>
+                    <td>正常</td>
+                </tr>
+                <tr>
+                    <td>Exchange Online</td>
+                    <td>118</td>
+                    <td>1250</td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>正常</td>
+                    <td>97</td>
+                    <td>2025-07-17 08:37:03</td>
+                    <td>正常</td>
+                </tr>
+                <tr>
+                    <td>Microsoft Teams</td>
+                    <td>95</td>
+                    <td>850</td>
+                    <td></td>
+                    <td>2</td>
+                    <td>正常</td>
+                    <td>96</td>
+                    <td>2025-07-17 08:37:03</td>
+                    <td>正常</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Microsoft 365統合管理ツール CLI - Enterprise Management Suite v2.0
+        </div>
+    </div>
+</body>
+</html>

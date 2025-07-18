@@ -1,7 +1,7 @@
 # 証明書パスワード確認スクリプト
 # パスワード armageddon2002 で証明書を確認・インストール
 
-$certificatePath = "E:\MicrosoftProductManagementTools\Certificates\mycert.pfx"
+$certificatePath = Join-Path $PSScriptRoot "..\Certificates\mycert.pfx"
 $certificatePassword = "armageddon2002"
 
 Write-Host "🔍 証明書確認中..." -ForegroundColor Cyan
@@ -31,7 +31,7 @@ try {
             Write-Host "  SerialNumber: $($cert.SerialNumber)" -ForegroundColor Gray
             
             # 設定ファイルのThumbprintと比較
-            $configPath = "E:\MicrosoftProductManagementTools\Config\appsettings.json"
+            $configPath = Join-Path $PSScriptRoot "..\Config\appsettings.json"
             if (Test-Path $configPath) {
                 $config = Get-Content $configPath -Raw | ConvertFrom-Json
                 $configThumbprint = $config.ExchangeOnline.CertificateThumbprint
@@ -73,7 +73,7 @@ try {
             }
             
             # .envファイルのパスワードを確認
-            $envPath = "E:\MicrosoftProductManagementTools\.env"
+            $envPath = Join-Path $PSScriptRoot "..\.env"
             if (Test-Path $envPath) {
                 $envContent = Get-Content $envPath -Raw
                 Write-Host "`n🔍 .envファイルのパスワード確認:" -ForegroundColor Yellow

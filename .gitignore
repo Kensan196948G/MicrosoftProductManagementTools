@@ -1,36 +1,107 @@
-# Environment variables with sensitive information
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environments
 .env
 .env.local
 .env.production
 .env.staging
+.env.*.local
 
 # Logs
 *.log
+logs/
 Logs/
+*.log.*
 
-# Certificates and keys
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Certificates (sensitive)
 *.pfx
 *.key
 *.crt
 *.pem
+*.p12
 
-# Backup files
-*.backup
-*.bak
+# Config with secrets
+appsettings.local.json
+config.local.json
+
+# PyInstaller
+*.spec
+
+# Node modules
+node_modules/
 
 # Temporary files
 *.tmp
 *.temp
 
-# Node modules
-node_modules/
-
 # IDE files
-.vscode/
-.idea/
 *.swp
 *.swo
 
-# OS files
-.DS_Store
-Thumbs.db
+# Microsoft 365 specific
+token_cache.bin
+graph_token_cache.json

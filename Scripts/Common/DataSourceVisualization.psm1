@@ -28,9 +28,15 @@ function Show-DataSourceStatus {
         }
         "RealDataSuccess" {
             Write-Host "[$timestamp] ✅ 実データ取得成功" -ForegroundColor Green
-            Write-Host "    📊 データ種別: $DataType" -ForegroundColor Cyan
-            Write-Host "    📈 取得件数: $RecordCount 件" -ForegroundColor Cyan
-            Write-Host "    🎯 データソース: $Source" -ForegroundColor Cyan
+            if (Get-Command Write-ModuleLog -ErrorAction SilentlyContinue) {
+                Write-ModuleLog "    📊 データ種別: $DataType" "INFO"
+                Write-ModuleLog "    📈 取得件数: $RecordCount 件" "INFO"
+                Write-ModuleLog "    🎯 データソース: $Source" "INFO"
+            } else {
+                Write-Host "    📊 データ種別: $DataType" -ForegroundColor Cyan
+                Write-Host "    📈 取得件数: $RecordCount 件" -ForegroundColor Cyan
+                Write-Host "    🎯 データソース: $Source" -ForegroundColor Cyan
+            }
             if ($Details.Count -gt 0) {
                 Write-Host "    🔍 詳細情報:" -ForegroundColor Gray
                 foreach ($key in $Details.Keys) {
@@ -39,10 +45,20 @@ function Show-DataSourceStatus {
             }
         }
         "FallbackToE3" {
-            Write-Host "[$timestamp] 🔄 E3ライセンス対応モードに切り替え" -ForegroundColor Yellow
-            Write-Host "    📊 データ種別: $DataType" -ForegroundColor Cyan
-            Write-Host "    📈 取得件数: $RecordCount 件" -ForegroundColor Cyan
-            Write-Host "    🎯 データソース: $Source" -ForegroundColor Cyan
+            if (Get-Command Write-ModuleLog -ErrorAction SilentlyContinue) {
+                Write-ModuleLog "🔄 E3ライセンス対応モードに切り替え" "INFO"
+            } else {
+                Write-Host "[$timestamp] 🔄 E3ライセンス対応モードに切り替え" -ForegroundColor Yellow
+            }
+            if (Get-Command Write-ModuleLog -ErrorAction SilentlyContinue) {
+                Write-ModuleLog "    📊 データ種別: $DataType" "INFO"
+                Write-ModuleLog "    📈 取得件数: $RecordCount 件" "INFO"
+                Write-ModuleLog "    🎯 データソース: $Source" "INFO"
+            } else {
+                Write-Host "    📊 データ種別: $DataType" -ForegroundColor Cyan
+                Write-Host "    📈 取得件数: $RecordCount 件" -ForegroundColor Cyan
+                Write-Host "    🎯 データソース: $Source" -ForegroundColor Cyan
+            }
         }
         "FallbackToDummy" {
             Write-Host "[$timestamp] ⚠️ ダミーデータモードで動作" -ForegroundColor Yellow

@@ -30,21 +30,46 @@ param(
 )
 
 # ================================================================================
-# 🔧 実行ポリシー自動修正機能
+# 🔧 実行ポリシー自動修正機能（強化版）
 # ================================================================================
-if ((Get-ExecutionPolicy -Scope CurrentUser) -eq 'RemoteSigned' -or (Get-ExecutionPolicy -Scope CurrentUser) -eq 'Restricted') {
+$currentPolicy = Get-ExecutionPolicy -Scope CurrentUser
+$processPolicy = Get-ExecutionPolicy -Scope Process
+
+Write-Host "🔍 現在の実行ポリシー確認中..." -ForegroundColor Cyan
+Write-Host "   CurrentUser: $currentPolicy" -ForegroundColor Gray
+Write-Host "   Process: $processPolicy" -ForegroundColor Gray
+
+if ($currentPolicy -eq 'RemoteSigned' -or $currentPolicy -eq 'Restricted' -or $processPolicy -eq 'RemoteSigned' -or $processPolicy -eq 'Restricted') {
     try {
         Write-Host "🔧 実行ポリシーを自動調整中..." -ForegroundColor Yellow
+        
+        # CurrentUserスコープでBypassに設定
         Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force
-        Write-Host "✅ 実行ポリシーを Bypass に設定しました" -ForegroundColor Green
+        Write-Host "✅ CurrentUser スコープを Bypass に設定" -ForegroundColor Green
+        
+        # Processスコープでも明示的にBypassに設定
+        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+        Write-Host "✅ Process スコープを Bypass に設定" -ForegroundColor Green
+        
+        # 設定確認
+        $newCurrentPolicy = Get-ExecutionPolicy -Scope CurrentUser
+        $newProcessPolicy = Get-ExecutionPolicy -Scope Process
+        Write-Host "📊 更新後のポリシー:" -ForegroundColor Cyan
+        Write-Host "   CurrentUser: $newCurrentPolicy" -ForegroundColor Green
+        Write-Host "   Process: $newProcessPolicy" -ForegroundColor Green
     }
     catch {
-        Write-Host "⚠️ 実行ポリシーの自動設定に失敗しました。管理者権限で以下のコマンドを実行してください:" -ForegroundColor Yellow
+        Write-Host "⚠️ 実行ポリシーの自動設定に失敗しました。" -ForegroundColor Yellow
+        Write-Host "📋 手動で以下のコマンドを実行してください:" -ForegroundColor Yellow
         Write-Host "   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser -Force" -ForegroundColor White
+        Write-Host "   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force" -ForegroundColor White
+        Write-Host ""
         Write-Host "Enterキーを押してメニューに戻る..." -ForegroundColor Gray
         Read-Host
         exit 1
     }
+} else {
+    Write-Host "✅ 実行ポリシーは適切に設定されています" -ForegroundColor Green
 }
 
 # ================================================================================
@@ -390,62 +415,38 @@ function Start-GUIMode {
         Write-Host ""
         Write-IconMessage $Script:Icons.Rocket "起動中..." -Color Green
         
-        # GUI起動の実行
-        Write-LauncherLog "新しいプロセスでGUI起動" -Level Info
+        # GUI起動の実行（同じプロンプトで実行）
+        Write-LauncherLog "同じプロセスでGUI起動" -Level Info
+        Write-IconMessage $Script:Icons.Info "現在のPowerShellプロンプトでGUIを起動します..." -Color Cyan
         
-        # 常に新しいプロセスで起動（コンソールハンドル問題を回避）
-        Write-IconMessage $Script:Icons.Info "新しいPowerShellプロセスでGUIを起動します..." -Color Cyan
-        
-        # PowerShellコマンドの選択
-        $psCommand = "pwsh"
-        if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
-            $psCommand = "powershell"
-            Write-IconMessage $Script:Icons.Warning "PowerShell 7が見つかりません。Windows PowerShellで起動します。" -Color Yellow
+        # STAモードチェック
+        if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
+            Write-IconMessage $Script:Icons.Warning "STAモードではありません。GUI表示に問題が発生する可能性があります。" -Color Yellow
         }
         
-        # PowerShell 7の視覚的識別強化
-        $psTitle = if ($psCommand -eq "pwsh") {
-            "🚀 Microsoft 365統合管理ツール - PowerShell 7 GUI"
-        } else {
-            "🚀 Microsoft 365統合管理ツール - Windows PowerShell GUI"
+        try {
+            # 現在のプロンプトでGUIスクリプトを直接実行
+            Write-IconMessage $Script:Icons.Running "GUIアプリケーションを起動中..." -Color Green
+            & $guiPath
+            Write-IconMessage $Script:Icons.Success "GUIアプリケーションが正常に終了しました" -Color Green
         }
-        
-        # プロセス起動オプション（タイトル設定付き）
-        $argumentList = @(
-            "-sta"
-            "-NoProfile" 
-            "-ExecutionPolicy", "Bypass"
-            "-Command"
-            "& { $Host.UI.RawUI.WindowTitle = '$psTitle'; & '$guiPath' }"
-        )
-        
-        $startProcessArgs = @{
-            FilePath = $psCommand
-            ArgumentList = $argumentList
-            PassThru = $true
-            WindowStyle = "Normal"
-        }
-        
-        # プロセス起動
-        $process = Start-Process @startProcessArgs
-        
-        if ($process) {
-            Write-IconMessage $Script:Icons.Success "GUIプロセスが起動しました (PID: $($process.Id))" -Color Green
-            Write-LauncherLog "GUIプロセス起動完了: PID $($process.Id)" -Level Info
-            
-            # プロセスの健全性チェック
-            Start-Sleep -Milliseconds 1000
-            if (-not $process.HasExited) {
-                Write-IconMessage $Script:Icons.Success "GUIアプリケーションが正常に動作中です" -Color Green
+        catch {
+            # STAモード以外でのエラーの場合、新しいSTAプロセスで再実行を提案
+            if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
+                Write-IconMessage $Script:Icons.Warning "STAモードが必要です。新しいプロセスで起動します..." -Color Yellow
+                
+                # PowerShellコマンドの選択
+                $psCommand = "pwsh"
+                if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+                    $psCommand = "powershell"
+                }
+                
+                # STAモードで新しいプロセス起動
+                $argumentList = @("-sta", "-File", $guiPath)
+                Start-Process -FilePath $psCommand -ArgumentList $argumentList -Wait
             } else {
-                Write-IconMessage $Script:Icons.Warning "GUIプロセスが予期せず終了しました。ログを確認してください。" -Color Yellow
+                throw
             }
-            
-            # プロセスの終了を待機しない（非同期起動）
-            Write-IconMessage $Script:Icons.Info "GUIアプリケーションが別プロセスで実行中です" -Color Cyan
-            
-        } else {
-            throw "GUIプロセスの起動に失敗しました"
         }
         
     }

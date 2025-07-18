@@ -7,7 +7,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("menu", "daily", "weekly", "monthly", "yearly", "test", "license", "usage", "performance", "security", "permission", "users", "mfa", "conditional", "signin", "mailbox", "mailflow", "spam", "delivery", "teams", "teamssettings", "meetings", "teamsapps", "storage", "sharing", "syncerror", "external", "connect", "help")]
+    [ValidateSet("menu", "daily", "weekly", "monthly", "yearly", "test", "license", "usage", "performance", "security", "permission", "users", "mfa", "conditional", "signin", "mailbox", "mailflow", "spam", "delivery", "teams", "teamssettings", "meetings", "teamsapps", "storage", "sharing", "syncerror", "external", "connect", "help", "show-daily")]
     [string]$Action = "menu",
     
     [Parameter()]
@@ -47,7 +47,7 @@ try {
     Write-Host "✅ RealM365DataProvider モジュール読み込み完了" -ForegroundColor Green
 } catch {
     Write-Host "❌ RealM365DataProvider モジュール読み込みエラー: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "ダミーデータモードで動作します" -ForegroundColor Yellow
+    Write-Host "警告: モジュール読み込みエラーが発生しました" -ForegroundColor Yellow
 }
 
 # Microsoft 365 認証状態確認
@@ -78,111 +78,36 @@ if (-not $NoConnect) {
 # データ取得関数群
 # ================================================================================
 
-function Get-RealOrDummyData {
+function Get-RealData {
     param(
         [string]$DataType,
         [hashtable]$Parameters = @{}
     )
     
     try {
-        if ($Script:M365Connected) {
-            Write-Host "📊 実データを取得中..." -ForegroundColor Cyan
-            switch ($DataType) {
-                "Users" { return Get-M365AllUsers @Parameters }
-                "LicenseAnalysis" { return Get-M365LicenseAnalysis @Parameters }
-                "UsageAnalysis" { return Get-M365UsageAnalysis @Parameters }
-                "MFAStatus" { return Get-M365MFAStatus @Parameters }
-                "MailboxAnalysis" { return Get-M365MailboxAnalysis @Parameters }
-                "TeamsUsage" { return Get-M365TeamsUsage @Parameters }
-                "OneDriveAnalysis" { return Get-M365OneDriveAnalysis @Parameters }
-                "SignInLogs" { return Get-M365SignInLogs @Parameters }
-                "DailyReport" { return Get-M365DailyReport @Parameters }
-                default { return Generate-DummyData -DataType $DataType @Parameters }
+        Write-Host "📊 データを取得中..." -ForegroundColor Cyan
+        switch ($DataType) {
+            "Users" { return Get-M365AllUsers @Parameters }
+            "LicenseAnalysis" { return Get-M365LicenseAnalysis @Parameters }
+            "UsageAnalysis" { return Get-M365UsageAnalysis @Parameters }
+            "MFAStatus" { return Get-M365MFAStatus @Parameters }
+            "MailboxAnalysis" { return Get-M365MailboxAnalysis @Parameters }
+            "TeamsUsage" { return Get-M365TeamsUsage @Parameters }
+            "OneDriveAnalysis" { return Get-M365OneDriveAnalysis @Parameters }
+            "SignInLogs" { return Get-M365SignInLogs @Parameters }
+            "DailyReport" { return Get-M365DailyReport @Parameters }
+            default { 
+                Write-Host "❌ 未対応のデータタイプ: $DataType" -ForegroundColor Red
+                return @()
             }
-        }
-        else {
-            Write-Host "📊 ダミーデータを生成中..." -ForegroundColor Yellow
-            return Generate-DummyData -DataType $DataType @Parameters
         }
     }
     catch {
         Write-Host "❌ データ取得エラー: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "📊 ダミーデータで代替します" -ForegroundColor Yellow
-        return Generate-DummyData -DataType $DataType @Parameters
+        return @()
     }
 }
 
-function Generate-DummyData {
-    param(
-        [string]$DataType,
-        [hashtable]$Parameters = @{}
-    )
-    
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    
-    switch ($DataType) {
-        "DailyReport" {
-            return @(
-                [PSCustomObject]@{ ServiceName = "Microsoft 365"; ActiveUsersCount = 125; TotalActivityCount = 1580; NewUsersCount = 2; ErrorCount = 3; ServiceStatus = "正常"; PerformanceScore = 98; LastCheck = $timestamp; Status = "正常" },
-                [PSCustomObject]@{ ServiceName = "Exchange Online"; ActiveUsersCount = 118; TotalActivityCount = 1250; NewUsersCount = 1; ErrorCount = 1; ServiceStatus = "正常"; PerformanceScore = 97; LastCheck = $timestamp; Status = "正常" },
-                [PSCustomObject]@{ ServiceName = "Microsoft Teams"; ActiveUsersCount = 95; TotalActivityCount = 850; NewUsersCount = 0; ErrorCount = 2; ServiceStatus = "正常"; PerformanceScore = 96; LastCheck = $timestamp; Status = "正常" }
-            )
-        }
-        "Users" {
-            return @(
-                [PSCustomObject]@{ DisplayName = "山田太郎"; UserPrincipalName = "yamada@contoso.com"; Department = "営業部"; JobTitle = "営業マネージャー"; AccountStatus = "有効"; LicenseStatus = "Office 365 E3"; CreationDate = "2023-01-15"; LastSignIn = "2025-01-16 09:30" },
-                [PSCustomObject]@{ DisplayName = "佐藤花子"; UserPrincipalName = "sato@contoso.com"; Department = "IT部"; JobTitle = "システム管理者"; AccountStatus = "有効"; LicenseStatus = "Office 365 E5"; CreationDate = "2023-02-20"; LastSignIn = "2025-01-16 08:15" },
-                [PSCustomObject]@{ DisplayName = "田中次郎"; UserPrincipalName = "tanaka@contoso.com"; Department = "人事部"; JobTitle = "人事スペシャリスト"; AccountStatus = "有効"; LicenseStatus = "Office 365 E3"; CreationDate = "2023-03-10"; LastSignIn = "2025-01-15 17:45" },
-                [PSCustomObject]@{ DisplayName = "鈴木三郎"; UserPrincipalName = "suzuki@contoso.com"; Department = "経理部"; JobTitle = "経理担当"; AccountStatus = "無効"; LicenseStatus = "ライセンスなし"; CreationDate = "2023-04-05"; LastSignIn = "2025-01-10 14:20" }
-            )
-        }
-        "LicenseAnalysis" {
-            return @(
-                [PSCustomObject]@{ LicenseName = "Office 365 E3"; SkuId = "6fd2c87f-b296-42f0-b197-1e91e994b900"; PurchasedQuantity = 100; AssignedQuantity = 85; AvailableQuantity = 15; UsageRate = 85.0; MonthlyUnitPrice = "¥2,170"; MonthlyCost = "¥184,450"; Status = "利用可能" },
-                [PSCustomObject]@{ LicenseName = "Office 365 E5"; SkuId = "c7df2760-2c81-4ef7-b578-5b5392b571df"; PurchasedQuantity = 50; AssignedQuantity = 35; AvailableQuantity = 15; UsageRate = 70.0; MonthlyUnitPrice = "¥4,310"; MonthlyCost = "¥150,850"; Status = "利用可能" },
-                [PSCustomObject]@{ LicenseName = "Microsoft Teams"; SkuId = "57ff2da0-773e-42df-b2af-ffb7a2317929"; PurchasedQuantity = 150; AssignedQuantity = 120; AvailableQuantity = 30; UsageRate = 80.0; MonthlyUnitPrice = "¥540"; MonthlyCost = "¥64,800"; Status = "利用可能" }
-            )
-        }
-        "MFAStatus" {
-            return @(
-                [PSCustomObject]@{ UserName = "山田太郎"; Email = "yamada@contoso.com"; Department = "営業部"; MFAStatus = "有効"; AuthenticationMethod = "Microsoft Authenticator"; FallbackMethod = "SMS"; LastMFASetupDate = "2024-12-15"; Compliance = "準拠"; RiskLevel = "低" },
-                [PSCustomObject]@{ UserName = "佐藤花子"; Email = "sato@contoso.com"; Department = "IT部"; MFAStatus = "有効"; AuthenticationMethod = "Microsoft Authenticator"; FallbackMethod = "SMS"; LastMFASetupDate = "2024-11-20"; Compliance = "準拠"; RiskLevel = "低" },
-                [PSCustomObject]@{ UserName = "田中次郎"; Email = "tanaka@contoso.com"; Department = "人事部"; MFAStatus = "無効"; AuthenticationMethod = "パスワード"; FallbackMethod = "なし"; LastMFASetupDate = "N/A"; Compliance = "非準拠"; RiskLevel = "高" }
-            )
-        }
-        "MailboxAnalysis" {
-            return @(
-                [PSCustomObject]@{ Email = "yamada@contoso.com"; DisplayName = "山田太郎"; MailboxType = "UserMailbox"; StorageUsedMB = 15250; StorageLimitMB = 50000; UsageRate = 30.5; ItemCount = 12850; LastAccess = "2025-01-16 09:30"; Status = "有効" },
-                [PSCustomObject]@{ Email = "sato@contoso.com"; DisplayName = "佐藤花子"; MailboxType = "UserMailbox"; StorageUsedMB = 35800; StorageLimitMB = 50000; UsageRate = 71.6; ItemCount = 28900; LastAccess = "2025-01-16 08:15"; Status = "有効" },
-                [PSCustomObject]@{ Email = "tanaka@contoso.com"; DisplayName = "田中次郎"; MailboxType = "UserMailbox"; StorageUsedMB = 8750; StorageLimitMB = 50000; UsageRate = 17.5; ItemCount = 6420; LastAccess = "2025-01-15 17:45"; Status = "有効" }
-            )
-        }
-        "TeamsUsage" {
-            return @(
-                [PSCustomObject]@{ UserName = "山田太郎"; Department = "営業部"; LastAccess = "2025-01-16"; MonthlyMeetingParticipation = 35; MonthlyChatCount = 180; StorageUsedMB = 850; AppUsageCount = 5; UsageLevel = "高"; Status = "アクティブ" },
-                [PSCustomObject]@{ UserName = "佐藤花子"; Department = "IT部"; LastAccess = "2025-01-16"; MonthlyMeetingParticipation = 28; MonthlyChatCount = 220; StorageUsedMB = 1200; AppUsageCount = 8; UsageLevel = "高"; Status = "アクティブ" },
-                [PSCustomObject]@{ UserName = "田中次郎"; Department = "人事部"; LastAccess = "2025-01-15"; MonthlyMeetingParticipation = 12; MonthlyChatCount = 95; StorageUsedMB = 420; AppUsageCount = 3; UsageLevel = "中"; Status = "アクティブ" }
-            )
-        }
-        "OneDriveAnalysis" {
-            return @(
-                [PSCustomObject]@{ UserName = "山田太郎"; Email = "yamada@contoso.com"; Department = "営業部"; UsedStorageGB = 25.6; AllocatedStorageGB = 1024; UsageRate = 2.5; FileCount = 1850; LastAccess = "2025-01-16"; Status = "アクティブ" },
-                [PSCustomObject]@{ UserName = "佐藤花子"; Email = "sato@contoso.com"; Department = "IT部"; UsedStorageGB = 156.8; AllocatedStorageGB = 1024; UsageRate = 15.3; FileCount = 3420; LastAccess = "2025-01-16"; Status = "アクティブ" },
-                [PSCustomObject]@{ UserName = "田中次郎"; Email = "tanaka@contoso.com"; Department = "人事部"; UsedStorageGB = 12.4; AllocatedStorageGB = 1024; UsageRate = 1.2; FileCount = 980; LastAccess = "2025-01-15"; Status = "アクティブ" }
-            )
-        }
-        "SignInLogs" {
-            return @(
-                [PSCustomObject]@{ SignInDateTime = "2025-01-16 09:30:15"; UserName = "山田太郎"; Application = "Microsoft Teams"; IPAddress = "203.0.113.45"; Location = "Tokyo, Japan"; DeviceInformation = "Windows PC"; SignInResult = "成功"; RiskLevel = "low"; MFADetails = "MFA実行" },
-                [PSCustomObject]@{ SignInDateTime = "2025-01-16 08:15:22"; UserName = "佐藤花子"; Application = "Outlook"; IPAddress = "203.0.113.46"; Location = "Tokyo, Japan"; DeviceInformation = "Windows PC"; SignInResult = "成功"; RiskLevel = "low"; MFADetails = "MFA実行" },
-                [PSCustomObject]@{ SignInDateTime = "2025-01-15 17:45:10"; UserName = "田中次郎"; Application = "SharePoint"; IPAddress = "203.0.113.47"; Location = "Tokyo, Japan"; DeviceInformation = "Windows PC"; SignInResult = "成功"; RiskLevel = "medium"; MFADetails = "MFA不要" }
-            )
-        }
-        default {
-            return @([PSCustomObject]@{ Message = "データタイプ '$DataType' は対応していません"; Timestamp = $timestamp })
-        }
-    }
-}
 
 function Export-CliResults {
     param(
@@ -393,19 +318,19 @@ function Execute-CliAction {
     
     switch ($Action.ToLower()) {
         "daily" {
-            $data = Get-RealOrDummyData -DataType "DailyReport"
+            $data = Get-RealData -DataType "DailyReport"
             $reportName = "日次レポート"
         }
         "weekly" {
-            $data = Generate-DummyData -DataType "DailyReport"
+            $data = Get-M365WeeklyReport
             $reportName = "週次レポート"
         }
         "monthly" {
-            $data = Generate-DummyData -DataType "DailyReport"
+            $data = Get-M365MonthlyReport
             $reportName = "月次レポート"
         }
         "yearly" {
-            $data = Generate-DummyData -DataType "DailyReport"
+            $data = Get-M365YearlyReport
             $reportName = "年次レポート"
         }
         "test" {
@@ -413,11 +338,11 @@ function Execute-CliAction {
             $reportName = "テスト実行結果"
         }
         "license" {
-            $data = Get-RealOrDummyData -DataType "LicenseAnalysis"
+            $data = Get-RealData -DataType "LicenseAnalysis"
             $reportName = "ライセンス分析"
         }
         "usage" {
-            $data = Get-RealOrDummyData -DataType "UsageAnalysis"
+            $data = Get-RealData -DataType "UsageAnalysis"
             $reportName = "使用状況分析"
         }
         "performance" {
@@ -433,11 +358,11 @@ function Execute-CliAction {
             $reportName = "権限監査"
         }
         "users" {
-            $data = Get-RealOrDummyData -DataType "Users" -Parameters @{ MaxResults = $MaxResults }
+            $data = Get-RealData -DataType "Users" -Parameters @{ MaxResults = $MaxResults }
             $reportName = "ユーザー一覧"
         }
         "mfa" {
-            $data = Get-RealOrDummyData -DataType "MFAStatus"
+            $data = Get-RealData -DataType "MFAStatus"
             $reportName = "MFA状況"
         }
         "conditional" {
@@ -445,11 +370,11 @@ function Execute-CliAction {
             $reportName = "条件付きアクセス"
         }
         "signin" {
-            $data = Get-RealOrDummyData -DataType "SignInLogs" -Parameters @{ MaxResults = $MaxResults }
+            $data = Get-RealData -DataType "SignInLogs" -Parameters @{ MaxResults = $MaxResults }
             $reportName = "サインインログ"
         }
         "mailbox" {
-            $data = Get-RealOrDummyData -DataType "MailboxAnalysis"
+            $data = Get-RealData -DataType "MailboxAnalysis"
             $reportName = "メールボックス管理"
         }
         "mailflow" {
@@ -465,7 +390,7 @@ function Execute-CliAction {
             $reportName = "配信分析"
         }
         "teams" {
-            $data = Get-RealOrDummyData -DataType "TeamsUsage"
+            $data = Get-RealData -DataType "TeamsUsage"
             $reportName = "Teams使用状況"
         }
         "teamssettings" {
@@ -481,7 +406,7 @@ function Execute-CliAction {
             $reportName = "Teamsアプリ分析"
         }
         "storage" {
-            $data = Get-RealOrDummyData -DataType "OneDriveAnalysis"
+            $data = Get-RealData -DataType "OneDriveAnalysis"
             $reportName = "OneDriveストレージ分析"
         }
         "sharing" {
@@ -511,6 +436,52 @@ function Execute-CliAction {
                 Write-Host "❌ 接続エラー: $($_.Exception.Message)" -ForegroundColor Red
                 return
             }
+        }
+        "show-daily" {
+            # 最新の日次レポートHTMLファイルを検索して表示
+            $reportsPath = Join-Path $Script:ToolRoot "Reports\Daily"
+            Write-Host "🔍 日次レポートを検索中..." -ForegroundColor Cyan
+            Write-Host "   検索パス: $reportsPath" -ForegroundColor Gray
+            
+            if (Test-Path $reportsPath) {
+                $latestReport = Get-ChildItem -Path $reportsPath -Filter "*.html" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($latestReport) {
+                    Write-Host "✅ 最新の日次レポートを表示します:" -ForegroundColor Green
+                    Write-Host "   ファイル: $($latestReport.Name)" -ForegroundColor White
+                    Write-Host "   作成日時: $($latestReport.LastWriteTime)" -ForegroundColor Gray
+                    Write-Host "   ファイルパス: $($latestReport.FullName)" -ForegroundColor Gray
+                    
+                    # プラットフォーム別でHTMLファイルを開く
+                    if ($IsLinux) {
+                        Write-Host "🌐 ブラウザでファイルを表示中..." -ForegroundColor Cyan
+                        $browserOpened = $false
+                        
+                        # 利用可能なブラウザを順番に試す
+                        $browsers = @('google-chrome', 'firefox', 'chromium-browser', 'xdg-open')
+                        foreach ($browser in $browsers) {
+                            if (Get-Command $browser -ErrorAction SilentlyContinue) {
+                                & $browser $latestReport.FullName 2>/dev/null &
+                                $browserOpened = $true
+                                Write-Host "   ブラウザ: $browser で開きました" -ForegroundColor Green
+                                break
+                            }
+                        }
+                        
+                        if (-not $browserOpened) {
+                            Write-Host "⚠️ ブラウザが見つかりません。手動でファイルを開いてください:" -ForegroundColor Yellow
+                            Write-Host "   $($latestReport.FullName)" -ForegroundColor White
+                        }
+                    } else {
+                        Start-Process $latestReport.FullName
+                    }
+                } else {
+                    Write-Host "⚠️ 日次レポートが見つかりません。先に日次レポートを生成してください。" -ForegroundColor Yellow
+                    Write-Host "   コマンド例: .\CliApp_Enhanced.ps1 daily -OutputHTML" -ForegroundColor Cyan
+                }
+            } else {
+                Write-Host "❌ 日次レポートフォルダが見つかりません: $reportsPath" -ForegroundColor Red
+            }
+            return
         }
         "help" {
             Show-CliHelp

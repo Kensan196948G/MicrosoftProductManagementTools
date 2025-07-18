@@ -1,0 +1,919 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テストカバレッジ分析レポート - 20250718_105259</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; }
+        .metric { display: inline-block; margin: 10px; padding: 15px; border-radius: 5px; text-align: center; min-width: 120px; }
+        .metric-high { background-color: #2ecc71; color: white; }
+        .metric-medium { background-color: #f39c12; color: white; }
+        .metric-low { background-color: #e74c3c; color: white; }
+        .metric-info { background-color: #3498db; color: white; }
+        .coverage-excellent { color: #2ecc71; font-weight: bold; }
+        .coverage-good { color: #f39c12; font-weight: bold; }
+        .coverage-poor { color: #e74c3c; font-weight: bold; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #34495e; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .recommendation { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .security-gap { background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .performance-gap { background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .compliance-gap { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .progress-bar { width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 20px; background-color: #4caf50; text-align: center; line-height: 20px; color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 テストカバレッジ分析レポート</h1>
+        <p><strong>分析セッション:</strong> 20250718_105259</p>
+        <p><strong>実行時間:</strong> 3.07 秒</p>
+        <p><strong>分析日時:</strong> 2025年07月18日 10:53:02</p>
+        
+        <h2>📊 カバレッジ概要</h2>
+        <div>
+            <div class="metric metric-info">
+                <div style="font-size: 24px;">96</div>
+                <div>ソースファイル</div>
+            </div>
+            <div class="metric metric-info">
+                <div style="font-size: 24px;">79</div>
+                <div>テストファイル</div>
+            </div>
+            <div class="metric metric-low">
+                <div style="font-size: 24px;">0%</div>
+                <div>カバレッジ率</div>
+            </div>
+            <div class="metric metric-high">
+                <div style="font-size: 24px;">0</div>
+                <div>カバー済み</div>
+            </div>
+            <div class="metric metric-low">
+                <div style="font-size: 24px;">96</div>
+                <div>未カバー</div>
+            </div>
+        </div>
+        
+        <h3>カバレッジ進捗</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%;">0%</div>
+        </div>
+        
+        <h2>🎯 品質ギャップ分析</h2>
+        <div>
+            <div class="metric metric-low">
+                <div style="font-size: 24px;">40</div>
+                <div>セキュリティギャップ</div>
+            </div>
+            <div class="metric metric-low">
+                <div style="font-size: 24px;">41</div>
+                <div>パフォーマンスギャップ</div>
+            </div>
+            <div class="metric metric-low">
+                <div style="font-size: 24px;">8</div>
+                <div>コンプライアンスギャップ</div>
+            </div>
+        </div>
+        
+        <h2>📋 改善提案</h2><div class='recommendation'>💡 テストカバレッジが80%未満です (0%)。追加のテストケースが必要です。</div>
+<div class='recommendation'>💡 96 個のファイルにテストがありません。</div>
+<div class='recommendation'>💡 未カバーファイル: CliApp.ps1, CliApp_Enhanced.ps1, GuiApp.ps1, GuiApp_Enhanced.ps1, GuiApp_Simple.ps1, ...</div>
+<h3>🔒 セキュリティギャップ</h3>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'GuiApp.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'GuiApp_Enhanced.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'UserManagement.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'AnalysisReportData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'Authentication.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'AuthenticationTest.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'AutomatedTesting.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'Create-ExchangeOnlineCertificate.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'DailyReportData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'DataSourceVisualization.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'EnvironmentManager.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'GoogleDriveSync.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'HTMLTemplateEngine.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'HTMLTemplateWithPDF.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'M365ErrorHandler.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'MenuConfig.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'MonthlyReportData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'ProgressDisplay.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'PuppeteerPDF.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'PuppeteerPdfGenerator.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'ReportGenerator.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'Update-Certificate-Only.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'WeeklyReportData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'YearlyReportData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'EntraIDManagementData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'LicenseAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'OneDriveExternalSharingAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'OneDriveUsageAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'TeamsConfigurationAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'UserManagement.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'UserSecurityManagement.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'ExchangeLicenseValidityCheck.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'ExchangeManagement-NEW.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'MailDeliveryAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'MailFlowAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'SpamPhishingAnalysis.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'simple-gui-launcher.ps1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'OneDriveManagementData.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'EncodingManager.psm1' にセキュリティテストがありません。</div>
+<div class='security-gap'>🚨 セキュリティパターンを含むファイル 'MenuEngine.psm1' にセキュリティテストがありません。</div>
+<h3>⚡ パフォーマンスギャップ</h3>
+<div class='performance-gap'>📊 大型ファイル 'CliApp.ps1' (552 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'CliApp_Enhanced.ps1' (551 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'GuiApp.ps1' (2091 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'GuiApp_Enhanced.ps1' (2189 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'GroupManagement.psm1' (2737 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'AnalysisReportData.psm1' (600 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'Authentication.psm1' (1523 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'AutomatedTesting.ps1' (712 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'DailyReportData.psm1' (671 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'EnhancedHTMLTemplateEngine.psm1' (945 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'GuiReportFunctions.psm1' (750 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'HTMLTemplateWithPDF.psm1' (666 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'MenuConfig.psm1' (629 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'MonthlyReportData.psm1' (554 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'PowerShellVersionManager.psm1' (737 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ProgressDisplay.psm1' (565 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'PuppeteerPDF.psm1' (624 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'RealM365DataProvider.psm1' (3002 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ReportGenerator.psm1' (721 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ScheduledReports.ps1' (530 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'YearlyReportData.psm1' (618 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'LicenseAnalysis.ps1' (1334 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'OneDriveExternalSharingAnalysis.ps1' (1213 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'OneDriveUsageAnalysis.ps1' (929 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'TeamsConfigurationAnalysis.ps1' (1136 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'UsageActivityReport.ps1' (778 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'UsageActivityReport_Simple.ps1' (597 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'UserManagement.psm1' (3659 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'YearlyConsumptionAlert.ps1' (777 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ExchangeLicenseValidityCheck.ps1' (980 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ExchangeManagement-NEW.psm1' (2890 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ExchangeManagement.psm1' (2012 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'MailboxManagement.ps1' (530 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'MailFlowAnalysis.ps1' (537 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'RoomResourceAudit.ps1' (506 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'SecurityAnalysis.ps1' (658 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'SpamPhishingAnalysis.ps1' (955 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'run_launcher_old.ps1' (679 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'CLIMenu.psm1' (554 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'ConsoleGUIMenu.psm1' (585 行) にパフォーマンステストがありません。</div>
+<div class='performance-gap'>📊 大型ファイル 'MenuEngine.psm1' (506 行) にパフォーマンステストがありません。</div>
+<h3>📜 ISO/IEC 27001 コンプライアンスギャップ</h3>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'SecurityAudit.ps1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'RoomResourceAudit.ps1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'Logging.psm1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'SecurityAudit.ps1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'UserSecurityManagement.ps1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'SecurityAnalysis.ps1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'Authentication.psm1' にISO/IEC 27001準拠テストがありません。</div>
+<div class='compliance-gap'>⚖️ コンプライアンス関連ファイル 'AuthenticationTest.psm1' にISO/IEC 27001準拠テストがありません。</div>
+        <h2>📁 ファイル別カバレッジ詳細</h2>
+        <table>
+            <tr>
+                <th>ソースファイル</th>
+                <th>カバレッジ</th>
+                <th>テストファイル数</th>
+                <th>テストケース数</th>
+                <th>カバレッジタイプ</th>
+                <th>対応テスト</th>
+            </tr>            <tr>
+                <td>CliApp.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>CliApp_Enhanced.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GuiApp.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GuiApp_Enhanced.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GuiApp_Simple.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GuiApp_Simple_Fixed.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GroupManagement.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GroupManagement.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Test-ADSync.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UserManagement.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>AnalysisReportData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Authentication.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>AuthenticationTest.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>AutoConnect.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>AutomatedTesting.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Common.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Create-ExchangeOnlineCertificate.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>DailyReportData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>DataSourceVisualization.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>EnhancedHTMLTemplateEngine.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>EnvironmentManager.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ErrorHandling.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Execute-GitSync.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Generate-CompleteUserTable.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GitSyncManager.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GoogleDriveSync.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>GuiReportFunctions.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>HTMLTemplateEngine.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>HTMLTemplateWithPDF.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Logging.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>M365ErrorHandler.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ManualTestReport.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MenuConfig.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Migrate-SecretsToEnv.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MonthlyReportData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MultiFormatReportGenerator.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>PermissionFallback.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>PowerShell7-Launcher.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>PowerShellVersionManager.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ProgressDisplay.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>PuppeteerPDF.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>PuppeteerPdfGenerator.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>RealDataProvider.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>RealM365DataProvider.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ReportGenerator.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>SafeDataProvider.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>SafeRealDataReport.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ScheduledReports.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>SecurityAudit.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Setup-GitSyncScheduler.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Simple-GenerateDashboard.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Unblock-AllModules.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Update-Certificate-Only.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Update-CertificateSettings.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UserDailyActivityProvider.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>VersionDetection.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>WeeklyReportData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>YearlyReportData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>EntraIDManagementData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Get-ODTeamsUsage.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>LicenseAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>OneDriveExternalSharingAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>OneDriveUsageAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>TeamsConfigurationAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>TeamsOneDriveManagement.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UsageActivityReport.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UsageActivityReport_Simple.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UserManagement.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>UserSecurityManagement.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>YearlyConsumptionAlert.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MailboxMonitoring.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ExchangeLicenseValidityCheck.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ExchangeManagement-NEW.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ExchangeManagement.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ExchangeManagementData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Get-MailboxUsage.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>Invoke-LicenseAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MailboxManagement.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MailDeliveryAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MailFlowAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>RoomResourceAudit.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>SecurityAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>SpamPhishingAnalysis.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>run_launcher_old.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>run_launcher_simple.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>run_launcher_sta.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>simple-gui-launcher.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>start-gui.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>test-gui-launch.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>test_gui.ps1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>OneDriveManagementData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>TeamsManagementData.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>CLIMenu.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>ConsoleGUIMenu.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>EncodingManager.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>            <tr>
+                <td>MenuEngine.psm1</td>
+                <td class="coverage-poor">❌ 未カバー</td>
+                <td>0</td>
+                <td></td>
+                <td class="coverage-poor">None</td>
+                <td></td>
+            </tr>        </table>
+        
+        <h2>📈 プロジェクト構造概要</h2>
+        <table>
+            <tr>
+                <th>ディレクトリ</th>
+                <th>スクリプトファイル</th>
+                <th>モジュールファイル</th>
+                <th>合計ファイル</th>
+                <th>最終更新</th>
+            </tr>            <tr>
+                <td>Apps</td>
+                <td>6</td>
+                <td>0</td>
+                <td>6</td>
+                <td>2025/07/18 10:51</td>
+            </tr>            <tr>
+                <td>Scripts/Common</td>
+                <td>14</td>
+                <td>34</td>
+                <td>48</td>
+                <td>2025/07/18 10:52</td>
+            </tr>            <tr>
+                <td>Scripts/AD</td>
+                <td>3</td>
+                <td>1</td>
+                <td>4</td>
+                <td>2025/07/17 18:06</td>
+            </tr>            <tr>
+                <td>Scripts/EXO</td>
+                <td>9</td>
+                <td>3</td>
+                <td>12</td>
+                <td>2025/07/17 18:06</td>
+            </tr>            <tr>
+                <td>Scripts/EntraID</td>
+                <td>10</td>
+                <td>2</td>
+                <td>12</td>
+                <td>2025/07/17 18:06</td>
+            </tr>            <tr>
+                <td>Tests</td>
+                <td>7</td>
+                <td>0</td>
+                <td>7</td>
+                <td>2025/07/18 08:45</td>
+            </tr>            <tr>
+                <td>TestScripts</td>
+                <td>72</td>
+                <td>0</td>
+                <td>72</td>
+                <td>2025/07/18 10:52</td>
+            </tr>        </table>
+        
+        <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #7f8c8d;">
+            <p>Generated by Dev2 - Test/QA Developer | Microsoft 365管理ツール テストカバレッジ分析</p>
+            <p>Report ID: 20250718_105259 | Generated: 2025年07月18日 10:53:02</p>
+        </footer>
+    </div>
+</body>
+</html>

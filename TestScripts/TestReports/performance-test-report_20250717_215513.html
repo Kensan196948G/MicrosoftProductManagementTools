@@ -1,0 +1,296 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>パフォーマンステストレポート - 20250717_215513</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .warning { color: orange; }
+        .error { color: red; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .chart { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>パフォーマンステストレポート</h1>
+    <h2>概要</h2>
+    <p>テスト実行時間: 83.04 秒</p>
+    <p>総テスト数: 41</p>
+    <p>メモリスナップショット数: 989</p>
+    
+    <h2>メモリ使用量</h2>
+    <p>初期メモリ: 24.41 MB</p>
+    <p>最終メモリ: 58.65 MB</p>
+    <p>総増加量: 34.24 MB</p>
+    <p>GC後メモリ: 24.86 MB</p>
+    <p class="success">
+        メモリリーク: 検出されませんでした
+    </p>
+    
+    <h2>パフォーマンス結果</h2>
+    <table>
+        <tr>
+            <th>テスト名</th>
+            <th>実行時間 (ms)</th>
+            <th>メモリ変化 (KB)</th>
+            <th>成功</th>
+            <th>エラー</th>
+        </tr>        <tr>
+            <td>Load_Authentication.psm1</td>
+            <td>38</td>
+            <td>1168.77</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Authentication.psm1</td>
+            <td>1</td>
+            <td>384</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Authentication.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Authentication.psm1</td>
+            <td>2</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Authentication.psm1</td>
+            <td>1</td>
+            <td>384</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Logging.psm1</td>
+            <td>0</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Logging.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Logging.psm1</td>
+            <td>1</td>
+            <td>384</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Logging.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_Logging.psm1</td>
+            <td>0</td>
+            <td>384</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_RealM365DataProvider.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_RealM365DataProvider.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_RealM365DataProvider.psm1</td>
+            <td>0</td>
+            <td>384</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_RealM365DataProvider.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_RealM365DataProvider.psm1</td>
+            <td>1</td>
+            <td>-19342.41</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_ErrorHandling.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_ErrorHandling.psm1</td>
+            <td>0</td>
+            <td>2518.68</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_ErrorHandling.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_ErrorHandling.psm1</td>
+            <td>1</td>
+            <td>368</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_ErrorHandling.psm1</td>
+            <td>1</td>
+            <td>368</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_MultiFormatReportGenerator.psm1</td>
+            <td>2</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_MultiFormatReportGenerator.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_MultiFormatReportGenerator.psm1</td>
+            <td>0</td>
+            <td>368</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_MultiFormatReportGenerator.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Load_MultiFormatReportGenerator.psm1</td>
+            <td>1</td>
+            <td>376</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>50</td>
+            <td>1240.05</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>1</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>0</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>0</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>0</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>0</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>2</td>
+            <td>368</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>1</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>1</td>
+            <td>-22493.9</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>AuthenticationStatus_Test</td>
+            <td>0</td>
+            <td>360</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>Mass_Log_Output</td>
+            <td>22</td>
+            <td>464</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Mass_Log_Output</td>
+            <td>1</td>
+            <td>392</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Mass_Log_Output</td>
+            <td>1</td>
+            <td>392</td>
+            <td class="error">False</td>
+            <td>A Using variable cannot be retrieved. A Using variable can be used only with Invoke-Command, Start-Job, or InlineScript in the script workflow. When it is used with Invoke-Command, the Using variable is valid only if the script block is invoked on a remote computer.</td>
+        </tr>        <tr>
+            <td>Large_Data_Processing</td>
+            <td>6025</td>
+            <td>27048.54</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>Large_Data_Processing</td>
+            <td>7458</td>
+            <td>-17.27</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>        <tr>
+            <td>Large_Data_Processing</td>
+            <td>6200</td>
+            <td>681.27</td>
+            <td class="success">True</td>
+            <td></td>
+        </tr>    </table>
+    
+    <h2>推奨事項</h2>
+    <ul>
+        
+        <li class="warning">遅いテストの最適化を検討してください</li>
+        <li>定期的なパフォーマンス監視を実施してください</li>
+        <li>メモリ使用量が異常に高い場合は、ガベージコレクションの最適化を検討してください</li>
+    </ul>
+</body>
+</html>

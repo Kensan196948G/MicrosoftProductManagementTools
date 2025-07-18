@@ -90,7 +90,7 @@ function Export-MultiFormatReport {
         [array]$Data,
         [string]$ReportName,
         [string]$ReportType,
-        [string]$BaseDirectory = "E:\MicrosoftProductManagementTools\Reports",
+        [string]$BaseDirectory = $null,
         [switch]$ShowPopup = $true
     )
     
@@ -209,6 +209,13 @@ function Get-ReportOutputDirectory {
         $subDirectory = "General"
     }
     
+    # BaseDirectoryがnullまたは空の場合、相対パスを設定
+    if ([string]::IsNullOrEmpty($BaseDirectory)) {
+        # プロジェクトルートから相対的にReportsディレクトリを設定
+        $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+        $BaseDirectory = Join-Path $projectRoot "Reports"
+    }
+    
     return Join-Path $BaseDirectory $subDirectory
 }
 
@@ -284,6 +291,8 @@ function Show-ReportPopup {
         # Windows Forms を使用してポップアップ表示
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Drawing
+        
+        # Windows Forms初期設定は既にメインスクリプトで完了済み
         
         # メインフォームを作成
         $form = New-Object System.Windows.Forms.Form

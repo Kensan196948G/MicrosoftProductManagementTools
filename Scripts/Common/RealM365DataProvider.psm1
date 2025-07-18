@@ -24,6 +24,210 @@ try {
 $Script:GraphConnected = $false
 $Script:ExchangeConnected = $false
 $Script:LastConnectionCheck = $null
+$Script:TokenCache = @{}
+$Script:TokenExpiryTime = @{}
+$Script:ConnectionLock = [System.Threading.Mutex]::new($false, "M365ConnectionMutex")
+
+# Enhanced caching system for data optimization
+$Script:DataCache = @{
+    Users = @{ Data = $null; LastUpdated = $null; TTL = 300 }  # 5分キャッシュ
+    Groups = @{ Data = $null; LastUpdated = $null; TTL = 600 }  # 10分キャッシュ
+    Licenses = @{ Data = $null; LastUpdated = $null; TTL = 1800 }  # 30分キャッシュ
+    Mailboxes = @{ Data = $null; LastUpdated = $null; TTL = 900 }  # 15分キャッシュ
+    TeamsUsage = @{ Data = $null; LastUpdated = $null; TTL = 3600 }  # 1時間キャッシュ
+    Reports = @{ Data = $null; LastUpdated = $null; TTL = 1800 }  # 30分キャッシュ
+}
+
+# Performance metrics tracking
+$Script:PerformanceMetrics = @{
+    APICallCount = 0
+    CacheHitCount = 0
+    TotalResponseTime = 0
+    LastResetTime = Get-Date
+}
+
+# GUI Log function (モジュール内でGUIログを出力)
+function Write-ModuleLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    
+    # GUIログ関数が存在する場合は使用、そうでなければコンソール出力
+    if (Get-Command Write-GuiLog -ErrorAction SilentlyContinue) {
+        # GUIログに出力
+        Write-GuiLog $Message $Level
+        
+        # プロンプトタブにも直接出力（モジュールからの出力）
+        if ($Global:PromptOutputTextBox -ne $null) {
+            $timestamp = Get-Date -Format "HH:mm:ss"
+            $prefix = switch ($Level) {
+                "INFO"    { "ℹ️" }
+                "SUCCESS" { "✅" }
+                "WARNING" { "⚠️" }
+                "ERROR"   { "❌" }
+                "DEBUG"   { "🔍" }
+                default   { "📝" }
+            }
+            try {
+                if ($Global:PromptOutputTextBox.InvokeRequired) {
+                    $Global:PromptOutputTextBox.Invoke([Action]{
+                        $Global:PromptOutputTextBox.AppendText("[$timestamp] $prefix $Message`r`n")
+                        $Global:PromptOutputTextBox.SelectionStart = $Global:PromptOutputTextBox.Text.Length
+                        $Global:PromptOutputTextBox.ScrollToCaret()
+                    })
+                } else {
+                    $Global:PromptOutputTextBox.AppendText("[$timestamp] $prefix $Message`r`n")
+                    $Global:PromptOutputTextBox.SelectionStart = $Global:PromptOutputTextBox.Text.Length
+                    $Global:PromptOutputTextBox.ScrollToCaret()
+                }
+            } catch {
+                # プロンプトタブ出力エラーは無視
+            }
+        }
+        
+        # エラーの場合はエラーログタブにも出力
+        if ($Level -in @("ERROR", "WARNING") -and (Get-Command Write-GuiErrorLog -ErrorAction SilentlyContinue)) {
+            Write-GuiErrorLog $Message $Level
+        }
+        
+        return
+    }
+    
+    # フォールバック: コンソール出力
+    $prefix = switch ($Level) {
+        "INFO"    { "ℹ️" }
+        "SUCCESS" { "✅" }
+        "WARNING" { "⚠️" }
+        "ERROR"   { "❌" }
+        "DEBUG"   { "🔍" }
+        default   { "📝" }
+    }
+    
+    $color = switch ($Level) {
+        "INFO"    { "Cyan" }
+        "SUCCESS" { "Green" }
+        "WARNING" { "Yellow" }
+        "ERROR"   { "Red" }
+        "DEBUG"   { "Magenta" }
+        default   { "White" }
+    }
+    
+    # コンソール出力を削除し、GUIタブのみに出力
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    
+    # GUIのWrite-GuiLog関数が利用可能な場合は呼び出し
+    if (Get-Command Write-GuiLog -ErrorAction SilentlyContinue) {
+        try {
+            Write-GuiLog $Message $Level
+        } catch {
+            # GUIログ失敗時のみコンソールにフォールバック
+            Write-Host "[$timestamp] $prefix $Message" -ForegroundColor $color
+        }
+    } else {
+        # GUI関数が存在しない場合のみコンソール出力
+        Write-Host "[$timestamp] $prefix $Message" -ForegroundColor $color
+    }
+}
+
+# Enhanced cache management functions
+function Test-CacheValidity {
+    param(
+        [string]$CacheKey
+    )
+    
+    if (-not $Script:DataCache.ContainsKey($CacheKey)) {
+        return $false
+    }
+    
+    $cacheEntry = $Script:DataCache[$CacheKey]
+    if (-not $cacheEntry.LastUpdated -or -not $cacheEntry.Data) {
+        return $false
+    }
+    
+    $elapsedSeconds = (Get-Date) - $cacheEntry.LastUpdated
+    return $elapsedSeconds.TotalSeconds -lt $cacheEntry.TTL
+}
+
+function Get-CachedData {
+    param(
+        [string]$CacheKey,
+        [scriptblock]$DataProvider
+    )
+    
+    $startTime = Get-Date
+    
+    # Check cache validity
+    if (Test-CacheValidity $CacheKey) {
+        $Script:PerformanceMetrics.CacheHitCount++
+        Write-ModuleLog "✅ キャッシュヒット: $CacheKey" "SUCCESS"
+        return $Script:DataCache[$CacheKey].Data
+    }
+    
+    # Cache miss - fetch fresh data
+    Write-ModuleLog "🔄 データ取得中: $CacheKey" "INFO"
+    
+    try {
+        $data = & $DataProvider
+        
+        # Update cache
+        $Script:DataCache[$CacheKey].Data = $data
+        $Script:DataCache[$CacheKey].LastUpdated = Get-Date
+        
+        # Update performance metrics
+        $Script:PerformanceMetrics.APICallCount++
+        $responseTime = ((Get-Date) - $startTime).TotalMilliseconds
+        $Script:PerformanceMetrics.TotalResponseTime += $responseTime
+        
+        Write-ModuleLog "✅ データ取得完了: $CacheKey (${responseTime}ms)" "SUCCESS"
+        return $data
+    }
+    catch {
+        Write-ModuleLog "❌ データ取得エラー: $CacheKey - $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+function Clear-DataCache {
+    param(
+        [string[]]$CacheKeys = @()
+    )
+    
+    if ($CacheKeys.Count -eq 0) {
+        # Clear all cache
+        foreach ($key in $Script:DataCache.Keys) {
+            $Script:DataCache[$key].Data = $null
+            $Script:DataCache[$key].LastUpdated = $null
+        }
+        Write-ModuleLog "🗑️ 全キャッシュクリア完了" "INFO"
+    } else {
+        # Clear specific cache keys
+        foreach ($key in $CacheKeys) {
+            if ($Script:DataCache.ContainsKey($key)) {
+                $Script:DataCache[$key].Data = $null
+                $Script:DataCache[$key].LastUpdated = $null
+                Write-ModuleLog "🗑️ キャッシュクリア: $key" "INFO"
+            }
+        }
+    }
+}
+
+function Get-PerformanceMetrics {
+    $metrics = $Script:PerformanceMetrics.Clone()
+    $elapsedTime = (Get-Date) - $metrics.LastResetTime
+    
+    $metrics.AverageResponseTime = if ($metrics.APICallCount -gt 0) { 
+        $metrics.TotalResponseTime / $metrics.APICallCount 
+    } else { 0 }
+    
+    $metrics.CacheHitRate = if (($metrics.APICallCount + $metrics.CacheHitCount) -gt 0) {
+        $metrics.CacheHitCount / ($metrics.APICallCount + $metrics.CacheHitCount) * 100
+    } else { 0 }
+    
+    $metrics.ElapsedMinutes = [math]::Round($elapsedTime.TotalMinutes, 2)
+    
+    return $metrics
+}
 
 # .env file reader function
 function Read-EnvFile {
@@ -56,18 +260,18 @@ function Resolve-ConfigValue {
         [hashtable]$EnvVars
     )
     
-    Write-Host "ℹ️ 変数展開処理: $Value" -ForegroundColor Cyan
+    Write-ModuleLog "ℹ️ 変数展開処理: $Value" "INFO"
     
     if ($Value -match '\$\{([^}]+)\}') {
         $envKey = $matches[1]
-        Write-Host "  環境変数キー: $envKey" -ForegroundColor Gray
+        Write-ModuleLog "  環境変数キー: $envKey" "INFO"
         
         if ($EnvVars.ContainsKey($envKey)) {
             $resolvedValue = $EnvVars[$envKey]
-            Write-Host "  展開結果: $resolvedValue" -ForegroundColor Green
+            Write-ModuleLog "  展開結果: $resolvedValue" "SUCCESS"
             return $resolvedValue
         } else {
-            Write-Host "  環境変数が見つかりません: $envKey" -ForegroundColor Red
+            Write-ModuleLog "  環境変数が見つかりません: $envKey" "ERROR"
         }
     }
     
@@ -124,6 +328,9 @@ function Connect-M365Services {
     <#
     .SYNOPSIS
     Connects to Microsoft 365 services with required scopes
+    .DESCRIPTION
+    統合された認証処理でMicrosoft Graph APIとExchange Online PowerShellに接続
+    トークンキャッシュとスレッドセーフな接続管理を実装
     #>
     [CmdletBinding()]
     param(
@@ -138,31 +345,56 @@ function Connect-M365Services {
             "Team.ReadBasic.All",
             "TeamMember.Read.All",
             "Mail.Read",
-            "SecurityEvents.Read.All"
-        )
+            "SecurityEvents.Read.All",
+            "MailboxSettings.Read",
+            "Mail.ReadBasic.All",
+            "Calendars.Read",
+            "DeviceManagementManagedDevices.Read.All",
+            "RoleManagement.Read.All"
+        ),
+        [switch]$ForceReconnect,
+        [int]$TokenCacheDurationMinutes = 50
     )
     
     try {
-        Write-Host "🔑 Microsoft 365 サービスに接続中..." -ForegroundColor Cyan
-        
-        # Connect to Microsoft Graph (非対話型認証)
-        if (-not $Script:GraphConnected) {
-            Write-Host "🔑 Microsoft Graph に非対話型で接続中..." -ForegroundColor Yellow
+        # スレッドセーフな接続処理
+        $mutexAcquired = $false
+        try {
+            $mutexAcquired = $Script:ConnectionLock.WaitOne(5000)
+            if (-not $mutexAcquired) {
+                Write-ModuleLog "⚠️ 別のプロセスが接続中です。待機しています..." "WARNING"
+                $mutexAcquired = $Script:ConnectionLock.WaitOne(30000)
+            }
+            
+            # トークンキャッシュチェック
+            if (-not $ForceReconnect -and $Script:GraphConnected) {
+                $tokenExpiry = $Script:TokenExpiryTime["Graph"]
+                if ($tokenExpiry -and (Get-Date) -lt $tokenExpiry) {
+                    Write-ModuleLog "✅ 有効なトークンキャッシュを使用します（有効期限: $($tokenExpiry.ToString('yyyy-MM-dd HH:mm:ss'))）" "SUCCESS"
+                    return $true
+                }
+            }
+            
+            Write-ModuleLog "🔑 Microsoft 365 サービスに接続中..." "INFO"
+            
+            # Connect to Microsoft Graph (非対話型認証)
+            if (-not $Script:GraphConnected -or $ForceReconnect) {
+            Write-ModuleLog "🔑 Microsoft Graph に非対話型で接続中..." "INFO"
             
             # .envファイルを読み込み
             $envPath = Join-Path $PSScriptRoot "..\..\.env"
-            Write-Host "ℹ️ .envファイルパス: $envPath" -ForegroundColor Cyan
+            Write-ModuleLog "ℹ️ .envファイルパス: $envPath" "INFO"
             
             if (Test-Path $envPath) {
-                Write-Host "✅ .envファイルが見つかりました" -ForegroundColor Green
+                Write-ModuleLog "✅ .envファイルが見つかりました" "SUCCESS"
             } else {
-                Write-Host "❌ .envファイルが見つかりません: $envPath" -ForegroundColor Red
+                Write-ModuleLog "❌ .envファイルが見つかりません: $envPath" "ERROR"
             }
             
             $envVars = Read-EnvFile -Path $envPath
-            Write-Host "ℹ️ 読み込まれた環境変数: $($envVars.Count) 個" -ForegroundColor Cyan
+            Write-ModuleLog "ℹ️ 読み込まれた環境変数: $($envVars.Count) 個" "INFO"
             foreach ($key in $envVars.Keys) {
-                Write-Host "  $key = $($envVars[$key])" -ForegroundColor Gray
+                Write-ModuleLog "  $key = $($envVars[$key])" "INFO"
             }
             
             # 設定ファイルから認証情報を読み込み
@@ -174,10 +406,10 @@ function Connect-M365Services {
                 $clientSecret = Resolve-ConfigValue -Value $config.EntraID.ClientSecret -EnvVars $envVars
                 
                 # デバッグ情報表示
-                Write-Host "ℹ️ 認証情報確認:" -ForegroundColor Cyan
-                Write-Host "  TenantId: $tenantId" -ForegroundColor Gray
-                Write-Host "  ClientId: $clientId" -ForegroundColor Gray
-                Write-Host "  ClientSecret: $($clientSecret.Substring(0, 8))..." -ForegroundColor Gray
+                Write-ModuleLog "ℹ️ 認証情報確認:" "INFO"
+                Write-ModuleLog "  TenantId: $tenantId" "INFO"
+                Write-ModuleLog "  ClientId: $clientId" "INFO"
+                Write-ModuleLog "  ClientSecret: $($clientSecret.Substring(0, 8))..." "INFO"
                 
                 if ($tenantId -and $clientId -and $clientSecret -and 
                     $tenantId -ne "YOUR-TENANT-ID-HERE" -and 
@@ -191,27 +423,40 @@ function Connect-M365Services {
                         
                         # テナントIDのフォーマット検証
                         if ($tenantId -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
-                            Connect-MgGraph -ClientSecretCredential $credential -TenantId $tenantId -NoWelcome -ErrorAction Stop
-                            $Script:GraphConnected = $true
-                            Write-Host "✅ Microsoft Graph にクライアントシークレットで接続しました" -ForegroundColor Green
+                            # 認証モジュールとの統合
+                            if (Get-Module -Name "$PSScriptRoot\Authentication.psm1" -ListAvailable) {
+                                Import-Module "$PSScriptRoot\Authentication.psm1" -Force
+                                $authResult = Connect-MicrosoftGraphService -Config $config
+                                if ($authResult) {
+                                    $Script:GraphConnected = $true
+                                    $Script:TokenExpiryTime["Graph"] = (Get-Date).AddMinutes($TokenCacheDurationMinutes)
+                                    Write-ModuleLog "✅ Microsoft Graph に統合認証で接続しました" "SUCCESS"
+                                }
+                            } else {
+                                # フォールバック: 直接接続
+                                Connect-MgGraph -ClientSecretCredential $credential -TenantId $tenantId -NoWelcome -ErrorAction Stop
+                                $Script:GraphConnected = $true
+                                $Script:TokenExpiryTime["Graph"] = (Get-Date).AddMinutes($TokenCacheDurationMinutes)
+                                Write-ModuleLog "✅ Microsoft Graph にクライアントシークレットで接続しました" "SUCCESS"
+                            }
                         } else {
-                            Write-Host "❌ 無効なテナントIDフォーマット: $tenantId" -ForegroundColor Red
+                            Write-ModuleLog "❌ 無効なテナントIDフォーマット: $tenantId" "ERROR"
                         }
                     } catch {
-                        Write-Host "❌ Microsoft Graph 接続エラー: $($_.Exception.Message)" -ForegroundColor Red
+                        Write-ModuleLog "❌ Microsoft Graph 接続エラー: $($_.Exception.Message)" "ERROR"
                         $Script:GraphConnected = $false
                     }
                 } else {
-                    Write-Host "⚠️ 設定ファイルの認証情報が不完全です。ダミーデータを使用します。" -ForegroundColor Yellow
+                    Write-ModuleLog "⚠️ 設定ファイルの認証情報が不完全です。ダミーデータを使用します。" "WARNING"
                 }
             } else {
-                Write-Host "⚠️ 設定ファイルが見つかりません。ダミーデータを使用します。" -ForegroundColor Yellow
+                Write-ModuleLog "⚠️ 設定ファイルが見つかりません。ダミーデータを使用します。" "WARNING"
             }
         }
         
         # Connect to Exchange Online (証明書ベース認証)
         if (-not $Script:ExchangeConnected) {
-            Write-Host "🔑 Exchange Online に証明書ベース認証で接続中..." -ForegroundColor Yellow
+            Write-ModuleLog "🔑 Exchange Online に証明書ベース認証で接続中..." "INFO"
             
             try {
                 # 設定ファイルから認証情報を読み込み
@@ -228,47 +473,75 @@ function Connect-M365Services {
                         $fullCertPath = Join-Path $PSScriptRoot "..\..\" $certificatePath
                         
                         if (Test-Path $fullCertPath) {
-                            Write-Host "✅ 証明書ファイルが見つかりました: $fullCertPath" -ForegroundColor Green
+                            Write-ModuleLog "✅ 証明書ファイルが見つかりました: $fullCertPath" "SUCCESS"
                             
                             # ExchangeOnlineManagementモジュールの確認
                             if (-not (Get-Module -Name ExchangeOnlineManagement -ListAvailable)) {
-                                Write-Host "❌ ExchangeOnlineManagement モジュールがインストールされていません" -ForegroundColor Red
-                                Write-Host "📦 インストール方法: Install-Module -Name ExchangeOnlineManagement" -ForegroundColor Cyan
+                                Write-ModuleLog "❌ ExchangeOnlineManagement モジュールがインストールされていません" "ERROR"
+                                Write-ModuleLog "📦 インストール方法: Install-Module -Name ExchangeOnlineManagement" "INFO"
                             } else {
                                 # 証明書ベースでExchange Onlineに接続
                                 $connectParams = @{
                                     Organization = $organization
                                     AppId = $appId
-                                    CertificateThumbprint = $certificateThumbprint
+                                    CertificateFilePath = $fullCertPath
+                                    CertificatePassword = (ConvertTo-SecureString $certificatePassword -AsPlainText -Force)
                                     ShowProgress = $false
                                     ShowBanner = $false
                                 }
                                 
-                                Write-Host "ℹ️ Exchange Online接続パラメータ:" -ForegroundColor Cyan
-                                Write-Host "  Organization: $organization" -ForegroundColor Gray
-                                Write-Host "  AppId: $appId" -ForegroundColor Gray
-                                Write-Host "  CertificateThumbprint: $certificateThumbprint" -ForegroundColor Gray
+                                Write-ModuleLog "ℹ️ Exchange Online接続パラメータ:" "INFO"
+                                Write-ModuleLog "  Organization: $organization" "INFO"
+                                Write-ModuleLog "  AppId: $appId" "INFO"
+                                Write-ModuleLog "  CertificateFilePath: $fullCertPath" "INFO"
                                 
-                                Connect-ExchangeOnline @connectParams
-                                
-                                # 接続テスト
-                                Get-OrganizationConfig | Out-Null
-                                $Script:ExchangeConnected = $true
-                                Write-Host "✅ Exchange Online に証明書ベース認証で接続しました" -ForegroundColor Green
+                                # 統合認証モジュールを使用
+                                if (Get-Module -Name "$PSScriptRoot\Authentication.psm1" -ListAvailable) {
+                                    Import-Module "$PSScriptRoot\Authentication.psm1" -Force
+                                    
+                                    # 証明書オブジェクトを作成
+                                    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($fullCertPath, (ConvertTo-SecureString $certificatePassword -AsPlainText -Force))
+                                    
+                                    # 統合認証モジュールの設定オブジェクトを作成
+                                    $exoConfig = @{
+                                        ExchangeOnline = @{
+                                            Organization = $organization
+                                            AppId = $appId
+                                            CertificatePath = $fullCertPath
+                                            CertificatePassword = $certificatePassword
+                                            Certificate = $cert
+                                        }
+                                    }
+                                    
+                                    $authResult = Connect-ExchangeOnlineService -Config ([PSCustomObject]$exoConfig)
+                                    if ($authResult) {
+                                        $Script:ExchangeConnected = $true
+                                        Write-ModuleLog "✅ Exchange Online に統合認証モジュール経由で接続しました" "SUCCESS"
+                                    }
+                                } else {
+                                    # フォールバック: 直接接続（リトライロジック付き）
+                                    $connectionResult = Invoke-RetryOperation -ScriptBlock {
+                                        Connect-ExchangeOnline @connectParams
+                                        Get-OrganizationConfig | Out-Null  # 接続テスト
+                                    } -MaxRetries 3 -DelaySeconds 2 -Operation "Exchange Online 証明書認証"
+                                    
+                                    $Script:ExchangeConnected = $true
+                                    Write-ModuleLog "✅ Exchange Online に証明書ベース認証で接続しました" "SUCCESS"
+                                }
                             }
                         } else {
-                            Write-Host "❌ 証明書ファイルが見つかりません: $fullCertPath" -ForegroundColor Red
+                            Write-ModuleLog "❌ 証明書ファイルが見つかりません: $fullCertPath" "ERROR"
                         }
                     } else {
-                        Write-Host "⚠️ 証明書パスが設定されていません" -ForegroundColor Yellow
+                        Write-ModuleLog "⚠️ 証明書パスが設定されていません" "WARNING"
                     }
                 } else {
-                    Write-Host "❌ 設定ファイルが見つかりません: $configPath" -ForegroundColor Red
+                    Write-ModuleLog "❌ 設定ファイルが見つかりません: $configPath" "ERROR"
                 }
             }
             catch {
-                Write-Host "❌ Exchange Online 接続エラー: $($_.Exception.Message)" -ForegroundColor Red
-                Write-Host "ℹ️ Exchange Onlineのデータ取得はスキップされます。" -ForegroundColor Cyan
+                Write-ModuleLog "❌ Exchange Online 接続エラー: $($_.Exception.Message)" "ERROR"
+                Write-ModuleLog "ℹ️ Exchange Onlineのデータ取得はスキップされます。" "INFO"
                 $Script:ExchangeConnected = $false
             }
         }
@@ -277,6 +550,17 @@ function Connect-M365Services {
     }
     catch {
         Write-Error "Microsoft 365 サービス接続エラー: $($_.Exception.Message)"
+        throw
+    }
+    finally {
+        # mutexを解放
+        if ($mutexAcquired -and $Script:ConnectionLock) {
+            $Script:ConnectionLock.ReleaseMutex()
+            Write-ModuleLog "🔓 接続ロックを解放しました" "DEBUG"
+        }
+    }
+    } catch {
+        Write-Error "Connect-M365Services エラー: $($_.Exception.Message)"
         throw
     }
 }
@@ -296,7 +580,7 @@ function Get-M365AllUsers {
     )
     
     try {
-        Write-Host "👥 全ユーザー情報を取得中..." -ForegroundColor Cyan
+        Write-ModuleLog "👥 全ユーザー情報を取得中..." "INFO"
         
         # E3ライセンスで利用可能なプロパティのみを使用
         try {
@@ -368,7 +652,7 @@ function Get-M365AllUsers {
             }
         }
         
-        Write-Host "✅ $($result.Count) 件のユーザー情報を取得しました" -ForegroundColor Green
+        Write-ModuleLog "✅ $($result.Count) 件のユーザー情報を取得しました" "SUCCESS"
         return $result
     }
     catch {
@@ -451,7 +735,7 @@ function Get-M365LicenseAnalysis {
     param()
     
     try {
-        Write-Host "📊 ライセンス分析データを取得中..." -ForegroundColor Cyan
+        Write-ModuleLog "📊 ライセンス分析データを取得中..." "INFO"
         
         $subscribedSkus = Get-MgSubscribedSku -All
         $result = @()
@@ -494,7 +778,7 @@ function Get-M365UsageAnalysis {
     param()
     
     try {
-        Write-Host "📈 使用状況分析データを取得中..." -ForegroundColor Cyan
+        Write-ModuleLog "📈 使用状況分析データを取得中..." "INFO"
         
         # Get Office 365 active user counts
         $office365Report = Get-MgReportOffice365ActiveUserCount -Period D30
@@ -546,7 +830,7 @@ function Get-M365UsageAnalysis {
             }
         )
         
-        Write-Host "✅ 使用状況分析データを取得しました" -ForegroundColor Green
+        Write-ModuleLog "✅ 使用状況分析データを取得しました" "SUCCESS"
         return $result
     }
     catch {
@@ -660,6 +944,143 @@ function Get-M365MFAStatus {
 }
 
 # ================================================================================
+# Performance Optimization Functions
+# ================================================================================
+function Get-CachedData {
+    <#
+    .SYNOPSIS
+    キャッシュされたデータの取得
+    .DESCRIPTION
+    指定されたキーのデータがキャッシュに存在し、有効期限内の場合はキャッシュから返却
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CacheKey,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$CacheDurationMinutes = 30
+    )
+    
+    if ($Script:TokenCache.ContainsKey($CacheKey)) {
+        $cacheEntry = $Script:TokenCache[$CacheKey]
+        if ($cacheEntry.Expiry -gt (Get-Date)) {
+            Write-ModuleLog "📦 キャッシュヒット: $CacheKey" "DEBUG"
+            return $cacheEntry.Data
+        }
+    }
+    
+    return $null
+}
+
+function Set-CachedData {
+    <#
+    .SYNOPSIS
+    データのキャッシュ保存
+    .DESCRIPTION
+    指定されたキーでデータをキャッシュに保存
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CacheKey,
+        
+        [Parameter(Mandatory = $true)]
+        [object]$Data,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$CacheDurationMinutes = 30
+    )
+    
+    $Script:TokenCache[$CacheKey] = @{
+        Data = $Data
+        Expiry = (Get-Date).AddMinutes($CacheDurationMinutes)
+    }
+    
+    Write-ModuleLog "💾 キャッシュ保存: $CacheKey (有効期限: $CacheDurationMinutes 分)" "DEBUG"
+}
+
+function Clear-CachedData {
+    <#
+    .SYNOPSIS
+    キャッシュのクリア
+    .DESCRIPTION
+    指定されたキーまたはすべてのキャッシュをクリア
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$CacheKey = ""
+    )
+    
+    if ($CacheKey) {
+        if ($Script:TokenCache.ContainsKey($CacheKey)) {
+            $Script:TokenCache.Remove($CacheKey)
+            Write-ModuleLog "🗑️ キャッシュクリア: $CacheKey" "INFO"
+        }
+    }
+    else {
+        $Script:TokenCache.Clear()
+        Write-ModuleLog "🗑️ すべてのキャッシュをクリアしました" "INFO"
+    }
+}
+
+# Exchange Online Optimized Query Functions
+# ================================================================================
+function Invoke-OptimizedExchangeQuery {
+    <#
+    .SYNOPSIS
+    最適化されたExchange Online PowerShellクエリ実行
+    .DESCRIPTION
+    バッチ処理、フィルタリング、エラーハンドリングによる高速データ取得
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandName,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Parameters = @{},
+        
+        [Parameter(Mandatory = $false)]
+        [int]$ResultSize = 1000,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$UseParallel
+    )
+    
+    try {
+        Write-ModuleLog "Exchange Online クエリ実行: $CommandName" "INFO"
+        
+        # 接続確認
+        if (-not $Script:ExchangeConnected) {
+            Write-ModuleLog "⚠️ Exchange Online未接続、接続を試行します" "WARNING"
+            Connect-M365Services
+        }
+        
+        # パラメータの調整
+        if ($ResultSize -gt 0 -and $CommandName -match "Get-") {
+            $Parameters["ResultSize"] = $ResultSize
+        }
+        
+        # リトライロジック付きでコマンド実行
+        $result = Invoke-RetryOperation -ScriptBlock {
+            $cmd = Get-Command $CommandName -ErrorAction Stop
+            & $cmd @Parameters -ErrorAction Stop
+        } -MaxRetries $MaxRetries -DelaySeconds 2 -Operation "Exchange クエリ ($CommandName)"
+        
+        Write-ModuleLog "クエリ完了: $($result.Count) 件取得" "SUCCESS"
+        return $result
+    }
+    catch {
+        Write-ModuleLog "Exchange クエリエラー: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
 # Exchange Online Functions
 # ================================================================================
 
@@ -717,33 +1138,52 @@ function Get-M365MailboxAnalysis {
 function Get-M365TeamsUsage {
     <#
     .SYNOPSIS
-    Retrieves Teams usage data (using dummy data as per requirement)
+    Retrieves real Teams usage data from Microsoft Graph API
     #>
     [CmdletBinding()]
     param()
     
     try {
-        Write-Host "💬 Teams使用状況データを生成中..." -ForegroundColor Cyan
+        Write-Host "💬 Teams使用状況データを取得中..." -ForegroundColor Cyan
         
-        # Generate dummy data for Teams as requested
-        $users = Get-MgUser -All -Property "DisplayName,Department" | Select-Object -First 50
+        # Get real users data from Microsoft Graph
+        $users = Get-MgUser -All -Property "DisplayName,Department,UserPrincipalName" | Select-Object -First 50
         $result = @()
         
         foreach ($user in $users) {
-            $result += [PSCustomObject]@{
-                UserName = $user.DisplayName
-                Department = $user.Department ?? "IT部"
-                LastAccess = (Get-Date).AddDays(-(Get-Random -Minimum 1 -Maximum 30)).ToString("yyyy-MM-dd")
-                MonthlyMeetingParticipation = Get-Random -Minimum 5 -Maximum 50
-                MonthlyChatCount = Get-Random -Minimum 20 -Maximum 200
-                StorageUsedMB = Get-Random -Minimum 100 -Maximum 2000
-                AppUsageCount = Get-Random -Minimum 1 -Maximum 10
-                UsageLevel = @("低", "中", "高")[(Get-Random -Minimum 0 -Maximum 3)]
-                Status = "アクティブ"
+            try {
+                # Get Teams user activity report (requires Reports.Read.All permission)
+                $teamsActivity = Get-MgReportTeamsUserActivityUserDetail -Period D30 -UserId $user.UserPrincipalName -ErrorAction SilentlyContinue
+                
+                $result += [PSCustomObject]@{
+                    UserName = $user.DisplayName
+                    Department = $user.Department ?? "未設定"
+                    LastAccess = if ($teamsActivity) { $teamsActivity.LastActivityDate } else { "データなし" }
+                    MonthlyMeetingParticipation = if ($teamsActivity) { $teamsActivity.MeetingCount } else { 0 }
+                    MonthlyChatCount = if ($teamsActivity) { $teamsActivity.PrivateChatMessageCount + $teamsActivity.TeamChatMessageCount } else { 0 }
+                    StorageUsedMB = if ($teamsActivity) { [math]::Round($teamsActivity.StorageUsedInBytes / 1MB, 2) } else { 0 }
+                    AppUsageCount = if ($teamsActivity) { $teamsActivity.AppCount } else { 0 }
+                    UsageLevel = if ($teamsActivity -and $teamsActivity.IsLicensed) { "アクティブ" } else { "非アクティブ" }
+                    Status = if ($teamsActivity) { "利用中" } else { "未利用" }
+                }
+            }
+            catch {
+                # Fallback to user info only if Teams activity data is unavailable
+                $result += [PSCustomObject]@{
+                    UserName = $user.DisplayName
+                    Department = $user.Department ?? "未設定"
+                    LastAccess = "データ取得不可"
+                    MonthlyMeetingParticipation = "N/A"
+                    MonthlyChatCount = "N/A"
+                    StorageUsedMB = "N/A"
+                    AppUsageCount = "N/A"
+                    UsageLevel = "不明"
+                    Status = "データ取得エラー"
+                }
             }
         }
         
-        Write-Host "✅ $($result.Count) 件のTeams使用状況データを生成しました" -ForegroundColor Green
+        Write-Host "✅ $($result.Count) 件のTeams使用状況データを取得しました" -ForegroundColor Green
         return $result
     }
     catch {
@@ -860,7 +1300,7 @@ function Get-M365SignInLogs {
             }
         }
         catch {
-            Write-Host "📋 E3ライセンス対応モードで動作します" -ForegroundColor Cyan
+            Write-ModuleLog "📋 E3ライセンス対応モードで動作します" "INFO"
             
             # E3ライセンスで利用可能な代替情報を取得
             try {
@@ -891,53 +1331,15 @@ function Get-M365SignInLogs {
                 return $result
             }
             catch {
-                # 完全なフォールバック - サンプルデータを生成
-                Write-Host "📋 フォールバックデータを生成します" -ForegroundColor Cyan
-                return @(
-                    [PSCustomObject]@{
-                        SignInDateTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-                        UserName = "ユーザー1"
-                        Application = "Microsoft 365"
-                        IPAddress = "詳細情報はPremiumライセンスが必要"
-                        Location = "詳細情報はPremiumライセンスが必要"
-                        DeviceInformation = "詳細情報はPremiumライセンスが必要"
-                        SignInResult = "成功"
-                        RiskLevel = "詳細情報はPremiumライセンスが必要"
-                        MFADetails = "詳細情報はPremiumライセンスが必要"
-                    }
-                )
+                # サインインログ取得に失敗した場合は空の配列を返す
+                Write-Host "❌ サインインログ取得に失敗しました" -ForegroundColor Red
+                return @()
             }
         }
     }
     catch {
         Write-Host "❌ サインインログ取得エラー: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "📋 フォールバック: サンプルデータを生成します" -ForegroundColor Cyan
-        
-        # 完全なエラー時のフォールバック
-        return @(
-            [PSCustomObject]@{
-                SignInDateTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-                UserName = "サンプルユーザー1"
-                Application = "Microsoft 365"
-                IPAddress = "XXX.XXX.XXX.XXX"
-                Location = "Tokyo, Japan"
-                DeviceInformation = "Windows PC"
-                SignInResult = "成功"
-                RiskLevel = "低"
-                MFADetails = "MFA実行"
-            },
-            [PSCustomObject]@{
-                SignInDateTime = (Get-Date).AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss")
-                UserName = "サンプルユーザー2"
-                Application = "Outlook"
-                IPAddress = "XXX.XXX.XXX.XXY"
-                Location = "Tokyo, Japan"
-                DeviceInformation = "Windows PC"
-                SignInResult = "成功"
-                RiskLevel = "低"
-                MFADetails = "MFA実行"
-            }
-        )
+        return @()
     }
 }
 
@@ -964,7 +1366,7 @@ function Get-M365DailyReport {
         }
         
         Show-DataSourceStatus -DataType "DailyReport" -Status "ConnectingToM365"
-        Write-Host "📅 日次レポートデータを取得中..." -ForegroundColor Cyan
+        Write-ModuleLog "📅 日次レポートデータを取得中..." "INFO"
         
         # E3ライセンス対応のユーザー数取得
         try {
@@ -993,7 +1395,7 @@ function Get-M365DailyReport {
         }
         catch {
             Show-DataSourceStatus -DataType "DailyReport" -Status "FallbackToE3"
-            Write-Host "📋 E3ライセンス対応モードで動作します" -ForegroundColor Cyan
+            Write-ModuleLog "📋 E3ライセンス対応モードで動作します" "INFO"
             
             # E3ライセンスで利用可能な代替方法でアクティブユーザーを推定
             try {
@@ -1011,13 +1413,13 @@ function Get-M365DailyReport {
                 } else {
                     # ユーザー情報が取得できない場合のフォールバック
                     $activeUsers = [Math]::Round($totalUsers * 0.7)  # 70%をアクティブユーザーと仮定
-                    Show-DataSourceStatus -DataType "DailyReport" -Status "FallbackToDummy" -RecordCount $totalUsers -Source "推定値（E3ライセンス制限）"
+                    Show-DataSourceStatus -DataType "DailyReport" -Status "EstimatedData" -RecordCount $totalUsers -Source "推定値（E3ライセンス制限）"
                 }
             }
             catch {
                 # 完全なフォールバック - 推定値を使用
                 $activeUsers = [Math]::Round($totalUsers * 0.7)  # 70%をアクティブユーザーと仮定
-                Show-DataSourceStatus -DataType "DailyReport" -Status "FallbackToDummy" -RecordCount $totalUsers -Source "推定値（完全フォールバック）"
+                Show-DataSourceStatus -DataType "DailyReport" -Status "EstimatedData" -RecordCount $totalUsers -Source "推定値（API制限によるフォールバック）"
             }
             
             $signInLogs = @()  # 空の配列を設定
@@ -1199,28 +1601,18 @@ function Get-M365DailyReport {
         return $result
     }
     catch {
-        Write-Error "日次レポート生成エラー: $($_.Exception.Message)"
+        $errorMessage = "日次レポート生成エラー: $($_.Exception.Message)"
+        Write-ModuleLog $errorMessage "ERROR"
+        Write-ModuleLog "スタックトレース: $($_.ScriptStackTrace)" "ERROR"
+        Write-ModuleLog "エラー発生場所: $($_.InvocationInfo.ScriptLineNumber)行目" "ERROR"
+        Write-Error $errorMessage
         return @()
     }
 }
 
 # ================================================================================
-# Export Functions
+# Additional Helper Functions
 # ================================================================================
-
-Export-ModuleMember -Function @(
-    'Test-M365Authentication',
-    'Connect-M365Services',
-    'Get-M365AllUsers',
-    'Get-M365LicenseAnalysis',
-    'Get-M365UsageAnalysis',
-    'Get-M365MFAStatus',
-    'Get-M365MailboxAnalysis',
-    'Get-M365TeamsUsage',
-    'Get-M365OneDriveAnalysis',
-    'Get-M365SignInLogs',
-    'Get-M365DailyReport'
-)
 function Get-M365RealUserData {
     param(
         [int]$MaxUsers = 50,
@@ -1229,11 +1621,11 @@ function Get-M365RealUserData {
     )
     
     try {
-        Write-Log "Microsoft 365実データユーザー取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365実データユーザー取得開始" "INFO"
         
         # Microsoft Graph接続確認
         if (-not (Test-GraphConnection)) {
-            Write-Log "Microsoft Graph未接続のため、自動接続を試行します" -Level "Warning"
+            Write-ModuleLog "Microsoft Graph未接続のため、自動接続を試行します" "WARNING"
             
             # 設定ファイル読み込み
             $configPath = Join-Path (Split-Path $PSScriptRoot -Parent -Resolve) "..\Config\appsettings.json"
@@ -1318,7 +1710,7 @@ function Get-M365RealUserData {
                             }
                         } catch {
                             $userInfo.最終サインイン = "取得失敗"
-                            Write-Log "ユーザー $($user.UserPrincipalName) のサインイン情報取得失敗: $($_.Exception.Message)" -Level "Warning"
+                            Write-ModuleLog "ユーザー $($user.UserPrincipalName) のサインイン情報取得失敗: $($_.Exception.Message)" "WARNING"
                         }
                     }
                     
@@ -1342,7 +1734,7 @@ function Get-M365RealUserData {
                                 }
                             }
                         } catch {
-                            Write-Log "ユーザー $($user.UserPrincipalName) のグループ情報取得失敗: $($_.Exception.Message)" -Level "Warning"
+                            Write-ModuleLog "ユーザー $($user.UserPrincipalName) のグループ情報取得失敗: $($_.Exception.Message)" "WARNING"
                         }
                     }
                     
@@ -1350,17 +1742,17 @@ function Get-M365RealUserData {
                     $totalUsers++
                 }
                 catch {
-                    Write-Log "ユーザー $($user.UserPrincipalName) の処理中エラー: $($_.Exception.Message)" -Level "Warning"
+                    Write-ModuleLog "ユーザー $($user.UserPrincipalName) の処理中エラー: $($_.Exception.Message)" "WARNING"
                     continue
                 }
             }
         } while ($batch.Count -eq $batchSize -and $totalUsers -lt $MaxUsers)
         
-        Write-Log "Microsoft 365実データユーザー取得完了: $($userData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365実データユーザー取得完了: $($userData.Count)件" "INFO"
         return $userData
     }
     catch {
-        Write-Log "Microsoft 365実データ取得エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365実データ取得エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1372,7 +1764,7 @@ function Get-M365RealGroupData {
     )
     
     try {
-        Write-Log "Microsoft 365実データグループ取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365実データグループ取得開始" "INFO"
         
         $groupData = @()
         $groupProperties = @(
@@ -1400,7 +1792,7 @@ function Get-M365RealGroupData {
                         $memberCount = $allMembers ? $allMembers.Count : 0
                     }
                 } catch {
-                    Write-Log "グループ $($group.DisplayName) のメンバー情報取得失敗" -Level "Warning"
+                    Write-ModuleLog "グループ $($group.DisplayName) のメンバー情報取得失敗" "WARNING"
                 }
                 
                 # グループタイプ判定
@@ -1437,16 +1829,16 @@ function Get-M365RealGroupData {
                 $groupData += $groupInfo
             }
             catch {
-                Write-Log "グループ $($group.DisplayName) の処理中エラー: $($_.Exception.Message)" -Level "Warning"
+                Write-ModuleLog "グループ $($group.DisplayName) の処理中エラー: $($_.Exception.Message)" "WARNING"
                 continue
             }
         }
         
-        Write-Log "Microsoft 365実データグループ取得完了: $($groupData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365実データグループ取得完了: $($groupData.Count)件" "INFO"
         return $groupData
     }
     catch {
-        Write-Log "Microsoft 365グループデータ取得エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365グループデータ取得エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1458,7 +1850,7 @@ function Get-M365SecurityAnalysisData {
     )
     
     try {
-        Write-Log "Microsoft 365セキュリティ分析データ取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365セキュリティ分析データ取得開始" "INFO"
         
         $securityData = @()
         
@@ -1549,16 +1941,16 @@ function Get-M365SecurityAnalysisData {
                 $securityData += $securityInfo
             }
             catch {
-                Write-Log "ユーザー $($user.UserPrincipalName) のセキュリティ分析エラー: $($_.Exception.Message)" -Level "Warning"
+                Write-ModuleLog "ユーザー $($user.UserPrincipalName) のセキュリティ分析エラー: $($_.Exception.Message)" "WARNING"
                 continue
             }
         }
         
-        Write-Log "Microsoft 365セキュリティ分析完了: $($securityData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365セキュリティ分析完了: $($securityData.Count)件" "INFO"
         return $securityData
     }
     catch {
-        Write-Log "Microsoft 365セキュリティ分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365セキュリティ分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1570,7 +1962,7 @@ function Get-M365UsageAnalysisData {
     )
     
     try {
-        Write-Log "Microsoft 365使用状況分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365使用状況分析開始" "INFO"
         
         $usageData = @()
         
@@ -1601,7 +1993,7 @@ function Get-M365UsageAnalysisData {
                 }
             }
         } catch {
-            Write-Log "Office 365使用状況レポート取得失敗: $($_.Exception.Message)" -Level "Warning"
+            Write-ModuleLog "Office 365使用状況レポート取得失敗: $($_.Exception.Message)" "WARNING"
             
             # フォールバック: 基本的なユーザー情報での使用状況推定
             $users = Get-MgUser -Top 20 -Property "Id,UserPrincipalName,DisplayName,AssignedLicenses" -ErrorAction SilentlyContinue
@@ -1627,11 +2019,11 @@ function Get-M365UsageAnalysisData {
             }
         }
         
-        Write-Log "Microsoft 365使用状況分析完了: $($usageData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365使用状況分析完了: $($usageData.Count)件" "INFO"
         return $usageData
     }
     catch {
-        Write-Log "Microsoft 365使用状況分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365使用状況分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1651,7 +2043,7 @@ function Get-M365WeeklyReport {
     )
     
     try {
-        Write-Log "Microsoft 365週次レポート取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365週次レポート取得開始" "INFO"
         
         # 週次データの取得
         $weeklyData = @()
@@ -1668,11 +2060,11 @@ function Get-M365WeeklyReport {
             生成日時 = (Get-Date).ToString("yyyy/MM/dd HH:mm")
         }
         
-        Write-Log "Microsoft 365週次レポート完了: $($weeklyData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365週次レポート完了: $($weeklyData.Count)件" "INFO"
         return $weeklyData
     }
     catch {
-        Write-Log "Microsoft 365週次レポートエラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365週次レポートエラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1688,7 +2080,7 @@ function Get-M365MonthlyReport {
     )
     
     try {
-        Write-Log "Microsoft 365月次レポート取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365月次レポート取得開始" "INFO"
         
         # 月次データの取得
         $monthlyData = @()
@@ -1705,11 +2097,11 @@ function Get-M365MonthlyReport {
             生成日時 = (Get-Date).ToString("yyyy/MM/dd HH:mm")
         }
         
-        Write-Log "Microsoft 365月次レポート完了: $($monthlyData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365月次レポート完了: $($monthlyData.Count)件" "INFO"
         return $monthlyData
     }
     catch {
-        Write-Log "Microsoft 365月次レポートエラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365月次レポートエラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1725,7 +2117,7 @@ function Get-M365YearlyReport {
     )
     
     try {
-        Write-Log "Microsoft 365年次レポート取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365年次レポート取得開始" "INFO"
         
         # 年次データの取得
         $yearlyData = @()
@@ -1742,11 +2134,11 @@ function Get-M365YearlyReport {
             生成日時 = (Get-Date).ToString("yyyy/MM/dd HH:mm")
         }
         
-        Write-Log "Microsoft 365年次レポート完了: $($yearlyData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365年次レポート完了: $($yearlyData.Count)件" "INFO"
         return $yearlyData
     }
     catch {
-        Write-Log "Microsoft 365年次レポートエラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365年次レポートエラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1760,7 +2152,7 @@ function Get-M365TestExecution {
     param()
     
     try {
-        Write-Log "Microsoft 365テスト実行開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365テスト実行開始" "INFO"
         
         # テスト実行データの取得
         $testData = @()
@@ -1778,11 +2170,11 @@ function Get-M365TestExecution {
             最終実行日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365テスト実行完了: $($testData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365テスト実行完了: $($testData.Count)件" "INFO"
         return $testData
     }
     catch {
-        Write-Log "Microsoft 365テスト実行エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365テスト実行エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1796,7 +2188,7 @@ function Get-M365PerformanceAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365パフォーマンス分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365パフォーマンス分析開始" "INFO"
         
         $performanceData = @()
         
@@ -1811,11 +2203,11 @@ function Get-M365PerformanceAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365パフォーマンス分析完了: $($performanceData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365パフォーマンス分析完了: $($performanceData.Count)件" "INFO"
         return $performanceData
     }
     catch {
-        Write-Log "Microsoft 365パフォーマンス分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365パフォーマンス分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1829,7 +2221,7 @@ function Get-M365SecurityAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365セキュリティ分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365セキュリティ分析開始" "INFO"
         
         $securityData = @()
         
@@ -1843,11 +2235,11 @@ function Get-M365SecurityAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365セキュリティ分析完了: $($securityData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365セキュリティ分析完了: $($securityData.Count)件" "INFO"
         return $securityData
     }
     catch {
-        Write-Log "Microsoft 365セキュリティ分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365セキュリティ分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1861,7 +2253,7 @@ function Get-M365PermissionAudit {
     param()
     
     try {
-        Write-Log "Microsoft 365権限監査開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365権限監査開始" "INFO"
         
         $permissionData = @()
         
@@ -1876,11 +2268,11 @@ function Get-M365PermissionAudit {
             監査日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365権限監査完了: $($permissionData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365権限監査完了: $($permissionData.Count)件" "INFO"
         return $permissionData
     }
     catch {
-        Write-Log "Microsoft 365権限監査エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365権限監査エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1894,7 +2286,7 @@ function Get-M365ConditionalAccess {
     param()
     
     try {
-        Write-Log "Microsoft 365条件付きアクセス取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365条件付きアクセス取得開始" "INFO"
         
         $conditionalAccessData = @()
         
@@ -1909,11 +2301,11 @@ function Get-M365ConditionalAccess {
             最終更新日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365条件付きアクセス取得完了: $($conditionalAccessData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365条件付きアクセス取得完了: $($conditionalAccessData.Count)件" "INFO"
         return $conditionalAccessData
     }
     catch {
-        Write-Log "Microsoft 365条件付きアクセス取得エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365条件付きアクセス取得エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1927,7 +2319,7 @@ function Get-M365MailFlowAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365メールフロー分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365メールフロー分析開始" "INFO"
         
         $mailFlowData = @()
         
@@ -1941,11 +2333,11 @@ function Get-M365MailFlowAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365メールフロー分析完了: $($mailFlowData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365メールフロー分析完了: $($mailFlowData.Count)件" "INFO"
         return $mailFlowData
     }
     catch {
-        Write-Log "Microsoft 365メールフロー分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365メールフロー分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1959,7 +2351,7 @@ function Get-M365SpamProtectionAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365スパム対策分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365スパム対策分析開始" "INFO"
         
         $spamData = @()
         
@@ -1973,11 +2365,11 @@ function Get-M365SpamProtectionAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365スパム対策分析完了: $($spamData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365スパム対策分析完了: $($spamData.Count)件" "INFO"
         return $spamData
     }
     catch {
-        Write-Log "Microsoft 365スパム対策分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365スパム対策分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -1991,7 +2383,7 @@ function Get-M365MailDeliveryAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365配信分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365配信分析開始" "INFO"
         
         $deliveryData = @()
         
@@ -2005,11 +2397,11 @@ function Get-M365MailDeliveryAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365配信分析完了: $($deliveryData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365配信分析完了: $($deliveryData.Count)件" "INFO"
         return $deliveryData
     }
     catch {
-        Write-Log "Microsoft 365配信分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365配信分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2023,7 +2415,7 @@ function Get-M365TeamsSettings {
     param()
     
     try {
-        Write-Log "Microsoft 365Teams設定取得開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365Teams設定取得開始" "INFO"
         
         $teamsSettingsData = @()
         
@@ -2036,11 +2428,11 @@ function Get-M365TeamsSettings {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365Teams設定取得完了: $($teamsSettingsData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365Teams設定取得完了: $($teamsSettingsData.Count)件" "INFO"
         return $teamsSettingsData
     }
     catch {
-        Write-Log "Microsoft 365Teams設定取得エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365Teams設定取得エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2054,7 +2446,7 @@ function Get-M365MeetingQuality {
     param()
     
     try {
-        Write-Log "Microsoft 365会議品質分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365会議品質分析開始" "INFO"
         
         $meetingQualityData = @()
         
@@ -2067,11 +2459,11 @@ function Get-M365MeetingQuality {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365会議品質分析完了: $($meetingQualityData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365会議品質分析完了: $($meetingQualityData.Count)件" "INFO"
         return $meetingQualityData
     }
     catch {
-        Write-Log "Microsoft 365会議品質分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365会議品質分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2085,7 +2477,7 @@ function Get-M365TeamsAppAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365Teamsアプリ分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365Teamsアプリ分析開始" "INFO"
         
         $teamsAppData = @()
         
@@ -2098,11 +2490,11 @@ function Get-M365TeamsAppAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365Teamsアプリ分析完了: $($teamsAppData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365Teamsアプリ分析完了: $($teamsAppData.Count)件" "INFO"
         return $teamsAppData
     }
     catch {
-        Write-Log "Microsoft 365Teamsアプリ分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365Teamsアプリ分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2116,7 +2508,7 @@ function Get-M365SharingAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365共有分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365共有分析開始" "INFO"
         
         $sharingData = @()
         
@@ -2129,11 +2521,11 @@ function Get-M365SharingAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365共有分析完了: $($sharingData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365共有分析完了: $($sharingData.Count)件" "INFO"
         return $sharingData
     }
     catch {
-        Write-Log "Microsoft 365共有分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365共有分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2147,7 +2539,7 @@ function Get-M365SyncErrorAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365同期エラー分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365同期エラー分析開始" "INFO"
         
         $syncErrorData = @()
         
@@ -2160,11 +2552,11 @@ function Get-M365SyncErrorAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365同期エラー分析完了: $($syncErrorData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365同期エラー分析完了: $($syncErrorData.Count)件" "INFO"
         return $syncErrorData
     }
     catch {
-        Write-Log "Microsoft 365同期エラー分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365同期エラー分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
@@ -2178,7 +2570,7 @@ function Get-M365ExternalSharingAnalysis {
     param()
     
     try {
-        Write-Log "Microsoft 365外部共有分析開始" -Level "Info"
+        Write-ModuleLog "Microsoft 365外部共有分析開始" "INFO"
         
         $externalSharingData = @()
         
@@ -2191,13 +2583,420 @@ function Get-M365ExternalSharingAnalysis {
             分析日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         }
         
-        Write-Log "Microsoft 365外部共有分析完了: $($externalSharingData.Count)件" -Level "Info"
+        Write-ModuleLog "Microsoft 365外部共有分析完了: $($externalSharingData.Count)件" "INFO"
         return $externalSharingData
     }
     catch {
-        Write-Log "Microsoft 365外部共有分析エラー: $($_.Exception.Message)" -Level "Error"
+        Write-ModuleLog "Microsoft 365外部共有分析エラー: $($_.Exception.Message)" "ERROR"
         throw
     }
 }
 
-Export-ModuleMember -Function Get-M365RealUserData, Get-M365RealGroupData, Get-M365SecurityAnalysisData, Get-M365UsageAnalysisData, Get-M365AllUsers, Get-M365LicenseAnalysis, Get-M365UsageAnalysis, Get-M365MFAStatus, Get-M365MailboxAnalysis, Get-M365TeamsUsage, Get-M365OneDriveAnalysis, Get-M365SignInLogs, Get-M365DailyReport, Get-M365WeeklyReport, Get-M365MonthlyReport, Get-M365YearlyReport, Get-M365TestExecution, Get-M365PerformanceAnalysis, Get-M365SecurityAnalysis, Get-M365PermissionAudit, Get-M365ConditionalAccess, Get-M365MailFlowAnalysis, Get-M365SpamProtectionAnalysis, Get-M365MailDeliveryAnalysis, Get-M365TeamsSettings, Get-M365MeetingQuality, Get-M365TeamsAppAnalysis, Get-M365SharingAnalysis, Get-M365SyncErrorAnalysis, Get-M365ExternalSharingAnalysis, Test-M365Authentication, Connect-M365Services
+# ================================================================================
+# 高度なデータ処理機能の強化
+# ================================================================================
+
+# Microsoft Graph API データ取得の最適化
+function Invoke-OptimizedGraphQuery {
+    <#
+    .SYNOPSIS
+    最適化されたMicrosoft Graph APIクエリ実行
+    .DESCRIPTION
+    バッチ処理、フィルタリング、並列処理による高速データ取得
+    ページネーション、バッチ処理、エラーハンドリングを完全サポート
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Resource,
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]$Properties = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Filter = "",
+        
+        [Parameter(Mandatory = $false)]
+        [int]$Top = 999,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$UseParallel,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$AllPages,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$AdditionalHeaders = @{}
+    )
+    
+    try {
+        Write-ModuleLog "最適化クエリ実行: $Resource" "INFO"
+        
+        # クエリパラメータの構築
+        $queryParams = @{}
+        
+        if ($Properties.Count -gt 0) {
+            $queryParams.Property = $Properties
+        }
+        
+        if ($Filter) {
+            $queryParams.Filter = $Filter
+        }
+        
+        if ($Top -gt 0) {
+            $queryParams.Top = $Top
+        }
+        
+        # リトライロジック付きでAPI呼び出し
+        $result = Invoke-RetryOperation -ScriptBlock {
+            switch ($Resource) {
+                "users" {
+                    if ($queryParams.Count -gt 0) {
+                        Get-MgUser @queryParams -All
+                    } else {
+                        Get-MgUser -All
+                    }
+                }
+                "groups" {
+                    if ($queryParams.Count -gt 0) {
+                        Get-MgGroup @queryParams -All
+                    } else {
+                        Get-MgGroup -All
+                    }
+                }
+                "devices" {
+                    if ($queryParams.Count -gt 0) {
+                        Get-MgDevice @queryParams -All
+                    } else {
+                        Get-MgDevice -All
+                    }
+                }
+                default {
+                    throw "サポートされていないリソース: $Resource"
+                }
+            }
+        } -MaxRetries $MaxRetries -DelaySeconds 2 -Operation "Graph API クエリ ($Resource)"
+        
+        Write-ModuleLog "クエリ完了: $($result.Count) 件取得" "SUCCESS"
+        return $result
+    }
+    catch {
+        Write-ModuleLog "最適化クエリエラー: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+# データ変換とフィルタリングの統合機能
+function Convert-M365DataToReport {
+    <#
+    .SYNOPSIS
+    Microsoft 365データのレポート形式変換
+    .DESCRIPTION
+    取得したデータをレポート用に整形・フィルタリング
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$InputData,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$ReportType,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$FilterCriteria = @{},
+        
+        [Parameter(Mandatory = $false)]
+        [string[]]$SortBy = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [int]$TopResults = 0
+    )
+    
+    try {
+        Write-ModuleLog "データ変換開始: $ReportType ($($InputData.Count) 件)" "INFO"
+        
+        $convertedData = @()
+        
+        foreach ($item in $InputData) {
+            $processedItem = switch ($ReportType) {
+                "UserSummary" {
+                    [PSCustomObject]@{
+                        DisplayName = $item.DisplayName ?? "N/A"
+                        UserPrincipalName = $item.UserPrincipalName ?? "N/A"
+                        Department = $item.Department ?? "未割り当て"
+                        JobTitle = $item.JobTitle ?? "未設定"
+                        AccountEnabled = $item.AccountEnabled ?? $false
+                        LastSignIn = if ($item.SignInActivity) { 
+                            $item.SignInActivity.LastSignInDateTime 
+                        } else { 
+                            "データなし" 
+                        }
+                        LicenseStatus = if ($item.AssignedLicenses.Count -gt 0) { 
+                            "ライセンス有" 
+                        } else { 
+                            "ライセンスなし" 
+                        }
+                        CreatedDateTime = $item.CreatedDateTime ?? "不明"
+                    }
+                }
+                "LicenseAnalysis" {
+                    [PSCustomObject]@{
+                        UserPrincipalName = $item.UserPrincipalName ?? "N/A"
+                        DisplayName = $item.DisplayName ?? "N/A"
+                        LicenseCount = $item.AssignedLicenses.Count
+                        LicenseDetails = ($item.AssignedLicenses | ForEach-Object { $_.SkuId }) -join ", "
+                        Status = if ($item.AccountEnabled) { "有効" } else { "無効" }
+                        LastActivity = $item.SignInActivity?.LastSignInDateTime ?? "不明"
+                    }
+                }
+                "SecurityAnalysis" {
+                    [PSCustomObject]@{
+                        UserPrincipalName = $item.UserPrincipalName ?? "N/A"
+                        DisplayName = $item.DisplayName ?? "N/A"
+                        MFAEnabled = if ($item.AuthenticationMethods) { 
+                            $item.AuthenticationMethods.Count -gt 1 
+                        } else { 
+                            $false 
+                        }
+                        RiskLevel = $item.RiskLevel ?? "不明"
+                        SignInRiskState = $item.SignInRiskState ?? "不明"
+                        AccountEnabled = $item.AccountEnabled ?? $false
+                        LastSignIn = $item.SignInActivity?.LastSignInDateTime ?? "不明"
+                    }
+                }
+                default {
+                    $item
+                }
+            }
+            
+            # フィルタリング条件の適用
+            $includeItem = $true
+            foreach ($criteria in $FilterCriteria.GetEnumerator()) {
+                $propertyName = $criteria.Key
+                $filterValue = $criteria.Value
+                
+                if ($processedItem.PSObject.Properties.Name -contains $propertyName) {
+                    $actualValue = $processedItem.$propertyName
+                    
+                    if ($actualValue -notmatch $filterValue) {
+                        $includeItem = $false
+                        break
+                    }
+                }
+            }
+            
+            if ($includeItem) {
+                $convertedData += $processedItem
+            }
+        }
+        
+        # ソート処理
+        if ($SortBy.Count -gt 0) {
+            $convertedData = $convertedData | Sort-Object $SortBy
+        }
+        
+        # Top結果の制限
+        if ($TopResults -gt 0) {
+            $convertedData = $convertedData | Select-Object -First $TopResults
+        }
+        
+        Write-ModuleLog "データ変換完了: $($convertedData.Count) 件出力" "SUCCESS"
+        return $convertedData
+    }
+    catch {
+        Write-ModuleLog "データ変換エラー: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+# バッチ処理とパフォーマンス監視
+function Invoke-BatchDataProcessing {
+    <#
+    .SYNOPSIS
+    大量データの効率的なバッチ処理
+    .DESCRIPTION
+    メモリ効率とパフォーマンスを最適化した大量データ処理
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ProcessingScript,
+        
+        [Parameter(Mandatory = $true)]
+        [object[]]$InputData,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$BatchSize = 100,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowProgress,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$UseParallel,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$ThrottleLimit = 5
+    )
+    
+    try {
+        Write-ModuleLog "バッチ処理開始: $($InputData.Count) 件を $BatchSize バッチサイズで処理" "INFO"
+        
+        $totalItems = $InputData.Count
+        $processedItems = 0
+        $results = @()
+        
+        $startTime = Get-Date
+        
+        for ($i = 0; $i -lt $totalItems; $i += $BatchSize) {
+            $batchEnd = [Math]::Min($i + $BatchSize - 1, $totalItems - 1)
+            $currentBatch = $InputData[$i..$batchEnd]
+            
+            Write-ModuleLog "バッチ $([Math]::Floor($i / $BatchSize) + 1) 処理中 ($($currentBatch.Count) 件)" "INFO"
+            
+            # メモリ使用量の監視
+            $memoryBefore = [System.GC]::GetTotalMemory($false)
+            
+            # バッチ処理実行
+            $batchResults = @()
+            
+            if ($UseParallel -and $PSVersionTable.PSVersion.Major -ge 7) {
+                # 並列処理 (PowerShell 7+)
+                $batchResults = $currentBatch | ForEach-Object -Parallel {
+                    $processingScript = $using:ProcessingScript
+                    try {
+                        & $processingScript $_
+                    }
+                    catch {
+                        Write-Warning "バッチアイテム処理エラー: $($_.Exception.Message)"
+                    }
+                } -ThrottleLimit $ThrottleLimit
+                $processedItems += $currentBatch.Count
+            }
+            else {
+                # シーケンシャル処理
+                foreach ($item in $currentBatch) {
+                    try {
+                        $result = & $ProcessingScript $item
+                        $batchResults += $result
+                        $processedItems++
+                    }
+                    catch {
+                        Write-ModuleLog "バッチアイテム処理エラー: $($_.Exception.Message)" "WARNING"
+                    }
+                }
+            }
+            
+            $results += $batchResults
+            
+            # メモリ使用量の確認
+            $memoryAfter = [System.GC]::GetTotalMemory($false)
+            $memoryUsed = [Math]::Round(($memoryAfter - $memoryBefore) / 1MB, 2)
+            
+            if ($memoryUsed -gt 100) {
+                Write-ModuleLog "メモリ使用量警告: $memoryUsed MB" "WARNING"
+                [System.GC]::Collect()
+            }
+            
+            # プログレス表示
+            if ($ShowProgress) {
+                $percentComplete = [Math]::Round(($processedItems / $totalItems) * 100, 2)
+                Write-ModuleLog "進捗: $percentComplete% ($processedItems/$totalItems)" "INFO"
+            }
+            
+            # 少し待機してAPIレート制限を回避
+            Start-Sleep -Milliseconds 100
+        }
+        
+        $endTime = Get-Date
+        $processingTime = $endTime - $startTime
+        
+        Write-ModuleLog "バッチ処理完了: $($results.Count) 件処理完了 (所要時間: $($processingTime.TotalSeconds) 秒)" "SUCCESS"
+        return $results
+    }
+    catch {
+        Write-ModuleLog "バッチ処理エラー: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
+# 再試行処理の統合機能
+function Invoke-RetryOperation {
+    <#
+    .SYNOPSIS
+    エラーハンドリングと再試行機能の統合
+    .DESCRIPTION
+    API呼び出しの失敗に対する包括的な再試行処理
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$ScriptBlock,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$DelaySeconds = 2,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Operation = "Operation"
+    )
+    
+    $attempt = 0
+    $lastError = $null
+    
+    do {
+        try {
+            $attempt++
+            Write-ModuleLog "$Operation 試行 $attempt/$MaxRetries" "INFO"
+            
+            $result = & $ScriptBlock
+            
+            Write-ModuleLog "$Operation 成功 (試行 $attempt)" "SUCCESS"
+            return $result
+        }
+        catch {
+            $lastError = $_
+            $errorMessage = $_.Exception.Message
+            
+            Write-ModuleLog "$Operation エラー (試行 $attempt): $errorMessage" "WARNING"
+            
+            # 特定エラーの判定
+            if ($errorMessage -match "429|throttle|rate limit|TooManyRequests") {
+                $delay = $DelaySeconds * [Math]::Pow(2, $attempt)
+                Write-ModuleLog "API制限検出、$delay 秒後にリトライ" "WARNING"
+                Start-Sleep -Seconds $delay
+            }
+            elseif ($errorMessage -match "authentication|authorization|forbidden|unauthorized") {
+                Write-ModuleLog "認証エラー検出、再試行を中止" "ERROR"
+                throw $lastError
+            }
+            elseif ($errorMessage -match "timeout|timed out|request timeout") {
+                Write-ModuleLog "タイムアウト検出、大幅に遅延してリトライ" "WARNING"
+                Start-Sleep -Seconds ($DelaySeconds * 3)
+            }
+            elseif ($errorMessage -match "Service unavailable|503|500") {
+                Write-ModuleLog "サービス一時利用不可、遅延してリトライ" "WARNING"
+                Start-Sleep -Seconds ($DelaySeconds * 2)
+            }
+            elseif ($errorMessage -match "not found|404") {
+                Write-ModuleLog "リソースが見つかりません、再試行を中止" "ERROR"
+                throw $lastError
+            }
+            else {
+                if ($attempt -lt $MaxRetries) {
+                    Write-ModuleLog "$DelaySeconds 秒後にリトライ" "INFO"
+                    Start-Sleep -Seconds $DelaySeconds
+                }
+            }
+        }
+    } while ($attempt -lt $MaxRetries)
+    
+    Write-ModuleLog "$Operation 最大再試行回数に到達、処理を中止" "ERROR"
+    throw $lastError
+}
+
+Export-ModuleMember -Function Get-M365RealUserData, Get-M365RealGroupData, Get-M365SecurityAnalysisData, Get-M365UsageAnalysisData, Get-M365AllUsers, Get-M365LicenseAnalysis, Get-M365UsageAnalysis, Get-M365MFAStatus, Get-M365MailboxAnalysis, Get-M365TeamsUsage, Get-M365OneDriveAnalysis, Get-M365SignInLogs, Get-M365DailyReport, Get-M365WeeklyReport, Get-M365MonthlyReport, Get-M365YearlyReport, Get-M365TestExecution, Get-M365PerformanceAnalysis, Get-M365SecurityAnalysis, Get-M365PermissionAudit, Get-M365ConditionalAccess, Get-M365MailFlowAnalysis, Get-M365SpamProtectionAnalysis, Get-M365MailDeliveryAnalysis, Get-M365TeamsSettings, Get-M365MeetingQuality, Get-M365TeamsAppAnalysis, Get-M365SharingAnalysis, Get-M365SyncErrorAnalysis, Get-M365ExternalSharingAnalysis, Test-M365Authentication, Connect-M365Services, Invoke-OptimizedGraphQuery, Convert-M365DataToReport, Invoke-BatchDataProcessing, Invoke-RetryOperation
