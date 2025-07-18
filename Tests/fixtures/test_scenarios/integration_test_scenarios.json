@@ -1,0 +1,368 @@
+{
+  "scenarios": [
+    {
+      "id": "scenario_001",
+      "name": "完全認証フローテスト",
+      "description": "証明書認証からトークン取得まで",
+      "category": "authentication",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "action": "initialize_auth_manager",
+          "expected_result": "AuthManager インスタンス作成成功"
+        },
+        {
+          "step": 2,
+          "action": "authenticate_with_certificate",
+          "parameters": {
+            "certificate_path": "test_cert.pfx",
+            "password": "test_password"
+          },
+          "expected_result": "認証成功、access_token取得"
+        },
+        {
+          "step": 3,
+          "action": "verify_token_validity",
+          "expected_result": "トークンが有効かつ期限内"
+        },
+        {
+          "step": 4,
+          "action": "get_authorization_header",
+          "expected_result": "Bearer形式のヘッダー取得"
+        }
+      ],
+      "cleanup": [
+        "clear_authentication",
+        "reset_auth_manager"
+      ]
+    },
+    {
+      "id": "scenario_002", 
+      "name": "Microsoft Graph API統合テスト",
+      "description": "Graph APIでのユーザー・ライセンス情報取得",
+      "category": "graph_api",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "action": "authenticate_graph_client",
+          "expected_result": "Graph API認証成功"
+        },
+        {
+          "step": 2,
+          "action": "get_users_list",
+          "expected_result": "ユーザーリスト取得成功（3件以上）"
+        },
+        {
+          "step": 3,
+          "action": "get_user_licenses",
+          "parameters": {
+            "user_id": "user_001"
+          },
+          "expected_result": "ユーザーライセンス情報取得成功"
+        },
+        {
+          "step": 4,
+          "action": "get_organization_licenses",
+          "expected_result": "組織ライセンス情報取得成功"
+        }
+      ],
+      "validation": [
+        "verify_user_data_format",
+        "verify_license_data_integrity",
+        "verify_api_response_time"
+      ]
+    },
+    {
+      "id": "scenario_003",
+      "name": "Exchange Online統合テスト",
+      "description": "Exchange Onlineでのメールボックスとトレース情報取得",
+      "category": "exchange_online",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "action": "authenticate_exchange_client",
+          "expected_result": "Exchange Online認証成功"
+        },
+        {
+          "step": 2,
+          "action": "get_mailboxes_list",
+          "expected_result": "メールボックスリスト取得成功"
+        },
+        {
+          "step": 3,
+          "action": "get_message_trace",
+          "parameters": {
+            "start_date": "2025-07-17",
+            "end_date": "2025-07-18"
+          },
+          "expected_result": "メッセージトレース取得成功"
+        },
+        {
+          "step": 4,
+          "action": "analyze_mail_flow",
+          "expected_result": "メールフロー分析結果取得"
+        }
+      ],
+      "validation": [
+        "verify_mailbox_data_format",
+        "verify_message_trace_integrity",
+        "verify_mail_flow_analysis"
+      ]
+    },
+    {
+      "id": "scenario_004",
+      "name": "PowerShellブリッジテスト",
+      "description": "PowerShellスクリプトとの連携テスト",
+      "category": "powershell_bridge",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "action": "initialize_powershell_bridge",
+          "expected_result": "PowerShellブリッジ初期化成功"
+        },
+        {
+          "step": 2,
+          "action": "execute_powershell_script",
+          "parameters": {
+            "script_path": "Scripts/Common/Get-TenantInfo.ps1"
+          },
+          "expected_result": "PowerShellスクリプト実行成功"
+        },
+        {
+          "step": 3,
+          "action": "parse_powershell_output",
+          "expected_result": "PowerShell出力のパース成功"
+        },
+        {
+          "step": 4,
+          "action": "convert_to_python_objects",
+          "expected_result": "Pythonオブジェクトへの変換成功"
+        }
+      ],
+      "validation": [
+        "verify_powershell_execution",
+        "verify_output_parsing",
+        "verify_data_conversion"
+      ]
+    },
+    {
+      "id": "scenario_005",
+      "name": "レポート生成統合テスト",
+      "description": "CSV・HTMLレポート生成の統合テスト",
+      "category": "report_generation",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "action": "initialize_report_generator",
+          "expected_result": "レポートジェネレーター初期化成功"
+        },
+        {
+          "step": 2,
+          "action": "generate_user_report",
+          "parameters": {
+            "format": "csv",
+            "output_path": "Tests/output/users_report.csv"
+          },
+          "expected_result": "ユーザーレポートCSV生成成功"
+        },
+        {
+          "step": 3,
+          "action": "generate_license_report",
+          "parameters": {
+            "format": "html",
+            "output_path": "Tests/output/licenses_report.html"
+          },
+          "expected_result": "ライセンスレポートHTML生成成功"
+        },
+        {
+          "step": 4,
+          "action": "validate_report_content",
+          "expected_result": "レポート内容検証成功"
+        }
+      ],
+      "validation": [
+        "verify_csv_format",
+        "verify_html_structure",
+        "verify_report_data_accuracy"
+      ]
+    },
+    {
+      "id": "scenario_006",
+      "name": "エラーハンドリング統合テスト",
+      "description": "各種エラー条件での動作確認",
+      "category": "error_handling",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "action": "test_network_error",
+          "expected_result": "ネットワークエラー適切にハンドリング"
+        },
+        {
+          "step": 2,
+          "action": "test_authentication_error",
+          "expected_result": "認証エラー適切にハンドリング"
+        },
+        {
+          "step": 3,
+          "action": "test_api_timeout",
+          "expected_result": "APIタイムアウト適切にハンドリング"
+        },
+        {
+          "step": 4,
+          "action": "test_data_format_error",
+          "expected_result": "データフォーマットエラー適切にハンドリング"
+        }
+      ],
+      "validation": [
+        "verify_error_logging",
+        "verify_error_recovery",
+        "verify_user_notification"
+      ]
+    },
+    {
+      "id": "scenario_007",
+      "name": "パフォーマンス統合テスト",
+      "description": "大量データ処理時のパフォーマンス測定",
+      "category": "performance",
+      "priority": "low",
+      "steps": [
+        {
+          "step": 1,
+          "action": "load_large_user_dataset",
+          "parameters": {
+            "user_count": 1000
+          },
+          "expected_result": "大量ユーザーデータ処理成功"
+        },
+        {
+          "step": 2,
+          "action": "measure_processing_time",
+          "expected_result": "処理時間が基準値以内"
+        },
+        {
+          "step": 3,
+          "action": "measure_memory_usage",
+          "expected_result": "メモリ使用量が基準値以内"
+        },
+        {
+          "step": 4,
+          "action": "test_concurrent_requests",
+          "parameters": {
+            "concurrent_count": 10
+          },
+          "expected_result": "並行処理が正常に動作"
+        }
+      ],
+      "validation": [
+        "verify_performance_metrics",
+        "verify_resource_usage",
+        "verify_concurrent_execution"
+      ]
+    },
+    {
+      "id": "scenario_008",
+      "name": "GUI統合テスト",
+      "description": "PyQt6 GUIコンポーネントの統合テスト",
+      "category": "gui",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "action": "initialize_main_window",
+          "expected_result": "メインウィンドウ初期化成功"
+        },
+        {
+          "step": 2,
+          "action": "test_button_interactions",
+          "expected_result": "全ボタンが正常に動作"
+        },
+        {
+          "step": 3,
+          "action": "test_log_viewer",
+          "expected_result": "ログビューアが正常に動作"
+        },
+        {
+          "step": 4,
+          "action": "test_report_display",
+          "expected_result": "レポート表示が正常に動作"
+        }
+      ],
+      "validation": [
+        "verify_gui_responsiveness",
+        "verify_user_interactions",
+        "verify_accessibility_features"
+      ]
+    }
+  ],
+  "test_data_sets": [
+    {
+      "name": "small_dataset",
+      "description": "小規模テスト用データセット",
+      "users": 3,
+      "licenses": 2,
+      "groups": 2,
+      "messages": 5
+    },
+    {
+      "name": "medium_dataset",
+      "description": "中規模テスト用データセット",
+      "users": 50,
+      "licenses": 5,
+      "groups": 10,
+      "messages": 100
+    },
+    {
+      "name": "large_dataset",
+      "description": "大規模テスト用データセット",
+      "users": 1000,
+      "licenses": 20,
+      "groups": 100,
+      "messages": 5000
+    }
+  ],
+  "environment_requirements": {
+    "python_version": "3.11+",
+    "required_packages": [
+      "pytest>=7.0.0",
+      "pytest-asyncio>=0.20.0",
+      "pytest-qt>=4.0.0",
+      "pytest-cov>=4.0.0",
+      "pytest-xvfb>=2.0.0",
+      "pytest-html>=3.0.0",
+      "pytest-json-report>=1.5.0"
+    ],
+    "environment_variables": [
+      "AZURE_CLIENT_ID",
+      "AZURE_CLIENT_SECRET",
+      "AZURE_TENANT_ID",
+      "CERTIFICATE_PATH",
+      "CERTIFICATE_PASSWORD"
+    ],
+    "system_requirements": {
+      "memory": "4GB+",
+      "disk_space": "2GB+",
+      "network": "Internet connection for API tests"
+    }
+  },
+  "quality_gates": {
+    "code_coverage": {
+      "minimum": 90,
+      "target": 95
+    },
+    "performance": {
+      "max_response_time": 1000,
+      "max_memory_usage": 500,
+      "max_processing_time": 30
+    },
+    "reliability": {
+      "max_failure_rate": 0.1,
+      "min_success_rate": 99.9
+    }
+  }
+}
