@@ -6,9 +6,54 @@
 
 ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエンタープライズ向けMicrosoft 365管理ツール群です。**26機能を搭載したリッチGUI**とクロスプラットフォーム対応CLIにより、Active Directory、Entra ID、Exchange Online、OneDrive、Microsoft Teamsの自動監視、レポート生成、コンプライアンス追跡機能を提供します。
 
+## 🆕 最新アップデート（2025年1月18日）
+
+### Python移行開始
+- 🐍 **PowerShell → Python段階的移行**: 既存26機能を維持しながらPythonで再実装
+- 🎯 **完全互換性維持**: 既存UI/UX、ファイル形式、ディレクトリ構造を完全継承
+- 📦 **新プロジェクト構造**: `src/`ディレクトリにPythonコード集約
+- 🔄 **PowerShellブリッジ**: 移行期間中の互換性確保
+- 📚 **ドキュメント整理**: 全ドキュメントをDocsフォルダに集約
+
+## 🆕 最新アップデート（2025年7月17日）
+
+### GUI機能強化
+- ✅ **リアルタイムログ表示**: GUIウィンドウ内にコンソール風ログパネルを追加
+- ✅ **Write-GuiLog関数**: INFO/SUCCESS/WARNING/ERROR/DEBUGレベル対応
+- ✅ **PowerShellプロンプト統合**: 別プロンプトを開かず同一プロンプトで継続実行
+- ✅ **ウィンドウ操作**: 移動・リサイズ・最大化・最小化対応
+- ✅ **UIスレッドセーフ**: Invoke()によるスレッドセーフログ更新
+- ✅ **完全なダミーデータ除去**: 全ての仮想データを実データ取得に置換
+
+### ランチャー改善
+- ✅ **同一プロンプト実行**: GUI起動時に新しいPowerShellプロセスを作成しない
+- ✅ **STAモード自動検出**: GUI要件の自動チェックとフォールバック
+- ✅ **エラーハンドリング強化**: 包括的なエラー処理とユーザーフレンドリーなメッセージ
+
+### ドキュメント整備
+- ✅ **英語ファイル名の日本語化**: README.md → README日本語.md等
+- ✅ **CLAUDE.md更新**: 最新機能と技術仕様を反映
+
 ## アーキテクチャ
 
-### GUI/CLI両対応システム（完全版対応）
+### Python版アーキテクチャ（移行中）
+
+- **src/**: Pythonソースコードディレクトリ
+  - `main.py`: エントリーポイント（GUI/CLI自動判定）
+  - `gui/`: PyQt6ベースのGUIアプリケーション
+    - `main_window.py`: メインウィンドウ（26機能ボタン配置）
+    - `components/`: GUIコンポーネント（ログビューア等）
+  - `api/`: Microsoft 365 API統合
+    - `graph/`: Microsoft Graph APIクライアント
+    - `exchange/`: Exchange Online API（PowerShellブリッジ含む）
+  - `core/`: コア機能
+    - `config.py`: 設定管理（appsettings.json互換）
+    - `logging_config.py`: ログ設定
+  - `cli/`: CLIアプリケーション
+  - `reports/`: レポート生成エンジン
+  - `tests/`: テストスイート
+
+### GUI/CLI両対応システム（PowerShell版 - 現行）
 
 - **Apps/GuiApp_Enhanced.ps1**: 26機能搭載のWindows Forms GUI完全版（PowerShell 7.5.1対応）
   - 📊 定期レポート (5機能): 日次・週次・月次・年次・テスト実行
@@ -17,6 +62,9 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
   - 📧 Exchange Online管理 (4機能): メールボックス・メールフロー・スパム対策・配信分析
   - 💬 Teams管理 (4機能): 使用状況・設定・会議品質・アプリ分析
   - 💾 OneDrive管理 (4機能): ストレージ・共有・同期エラー・外部共有分析
+  - **2025/7/17更新**: リアルタイムログ表示機能（📋 Write-GuiLog）
+  - **2025/7/17更新**: 移動可能・リサイズ対応GUI（FormBorderStyle = "Sizable"）
+  - **2025/7/17更新**: 同一プロンプト実行（新プロセス作成なし）
   - **新機能**: リアルタイムMicrosoft 365データ取得対応
   - **新機能**: Templates/Samplesの全6フォルダ構造に完全対応
   - **新機能**: Microsoft Graph API統合・Exchange Online PowerShell統合
@@ -36,6 +84,8 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
   - PowerShell 7.5.1自動検出・インストール
   - プラットフォーム自動判定（Windows/Linux/macOS）
   - GUI/CLI/セットアップモード選択
+  - **2025/7/17更新**: 同一プロンプト実行（GUI起動時の別プロセス作成を廃止）
+  - **2025/7/17更新**: STAモード自動検出とフォールバック処理
 
 ### コアモジュール構成
 
@@ -183,7 +233,13 @@ TestScripts\test-graph-features.ps1
 
 ## 開発時の注意事項
 
-### PowerShell要件
+### Python要件（新規）
+- **推奨**: Python 3.11以上
+- **最小**: Python 3.9
+- 必須パッケージ: PyQt6、msal、pandas、jinja2
+- 仮想環境: venv推奨
+
+### PowerShell要件（現行）
 - **推奨**: PowerShell 7.5.1以上（完全機能）
 - **最小**: PowerShell 5.1（基本機能・制限あり）
 - 必須モジュール: ExchangeOnlineManagement、Microsoft.Graph
@@ -209,6 +265,15 @@ TestScripts\test-graph-features.ps1
 
 ## 主要技術仕様
 
+### Python版（移行中）
+- **Python**: 3.11推奨・3.9最小サポート
+- **GUI**: PyQt6（クロスプラットフォーム対応）
+- **認証**: MSAL Python・証明書ベース
+- **API**: Microsoft Graph SDK for Python
+- **出力**: CSV（UTF8BOM）・HTML（Jinja2テンプレート）
+- **テスト**: pytest・pytest-qt
+
+### PowerShell版（現行）
 - **PowerShell**: 7.5.1推奨・5.1最小サポート
 - **GUI**: System.Windows.Forms（Windows専用）
 - **認証**: Microsoft Graph・証明書ベース
@@ -216,4 +281,4 @@ TestScripts\test-graph-features.ps1
 - **ログ**: 構造化ログ・監査証跡対応
 - **テスト**: 自動化テスト・統合テスト完備
 
-スクリプトはタスクスケジューラーでの非対話型実行向けに設計されており、エンタープライズ環境での24/7運用に対応しています。
+両バージョンともタスクスケジューラーでの非対話型実行向けに設計されており、エンタープライズ環境での24/7運用に対応しています。

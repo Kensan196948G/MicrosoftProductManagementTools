@@ -1,0 +1,1 @@
+scripts/core/manager_coordination.sh
