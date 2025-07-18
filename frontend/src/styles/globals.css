@@ -1,0 +1,392 @@
+/* Microsoft 365 Management Tools - Global Styles */
+/* PowerShell GUI 互換のグローバルスタイル */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS変数の定義 */
+:root {
+  /* Microsoft カラーパレット */
+  --color-microsoft-50: #f3f9ff;
+  --color-microsoft-100: #e6f3ff;
+  --color-microsoft-200: #bde4ff;
+  --color-microsoft-300: #85d1ff;
+  --color-microsoft-400: #47baff;
+  --color-microsoft-500: #0078d4;
+  --color-microsoft-600: #106ebe;
+  --color-microsoft-700: #005a9e;
+  --color-microsoft-800: #004578;
+  --color-microsoft-900: #003152;
+  
+  /* フォーカスカラー */
+  --color-focus: #0078d4;
+  --color-focus-ring: rgba(0, 120, 212, 0.3);
+  
+  /* 背景色 */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f5f5f5;
+  --color-surface-tertiary: #fafafa;
+  
+  /* ボーダー */
+  --color-border: #e0e0e0;
+  --color-border-hover: #d0d0d0;
+  --color-border-focus: #0078d4;
+  
+  /* テキスト */
+  --color-text-primary: #323130;
+  --color-text-secondary: #605e5c;
+  --color-text-disabled: #a19f9d;
+  
+  /* シャドウ */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* ボーダー半径 */
+  --border-radius-sm: 0.125rem;
+  --border-radius-md: 0.25rem;
+  --border-radius-lg: 0.5rem;
+  
+  /* アニメーション */
+  --animation-duration: 0.2s;
+  --animation-timing: ease-in-out;
+  
+  /* PowerShell GUI 互換サイズ */
+  --button-width: 190px;
+  --button-height: 50px;
+  --grid-spacing: 16px;
+}
+
+/* ダークモードの変数 */
+:root.dark {
+  --color-surface: #1f1f1f;
+  --color-surface-secondary: #2d2d2d;
+  --color-surface-tertiary: #3a3a3a;
+  
+  --color-border: #404040;
+  --color-border-hover: #505050;
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #d0d0d0;
+  --color-text-disabled: #808080;
+  
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* 高コントラストモードの変数 */
+:root.high-contrast {
+  --color-surface: #ffffff;
+  --color-surface-secondary: #ffffff;
+  --color-surface-tertiary: #ffffff;
+  
+  --color-border: #000000;
+  --color-border-hover: #000000;
+  --color-border-focus: #0078d4;
+  
+  --color-text-primary: #000000;
+  --color-text-secondary: #000000;
+  --color-text-disabled: #808080;
+  
+  --color-microsoft-500: #000000;
+  --color-microsoft-600: #000000;
+  --color-microsoft-700: #000000;
+  
+  --shadow-card: 0 0 0 2px #000000;
+  --shadow-card-hover: 0 0 0 3px #000000;
+}
+
+/* ベーススタイル */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--color-surface-secondary);
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  
+  button {
+    font-family: inherit;
+  }
+  
+  /* フォーカススタイル */
+  :focus {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+/* コンポーネントスタイル */
+@layer components {
+  /* PowerShell GUI 互換ボタン */
+  .feature-button-base {
+    @apply inline-flex items-center justify-center;
+    @apply text-sm font-bold text-white;
+    @apply border border-solid cursor-pointer;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-microsoft-500;
+    
+    width: var(--button-width);
+    height: var(--button-height);
+    background-color: var(--color-microsoft-500);
+    border-color: var(--color-microsoft-700);
+    border-radius: var(--border-radius-md);
+  }
+  
+  .feature-button-base:hover {
+    background-color: var(--color-microsoft-600);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  .feature-button-base:active {
+    background-color: var(--color-microsoft-700);
+    transform: translateY(0);
+  }
+  
+  .feature-button-base:disabled {
+    @apply cursor-not-allowed;
+    background-color: #9ca3af;
+    border-color: #6b7280;
+    transform: none;
+  }
+  
+  /* カードスタイル */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--animation-duration) var(--animation-timing);
+  }
+  
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  
+  /* モーダルスタイル */
+  .modal {
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-modal);
+  }
+  
+  /* タブスタイル */
+  .tab-button {
+    @apply relative px-4 py-3 text-sm font-medium;
+    @apply border-b-2 border-transparent;
+    @apply transition-colors duration-200;
+    @apply hover:text-microsoft-600 hover:border-microsoft-300;
+    @apply focus:outline-none focus:ring-2 focus:ring-inset focus:ring-microsoft-500;
+    
+    min-width: 140px;
+    max-width: 200px;
+  }
+  
+  .tab-button.active {
+    @apply text-microsoft-600 border-microsoft-500;
+    background-color: var(--color-microsoft-50);
+  }
+  
+  /* フォームスタイル */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md;
+    @apply focus:outline-none focus:ring-2 focus:ring-microsoft-500 focus:border-microsoft-500;
+    @apply transition-colors duration-200;
+    
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+  }
+  
+  .form-input:disabled {
+    @apply bg-gray-50 text-gray-500 cursor-not-allowed;
+  }
+}
+
+/* ユーティリティスタイル */
+@layer utilities {
+  /* スクリーンリーダー専用 */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  
+  /* アニメーション制御 */
+  .animate-fade-in {
+    animation: fadeIn var(--animation-duration) var(--animation-timing);
+  }
+  
+  .animate-slide-in {
+    animation: slideIn var(--animation-duration) var(--animation-timing);
+  }
+  
+  /* レスポンシブグリッド */
+  .responsive-grid {
+    display: grid;
+    gap: var(--grid-spacing);
+    justify-content: center;
+    grid-template-columns: repeat(auto-fit, minmax(var(--button-width), 1fr));
+  }
+  
+  .responsive-grid-2x2 {
+    display: grid;
+    gap: var(--grid-spacing);
+    justify-content: center;
+    grid-template-columns: repeat(2, var(--button-width));
+  }
+  
+  .responsive-grid-3x2 {
+    display: grid;
+    gap: var(--grid-spacing);
+    justify-content: center;
+    grid-template-columns: repeat(3, var(--button-width));
+  }
+  
+  @media (max-width: 1024px) {
+    .responsive-grid-3x2 {
+      grid-template-columns: repeat(2, var(--button-width));
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .responsive-grid-2x2,
+    .responsive-grid-3x2 {
+      grid-template-columns: repeat(1, var(--button-width));
+    }
+  }
+  
+  /* アクセシビリティ */
+  .focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  
+  .high-contrast .feature-button-base {
+    border-width: 2px;
+    background-color: #000000;
+    color: #ffffff;
+  }
+  
+  .high-contrast .feature-button-base:hover {
+    background-color: #404040;
+  }
+  
+  /* モーション制御 */
+  @media (prefers-reduced-motion: reduce) {
+    .reduce-motion *,
+    .reduce-motion *::before,
+    .reduce-motion *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* キーフレームアニメーション */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* スクロールバーのスタイル */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* プリント用スタイル */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .feature-button-base {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+  }
+  
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+  }
+}

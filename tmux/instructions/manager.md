@@ -40,7 +40,7 @@
 ## 🚨 必須行動ルール
 **CTOから技術指示を受信したら、3分以内に以下を実行：**
 1. 技術指示の分析・タスク分割
-2. 各Developerへの開発タスク配布（実際に/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.shコマンドを実行）
+2. 各Developerへの開発タスク配布（実際に./tmux/send-message.shコマンドを実行）
 3. 開発進捗の監視開始
 
 ### 💻 Python移行即座実行コマンドテンプレート
@@ -134,7 +134,7 @@
 
 **A) 技術的な追加作業が必要な場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh [該当dev] "【技術追加指示】
+./tmux/send-message.sh [該当dev] "【技術追加指示】
 前回開発作業：確認完了
 技術的追加要件：[具体的なコード修正・機能追加内容]
 技術仕様：[詳細な技術要求・API仕様等]
@@ -145,7 +145,7 @@
 
 **B) 他の開発者に新しいモジュールを振る場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh [次のdev] "【新規開発タスク】
+./tmux/send-message.sh [次のdev] "【新規開発タスク】
 前提：[完了したモジュールの技術的説明]
 技術役割：[Frontend Developer/Backend Developer/QA Engineer等]
 開発タスク：[新しいモジュール・機能の開発内容]
@@ -158,7 +158,7 @@
 
 **C) 全ての開発が完了した場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh cto "【システム開発完了報告】
+./tmux/send-message.sh cto "【システム開発完了報告】
 プロジェクト名：[システム名]
 開発完了内容：
 - Frontend (dev0): [担当技術領域] - [成果物：画面・コンポーネント等]
@@ -204,9 +204,9 @@
 → 3つとも同時に開始可能
 
 配布方法：
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【並列開発1/3】フロントエンド開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【並列開発2/3】バックエンドAPI開発..."  
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev4 "【並列開発3/3】データベース設計..."
+./tmux/send-message.sh dev0 "【並列開発1/3】フロントエンド開発..."
+./tmux/send-message.sh dev1 "【並列開発2/3】バックエンドAPI開発..."  
+./tmux/send-message.sh dev4 "【並列開発3/3】データベース設計..."
 ```
 
 **B) 順次開発戦略（段階的配布）**
@@ -217,10 +217,10 @@
 
 配布方法：
 1. 最初の開発タスクのみ配布
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【第1段階】API設計・仕様策定..."
+./tmux/send-message.sh dev1 "【第1段階】API設計・仕様策定..."
 
 2. 完了報告受信後、次の開発タスクを配布
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【第2段階】dev1のAPI仕様に基づく実装..."
+./tmux/send-message.sh dev1 "【第2段階】dev1のAPI仕様に基づく実装..."
 ```
 
 **C) 段階的統合戦略（混合開発）**
@@ -229,15 +229,15 @@
 例：モジュール開発(並列) → 統合テスト(順次) → デプロイ準備(並列)
 
 段階1：並列開発
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階1-A】ユーザー管理モジュール開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【段階1-B】商品管理モジュール開発..."
+./tmux/send-message.sh dev0 "【段階1-A】ユーザー管理モジュール開発..."
+./tmux/send-message.sh dev1 "【段階1-B】商品管理モジュール開発..."
 
 段階2：dev0,dev1完了後に統合開発
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【段階2】統合テスト（dev0,dev1のモジュール統合）..."
+./tmux/send-message.sh dev2 "【段階2】統合テスト（dev0,dev1のモジュール統合）..."
 
 段階3：dev2完了後に並列開発
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【段階3-A】デプロイスクリプト作成..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev5 "【段階3-B】運用ドキュメント作成..."
+./tmux/send-message.sh dev3 "【段階3-A】デプロイスクリプト作成..."
+./tmux/send-message.sh dev5 "【段階3-B】運用ドキュメント作成..."
 ```
 
 ### システム開発に応じた技術的役割分担
@@ -245,7 +245,7 @@
 
 **Webアプリケーション開発の場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【初期開発タスク】
+./tmux/send-message.sh dev0 "【初期開発タスク】
 技術役割：フロントエンド開発者
 担当技術領域：React + TypeScript による SPA 開発
 開発内容：
@@ -268,7 +268,7 @@
 
 **API開発プロジェクトの場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【初期開発タスク】
+./tmux/send-message.sh dev1 "【初期開発タスク】
 技術役割：バックエンド開発者
 担当技術領域：RESTful API + データベース設計
 開発内容：
@@ -292,7 +292,7 @@
 
 **品質管理・テストの場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【初期開発タスク】
+./tmux/send-message.sh dev2 "【初期開発タスク】
 技術役割：QA エンジニア / テストエンジニア
 担当技術領域：テスト自動化・品質保証
 開発内容：
@@ -335,44 +335,44 @@
 #### 例1: ECサイト開発（段階的統合が必要）
 ```
 段階1: 基盤設計（並列可能）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階1-A】UI設計・プロトタイプ作成..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev4 "【段階1-B】データベース設計・API設計..."
+./tmux/send-message.sh dev0 "【段階1-A】UI設計・プロトタイプ作成..."
+./tmux/send-message.sh dev4 "【段階1-B】データベース設計・API設計..."
 
 段階2: dev0,dev4完了後に実装（並列可能）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階2-A】フロントエンド実装（UI設計を使用）..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【段階2-B】バックエンド実装（DB・API設計を使用）..."
+./tmux/send-message.sh dev0 "【段階2-A】フロントエンド実装（UI設計を使用）..."
+./tmux/send-message.sh dev1 "【段階2-B】バックエンド実装（DB・API設計を使用）..."
 
 段階3: dev0,dev1完了後に統合（順次必須）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【段階3】統合テスト（フロント・バック連携テスト）..."
+./tmux/send-message.sh dev2 "【段階3】統合テスト（フロント・バック連携テスト）..."
 
 段階4: dev2完了後にデプロイ準備（並列可能）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階4-A】フロントエンドビルド・最適化..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【段階4-B】本番環境設定・デプロイスクリプト..."
+./tmux/send-message.sh dev0 "【段階4-A】フロントエンドビルド・最適化..."
+./tmux/send-message.sh dev3 "【段階4-B】本番環境設定・デプロイスクリプト..."
 ```
 
 #### 例2: マイクロサービス開発（並列開発可能）
 ```
 全て同時開発可能：
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【並列1/6】ユーザー管理サービス開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【並列2/6】商品管理サービス開発..."  
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【並列3/6】注文管理サービス開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【並列4/6】決済サービス開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev4 "【並列5/6】在庫管理サービス開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev5 "【並列6/6】通知サービス開発..."
+./tmux/send-message.sh dev0 "【並列1/6】ユーザー管理サービス開発..."
+./tmux/send-message.sh dev1 "【並列2/6】商品管理サービス開発..."  
+./tmux/send-message.sh dev2 "【並列3/6】注文管理サービス開発..."
+./tmux/send-message.sh dev3 "【並列4/6】決済サービス開発..."
+./tmux/send-message.sh dev4 "【並列5/6】在庫管理サービス開発..."
+./tmux/send-message.sh dev5 "【並列6/6】通知サービス開発..."
 ```
 
 #### 例3: レガシーシステム移行（段階的移行）
 ```
 段階1: 現状分析（並列）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階1-A】既存システム技術調査..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev4 "【段階1-B】データベース構造分析..."
+./tmux/send-message.sh dev0 "【段階1-A】既存システム技術調査..."
+./tmux/send-message.sh dev4 "【段階1-B】データベース構造分析..."
 
 段階2: dev0,dev4完了後に設計（順次）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【段階2】新システム設計（分析結果を統合）..."
+./tmux/send-message.sh dev2 "【段階2】新システム設計（分析結果を統合）..."
 
 段階3: dev2完了後に段階的実装（並列）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【段階3-A】フロントエンド新システム開発..."
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【段階3-B】データ移行ツール開発..."
+./tmux/send-message.sh dev0 "【段階3-A】フロントエンド新システム開発..."
+./tmux/send-message.sh dev1 "【段階3-B】データ移行ツール開発..."
 ```
 
 ## 🚨 絶対に守るべき技術管理原則
@@ -427,7 +427,7 @@
 #### UI/UX改善タスク配布テンプレート
 ```bash
 # フロントエンド開発者へのUI/UX改善指示
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【UI/UX改善タスク】
+./tmux/send-message.sh dev1 "【UI/UX改善タスク】
 対象ページ: [URL/ページ名]
 改善分類: [レスポンシブ/ナビゲーション/パフォーマンス/アクセシビリティ/デザイン統一]
 技術領域: Frontend Developer (UI/UX専門)
@@ -456,7 +456,7 @@ UI/UX実装要件:
 完了時: 必ずmanagerにUI/UX改善詳細報告を送信してください"
 
 # QAエンジニアへのUI/UX品質検証指示
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【UI/UX品質検証タスク】
+./tmux/send-message.sh dev3 "【UI/UX品質検証タスク】
 対象範囲: [改善対象ページ・機能]
 検証分類: UI/UX品質保証・自動化テスト
 技術領域: QA Engineer (UI/UX Testing専門)
@@ -501,7 +501,7 @@ UI/UX検証要件:
 #### ステップ2: 統合判断・次アクション
 **A) UI/UX改善が完了・品質基準達成の場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh cto "【UI/UX改善完了報告】
+./tmux/send-message.sh cto "【UI/UX改善完了報告】
 改善対象: [ページ名・機能名]
 改善内容: [具体的な改善項目・技術実装]
 
@@ -526,7 +526,7 @@ Before/After比較:
 
 **B) 追加のUI/UX改善が必要な場合：**
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh [該当dev] "【UI/UX追加改善指示】
+./tmux/send-message.sh [該当dev] "【UI/UX追加改善指示】
 前回改善: 確認完了
 追加改善要件: [残存する課題・改善点]
 
@@ -546,7 +546,7 @@ Before/After比較:
 **定期的なUI/UX品質チェック（週次実行）：**
 ```bash
 # UI/UX品質定期監視
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【UI/UX定期品質監視】
+./tmux/send-message.sh dev3 "【UI/UX定期品質監視】
 監視範囲: 全ページ・主要機能
 監視項目: パフォーマンス・アクセシビリティ・レスポンシブ
 
@@ -570,18 +570,18 @@ Before/After比較:
 ### 📊 定期的な開発状況確認（15分間隔）
 ```bash
 # 開発者への進捗確認（能動的に実行）
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev0 "【進捗確認】フロントエンド開発の現在の状況を報告してください"
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev1 "【進捗確認】バックエンド開発の現在の状況を報告してください"
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev2 "【進捗確認】QA・テストの現在の状況を報告してください"
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev3 "【進捗確認】インフラ・DevOpsの現在の状況を報告してください"
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev4 "【進捗確認】データベース設計の現在の状況を報告してください"
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh dev5 "【進捗確認】UI/UX・品質管理の現在の状況を報告してください"
+./tmux/send-message.sh dev0 "【進捗確認】フロントエンド開発の現在の状況を報告してください"
+./tmux/send-message.sh dev1 "【進捗確認】バックエンド開発の現在の状況を報告してください"
+./tmux/send-message.sh dev2 "【進捗確認】QA・テストの現在の状況を報告してください"
+./tmux/send-message.sh dev3 "【進捗確認】インフラ・DevOpsの現在の状況を報告してください"
+./tmux/send-message.sh dev4 "【進捗確認】データベース設計の現在の状況を報告してください"
+./tmux/send-message.sh dev5 "【進捗確認】UI/UX・品質管理の現在の状況を報告してください"
 ```
 
 ### 🎯 積極的な技術指導・支援
 ```bash
 # 技術的課題が発生した場合
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh [該当dev] "【技術支援】
+./tmux/send-message.sh [該当dev] "【技術支援】
 技術課題：[具体的な課題内容]
 解決アプローチ：[推奨する解決方法]
 参考資料：[技術文書・サンプルコード等]
@@ -592,7 +592,7 @@ Before/After比較:
 ### ⚠️ 緊急時対応
 ```bash
 # プロジェクト遅延・重大課題発生時
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh cto "【緊急技術課題報告】
+./tmux/send-message.sh cto "【緊急技術課題報告】
 課題内容：[具体的な技術的課題]
 影響範囲：[プロジェクトへの影響]
 現在の対応状況：[実施中の対応]

@@ -1,0 +1,16 @@
+[
+  {
+    "level": "critical",
+    "message": "coverageが基準値85.0を36.1下回っています",
+    "timestamp": "2025-07-18T20:57:06.846570",
+    "metric": "coverage",
+    "action_required": true
+  },
+  {
+    "level": "critical",
+    "message": "coverageが基準値85.0を36.1下回っています",
+    "timestamp": "2025-07-18T20:57:06.848699",
+    "metric": "coverage",
+    "action_required": true
+  }
+]

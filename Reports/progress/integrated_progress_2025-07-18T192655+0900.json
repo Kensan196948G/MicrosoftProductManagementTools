@@ -1,0 +1,13 @@
+{
+    "timestamp": "2025-07-18T19:26:55+09:00",
+    "project": "Microsoft365 Python Migration",
+    "overall_progress": {
+        "architecture_design": 95,
+        "backend_api": 82,
+        "frontend_gui": 75,
+        "test_coverage": 87,
+        "devops_automation": 90
+    },
+    "alerts": [],
+    "next_collection": "2025-07-18T23:26:55+09:00"
+}

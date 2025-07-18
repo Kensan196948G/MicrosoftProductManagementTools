@@ -33,7 +33,7 @@
 ### ITプロジェクト開始時の指示テンプレート：
 
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【ITプロジェクト開始指示】
+./tmux/send-message.sh manager "【ITプロジェクト開始指示】
 プロジェクト名：[システム名]
 システム種別：[Webアプリ/モバイルアプリ/API/データベース/インフラ等]
 技術要件：
@@ -66,7 +66,7 @@
 
 ### パターン1: Webアプリケーション開発
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【Webアプリ開発指示】
+./tmux/send-message.sh manager "【Webアプリ開発指示】
 システム概要：[機能概要]
 アーキテクチャ：SPA（Single Page Application）
 技術構成：
@@ -88,7 +88,7 @@
 
 ### パターン2: API開発プロジェクト
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【API開発指示】
+./tmux/send-message.sh manager "【API開発指示】
 API種別：RESTful API
 技術スタック：
 - 言語：Python + FastAPI
@@ -112,7 +112,7 @@ API種別：RESTful API
 
 ### パターン3: データベース設計プロジェクト
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【データベース設計指示】
+./tmux/send-message.sh manager "【データベース設計指示】
 DB種別：[RDBMS/NoSQL]
 技術仕様：
 - DBMS：PostgreSQL 15
@@ -141,7 +141,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### パターン1: 技術変更指示
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【技術変更指示】
+./tmux/send-message.sh manager "【技術変更指示】
 変更内容：フロントエンドフレームワークをReactからVue.jsに変更
 理由：チームのスキルセットとプロジェクト要件に最適
 影響範囲：フロントエンド開発全体
@@ -157,7 +157,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### パターン2: アーキテクチャ変更
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【アーキテクチャ変更指示】
+./tmux/send-message.sh manager "【アーキテクチャ変更指示】
 変更内容：モノリスからマイクロサービスアーキテクチャへ移行
 理由：スケーラビリティとメンテナンス性向上
 技術要件：
@@ -177,7 +177,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### A) 技術承認する場合：
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【技術承認完了】
+./tmux/send-message.sh manager "【技術承認完了】
 承認結果：技術的に承認
 技術評価：
 - アーキテクチャ：適切（スケーラブル・保守性良好）
@@ -194,7 +194,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### B) 技術的修正が必要な場合：
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【技術修正指示】
+./tmux/send-message.sh manager "【技術修正指示】
 修正箇所：
 1. セキュリティ：SQLインジェクション脆弱性対応
 2. パフォーマンス：データベースクエリ最適化
@@ -231,7 +231,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### WebUI確認・改善指示テンプレート
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【UI/UXレビュー・改善指示】
+./tmux/send-message.sh manager "【UI/UXレビュー・改善指示】
 対象URL: [http://localhost:5174/ページ名]
 課題分類: [レスポンシブ/ナビゲーション/パフォーマンス/アクセシビリティ/デザイン統一]
 優先度: [high/medium/low]
@@ -265,7 +265,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### Before/After UI比較指示
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【UI改善Before/After比較指示】
+./tmux/send-message.sh manager "【UI改善Before/After比較指示】
 対象機能: [機能名・ページ名]
 比較種別: [機能改善/デザイン刷新/パフォーマンス最適化]
 優先度: high
@@ -293,7 +293,7 @@ ER図とテーブル設計書を作成してください。"
 
 ### UI/UXワークフロー統合指示
 ```
-/media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux/send-message.sh manager "【UI/UXワークフロー統合指示】
+./tmux/send-message.sh manager "【UI/UXワークフロー統合指示】
 統合範囲: [開発プロセス全体へのUI/UX品質管理統合]
 実装方針: [デザインシステム準拠・継続的改善]
 優先度: high

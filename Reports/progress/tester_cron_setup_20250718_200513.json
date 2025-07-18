@@ -1,0 +1,47 @@
+{
+    "timestamp": "2025-07-18T20:05:13+09:00",
+    "developer": "tester",
+    "setup_status": "completed",
+    "cron_jobs": [
+        {
+            "schedule": "0 */4 * * *",
+            "task": "品質監視システム実行",
+            "command": "python3 tests/automation/quality_monitor.py"
+        },
+        {
+            "schedule": "0 2 * * *",
+            "task": "日次レグレッションテスト",
+            "command": "python3 tests/standalone_tests.py"
+        },
+        {
+            "schedule": "0 * * * *",
+            "task": "毎時スタンドアロンテスト",
+            "command": "python3 tests/standalone_tests.py"
+        },
+        {
+            "schedule": "30 3 * * *",
+            "task": "日次品質レポート生成",
+            "command": "python3 tests/automation/quality_monitor.py"
+        },
+        {
+            "schedule": "0 6 * * 1",
+            "task": "週次包括的テスト",
+            "command": "python3 tests/run_all_tests.py"
+        },
+        {
+            "schedule": "0 7 1 * *",
+            "task": "月次テストカバレッジ分析",
+            "command": "python3 tests/automation/quality_monitor.py"
+        }
+    ],
+    "log_files": [
+        "logs/quality_monitor.log",
+        "logs/regression_daily.log",
+        "logs/hourly_tests.log",
+        "logs/weekly_comprehensive.log"
+    ],
+    "initial_test_results": {
+        "quality_monitor": "success",
+        "standalone_tests": "success"
+    }
+}

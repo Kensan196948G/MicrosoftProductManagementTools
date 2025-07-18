@@ -54,6 +54,29 @@ ITSM（ISO/IEC 20000）、ISO/IEC 27001、ISO/IEC 27002標準に準拠したエ�
 - **📄 CSV出力**: データ分析・外部システム連携用
 - **📁 自動整理**: Reports配下に機能別ディレクトリで出力
 
+## 🖥️ tmux並列開発環境
+
+### 🎯 Python移行プロジェクト専用環境
+
+本プロジェクトでは、PowerShellからPythonへの段階的移行を効率的に進めるため、tmuxを使用した5ペイン並列開発環境を採用しています。
+
+```bash
+# Python移行専用tmux環境の起動
+./tmux_python_setup.sh
+
+# 既存PowerShell開発用tmux環境
+./tmux_dev_env.sh
+```
+
+### 📊 5ペイン構成
+- **Pane 0**: アーキテクト役 - システム設計
+- **Pane 1**: バックエンド開発者役 - API実装
+- **Pane 2**: フロントエンド開発者役 - PyQt6 GUI
+- **Pane 3**: テスター役 - テスト実装
+- **Pane 4**: DevOps役 - 環境構築・CI/CD
+
+詳細は[tmux並列開発ドキュメント](Docs/tmux・並列開発/)を参照してください。
+
 ## 🚀 クイックスタート
 
 ### 1. 起動方法
@@ -90,9 +113,17 @@ pwsh -File Apps/CliApp.ps1 -Action weekly -Batch
 
 ```
 MicrosoftProductManagementTools/
-├── 📱 Apps/                    # メインアプリケーション
-│   ├── GuiApp.ps1             # GUI版（26機能搭載）
-│   └── CliApp.ps1             # CLI版（クロスプラットフォーム）
+├── 🐍 src/                    # Pythonソースコード（移行中）
+│   ├── main.py               # エントリーポイント
+│   ├── gui/                  # PyQt6 GUIアプリケーション
+│   ├── api/                  # Microsoft 365 API統合
+│   ├── core/                 # コア機能
+│   └── cli/                  # CLIアプリケーション
+├── 📱 Apps/                    # PowerShellアプリ（現行）
+│   ├── GuiApp_Enhanced.ps1   # GUI完全版（26機能）
+│   ├── CliApp_Enhanced.ps1   # CLI完全版
+│   ├── GuiApp.ps1             # GUI版（後方互換）
+│   └── CliApp.ps1             # CLI版（後方互換）
 ├── 📜 Scripts/                # 機能別スクリプト群
 │   ├── Common/                # 共通モジュール
 │   ├── AD/                    # Active Directory管理
@@ -111,9 +142,12 @@ MicrosoftProductManagementTools/
 │   └── OneDrive/             # OneDrive関連
 ├── ⚙️ Config/                # 設定ファイル
 ├── 📚 Docs/                  # ドキュメント
+│   └── tmux・並列開発/      # tmux開発環境ドキュメント
 ├── 🔧 TestScripts/          # テスト・検証用
 ├── 📋 Logs/                 # システムログ
-└── 📦 Archive/              # アーカイブ
+├── 📦 Archive/              # アーカイブ
+├── 🤖 tmux_python_setup.sh  # Python移行用tmux環境
+└── 🤖 tmux_dev_env.sh       # PowerShell開発用tmux環境
 ```
 
 ## 🎯 GUI機能一覧
@@ -211,6 +245,12 @@ MicrosoftProductManagementTools/
 - [🔄 PowerShell 7移行ガイド](Docs/PowerShell7-Migration-Guide.md)
 
 ## 🚀 最新アップデート
+
+### v2.1 (2025年1月版) - Python移行開始
+- ✅ **Python移行プロジェクト開始**: PowerShellからPythonへの段階的移行
+- ✅ **tmux並列開発環境**: 5ペインによる効率的な開発
+- ✅ **完全互換性維持**: 既存26機能を完全保持
+- ✅ **ドキュメント整理**: Docsフォルダへの集約
 
 ### v2.0 (2025年7月版)
 - ✅ **26機能搭載GUI**: セクション別整理による使いやすさ向上

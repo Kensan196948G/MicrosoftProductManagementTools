@@ -1,0 +1,91 @@
+{
+  "name": "microsoft-365-management-tools-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Microsoft 365 Management Tools - React + TypeScript Frontend (PowerShell Migration)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "cypress open",
+    "test:e2e:run": "cypress run",
+    "test:a11y": "jest --config=jest.a11y.config.js",
+    "test:visual": "jest --config=jest.visual.config.js",
+    "lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./reports/lighthouse-report.html",
+    "format": "prettier --write src/**/*.{ts,tsx,css,scss,json}",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/material": "^5.15.0",
+    "@mui/x-data-grid": "^6.18.0",
+    "@mui/x-date-pickers": "^6.18.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "dayjs": "^1.11.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "zustand": "^4.4.7",
+    "tailwindcss": "^3.3.0",
+    "clsx": "^1.2.1",
+    "framer-motion": "^10.12.0",
+    "react-hot-toast": "^2.4.1",
+    "react-aria": "^3.26.0",
+    "react-stately": "^3.26.0",
+    "axios": "^1.4.0",
+    "lucide-react": "^0.259.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/node": "^20.10.4",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "prettier": "^2.8.8",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.24",
+    "@tailwindcss/forms": "^0.5.3",
+    "@tailwindcss/typography": "^0.5.9",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "@axe-core/react": "^4.7.0",
+    "cypress": "^12.14.0",
+    "cypress-axe": "^1.4.0",
+    "percy-cypress": "^3.1.2",
+    "lighthouse": "^10.2.0",
+    "puppeteer": "^20.5.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vitest": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

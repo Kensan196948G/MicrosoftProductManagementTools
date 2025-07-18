@@ -105,3 +105,8 @@ node_modules/
 # Microsoft 365 specific
 token_cache.bin
 graph_token_cache.json
+
+##New 20250718
+venv/
+.env/
+Tests/venv_test/

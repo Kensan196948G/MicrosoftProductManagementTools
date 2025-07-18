@@ -1,0 +1,60 @@
+{
+  "report_type": "システム品質最終報告",
+  "timestamp": "2025-07-18T20:57:06.846602",
+  "monitoring_duration": "継続監視中",
+  "quality_summary": {
+    "overall_score": 34.559999999999995,
+    "quality_gates_passed": false,
+    "critical_issues": 1,
+    "improvement_opportunities": 1
+  },
+  "current_metrics": {
+    "coverage": 48.9,
+    "test_success_rate": 96.6,
+    "code_quality_score": 9.1,
+    "performance_score": 8.600000000000001,
+    "security_score": 9.599999999999998,
+    "last_updated": "2025-07-18T20:57:06.845976"
+  },
+  "quality_thresholds": {
+    "coverage": 85.0,
+    "test_success_rate": 95.0,
+    "code_quality_score": 8.0,
+    "performance_score": 7.5,
+    "security_score": 9.0
+  },
+  "active_alerts": [
+    {
+      "level": "critical",
+      "message": "coverageが基準値85.0を36.1下回っています",
+      "timestamp": "2025-07-18T20:57:06.846570",
+      "metric": "coverage",
+      "action_required": true
+    },
+    {
+      "level": "critical",
+      "message": "coverageが基準値85.0を36.1下回っています",
+      "timestamp": "2025-07-18T20:57:06.848699",
+      "metric": "coverage",
+      "action_required": true
+    }
+  ],
+  "improvement_suggestions": [
+    {
+      "category": "coverage",
+      "priority": "high",
+      "suggestion": "カバレッジが70%未満です。単体テストの追加を最優先に実施してください",
+      "impact": "高",
+      "effort": "中"
+    }
+  ],
+  "quality_trends": {
+    "coverage_trend": "安定",
+    "test_success_trend": "安定"
+  },
+  "recommendations": [
+    "継続的な品質監視システムは正常稼働中",
+    "品質基盤は安定しており、継続的改善が可能",
+    "定期的な品質レビューとメトリクス分析の実施を推奨"
+  ]
+}

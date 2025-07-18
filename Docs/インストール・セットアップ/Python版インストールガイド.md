@@ -43,9 +43,40 @@ cd /path/to/MicrosoftProductManagementTools
 
 # Pythonパッケージ管理ディレクトリの確認
 ls src/
+
+# tmux開発環境スクリプトの確認
+ls tmux_*.sh
 ```
 
-### ステップ 2: Python仮想環境の作成（推奨）
+### ステップ 2: tmux開発環境のセットアップ（開発者向け）
+
+```bash
+# tmuxのインストール確認（未インストールの場合）
+# Ubuntu/Debian:
+sudo apt-get install tmux
+
+# macOS:
+brew install tmux
+
+# Windows (WSL):
+sudo apt-get install tmux
+
+# Python移行用tmux環境の起動
+./tmux_python_setup.sh
+
+# 通常開発用tmux環境
+./tmux_dev_env.sh
+```
+
+#### tmux環境の構成
+Python移行プロジェクトでは、5ペイン構成のtmux環境を使用します：
+- **Pane 0**: アーキテクト役 (システム設計)
+- **Pane 1**: バックエンド開発者役 (API実装)
+- **Pane 2**: フロントエンド開発者役 (PyQt6 GUI)
+- **Pane 3**: テスター役 (テスト実装)
+- **Pane 4**: DevOps役 (環境構築・CI/CD)
+
+### ステップ 3: Python仮想環境の作成（推奨）
 
 ```bash
 # 仮想環境の作成
@@ -59,7 +90,7 @@ venv\\Scripts\\activate
 source venv/bin/activate
 ```
 
-### ステップ 3: 依存関係のインストール
+### ステップ 4: 依存関係のインストール
 
 ```bash
 # 全依存関係のインストール
@@ -69,7 +100,7 @@ pip install -r requirements.txt
 pip install PyQt6 msal requests colorlog python-dotenv pyyaml
 ```
 
-### ステップ 4: 設定ファイルの準備
+### ステップ 5: 設定ファイルの準備
 
 ```bash
 # 設定ディレクトリが存在することを確認
@@ -79,7 +110,7 @@ ls Config/appsettings.json
 cp Config/appsettings.sample.json Config/appsettings.json
 ```
 
-### ステップ 5: 動作テスト
+### ステップ 6: 動作テスト
 
 ```bash
 # 軽量テスト（依存関係なし）
@@ -309,6 +340,53 @@ tail -f Logs/m365_tools_$(date +%Y%m%d).log
 - **PowerShell出力**: `Reports/Daily/`, `Reports/Weekly/`等
 
 ## 📚 開発者向け情報
+
+### tmux並列開発ワークフロー
+
+#### 開発環境起動
+```bash
+# Python移行用tmux環境起動
+./tmux_python_setup.sh
+
+# ペイン間の移動
+Ctrl-b + 矢印キー
+
+# 共有コンテキストの編集
+vim tmux_shared_context.md
+```
+
+#### ペイン別役割
+1. **Pane 0**: アーキテクト
+   - Python/PowerShellブリッジ設計
+   - APIインターフェース設計
+   - システム全体の調整
+
+2. **Pane 1**: バックエンド開発者
+   - Microsoft Graph API統合
+   - PowerShellブリッジ実装
+   - データ処理ロジック
+
+3. **Pane 2**: フロントエンド開発者
+   - PyQt6 GUI実装
+   - UI/UX最適化
+   - PowerShell GUIとの互換性確保
+
+4. **Pane 3**: テスター
+   - テストケース作成
+   - 互換性テスト
+   - パフォーマンス測定
+
+5. **Pane 4**: DevOps
+   - CI/CDパイプライン
+   - Dockerコンテナ化
+   - デプロイメント自動化
+
+#### 連携プロトコル
+- 共有ファイル: `tmux_shared_context.md`
+- 12秒間隔でのClaude同期
+- 定型化されたメッセージフォーマット
+
+詳細は[tmux並列開発ドキュメント](../tmux・並列開発/)を参照してください。
 
 ### アーキテクチャ
 

@@ -1,0 +1,21 @@
+#!/bin/bash
+# jqインストール支援スクリプト
+
+echo "=== jq インストール支援 ==="
+echo ""
+echo "jqはJSON処理に必要なツールです。"
+echo "お使いの環境に応じて以下のコマンドでインストールできます："
+echo ""
+echo "Ubuntu/Debian (WSL2含む):"
+echo "  sudo apt-get update && sudo apt-get install -y jq"
+echo ""
+echo "macOS:"
+echo "  brew install jq"
+echo ""
+echo "Windows (winget):"
+echo "  winget install stedolan.jq"
+echo ""
+echo "手動インストール:"
+echo "  https://github.com/stedolan/jq/releases"
+echo ""
+echo "インストール後、再度テストを実行してください。"

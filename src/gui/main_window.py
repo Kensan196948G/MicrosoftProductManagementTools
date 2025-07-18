@@ -21,6 +21,7 @@ from PyQt6.QtGui import QFont, QIcon, QKeySequence, QShortcut, QAction
 from src.core.config import Config
 from src.core.logging_config import GuiLogHandler
 from src.gui.components.log_viewer import LogViewerWidget
+from src.gui.progress_monitor import ProgressMonitorWidget
 from src.api.graph.client import GraphClient
 
 
@@ -80,22 +81,33 @@ class MainWindow(QMainWindow):
         header_widget = self._create_header()
         main_layout.addWidget(header_widget)
         
-        # Create splitter for main content
-        splitter = QSplitter(Qt.Orientation.Vertical)
+        # Create main splitter for content
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        # Top section: Function tabs
+        # Left section: Function tabs
         self.function_tabs = self._create_function_tabs()
-        splitter.addWidget(self.function_tabs)
+        main_splitter.addWidget(self.function_tabs)
+        
+        # Right section: Progress monitor
+        self.progress_monitor = ProgressMonitorWidget()
+        main_splitter.addWidget(self.progress_monitor)
+        
+        # Set main splitter sizes (70% functions, 30% progress)
+        main_splitter.setSizes([980, 420])
+        
+        # Create vertical splitter for logs
+        vertical_splitter = QSplitter(Qt.Orientation.Vertical)
+        vertical_splitter.addWidget(main_splitter)
         
         # Bottom section: Log viewer
         self.log_viewer = LogViewerWidget()
         self.log_message.connect(self.log_viewer.add_log)
-        splitter.addWidget(self.log_viewer)
+        vertical_splitter.addWidget(self.log_viewer)
         
-        # Set splitter sizes (60% functions, 40% logs)
-        splitter.setSizes([540, 360])
+        # Set vertical splitter sizes (75% main content, 25% logs)
+        vertical_splitter.setSizes([675, 225])
         
-        main_layout.addWidget(splitter)
+        main_layout.addWidget(vertical_splitter)
         
         # Status bar with progress
         self._create_status_bar()
@@ -103,8 +115,12 @@ class MainWindow(QMainWindow):
         # Create menu bar
         self._create_menu_bar()
         
+        # Connect progress monitor signals
+        self.progress_monitor.progress_updated.connect(self._on_progress_updated)
+        self.progress_monitor.escalation_required.connect(self._on_escalation_required)
+        
         # Log initial message
-        self.logger.info("Microsoft 365 統合管理ツール 完全版 Python Edition v2.0 起動完了")
+        self.logger.info("Microsoft 365 統合管理ツール 完全版 Python Edition v2.0 起動完了 (進捗モニター統合版)")
         
     def _create_header(self) -> QWidget:
         """Create header widget with title and version info."""
@@ -804,3 +820,94 @@ class MainWindow(QMainWindow):
         """
         
         QMessageBox.about(self, "About", about_text)
+    
+    def _on_progress_updated(self, progress_data: dict):
+        """進捗データ更新時の処理"""
+        try:
+            metrics = progress_data.get("metrics", {})
+            timestamp = progress_data.get("timestamp", "")
+            
+            # ログに進捗情報を記録
+            gui_progress = metrics.get("gui_components_completed", 0)
+            coverage = metrics.get("pyqt6_coverage", 0.0)
+            
+            self.logger.info(f"進捗更新: GUI {gui_progress}/26機能完了, カバレッジ {coverage:.1f}%")
+            
+            # ステータスバーに反映
+            self.connection_status.setText(f"✅ 進捗監視中 ({gui_progress}/26)")
+            self.connection_status.setStyleSheet("color: green; font-weight: bold;")
+            
+        except Exception as e:
+            self.logger.error(f"進捗更新処理エラー: {e}")
+    
+    def _on_escalation_required(self, message: str, progress_data: dict):
+        """エスカレーション要求時の処理"""
+        try:
+            self.logger.warning(f"エスカレーション要求: {message}")
+            
+            # 重要度に応じた処理
+            if "CRITICAL" in message:
+                QMessageBox.critical(
+                    self,
+                    "🚨 緊急エスカレーション",
+                    f"緊急事項が発生しました:\n\n{message}\n\nアーキテクトへエスカレーションを送信しています。"
+                )
+                self.connection_status.setText("🚨 緊急エスカレーション")
+                self.connection_status.setStyleSheet("color: red; font-weight: bold;")
+                
+            elif "WARNING" in message:
+                QMessageBox.warning(
+                    self,
+                    "⚠️ エスカレーション",
+                    f"警告事項が発生しました:\n\n{message}\n\nアーキテクトへ通知しています。"
+                )
+                self.connection_status.setText("⚠️ 警告エスカレーション")
+                self.connection_status.setStyleSheet("color: orange; font-weight: bold;")
+                
+            # tmux_shared_context.mdへの通知記録
+            self._record_escalation_to_shared_context(message, progress_data)
+            
+        except Exception as e:
+            self.logger.error(f"エスカレーション処理エラー: {e}")
+    
+    def _record_escalation_to_shared_context(self, message: str, progress_data: dict):
+        """エスカレーション情報をtmux_shared_context.mdに記録"""
+        try:
+            from datetime import datetime
+            import os
+            
+            shared_context_path = "tmux_shared_context.md"
+            if not os.path.exists(shared_context_path):
+                return
+            
+            timestamp = datetime.now().strftime("%a %b %d %H:%M:%S JST %Y")
+            
+            escalation_entry = f"""
+### 🚨 エスカレーションアラート ({timestamp})
+- {message}
+- GUI実装進捗: {progress_data.get('metrics', {}).get('gui_components_completed', 0)}/26
+- テストカバレッジ: {progress_data.get('metrics', {}).get('pyqt6_coverage', 0.0):.1f}%
+- 対応要求: フロントエンド開発者からの緊急支援要請
+
+"""
+            
+            # ファイルに追記
+            with open(shared_context_path, 'a', encoding='utf-8') as f:
+                f.write(escalation_entry)
+            
+            self.logger.info(f"エスカレーション情報をtmux_shared_context.mdに記録: {message}")
+            
+        except Exception as e:
+            self.logger.error(f"共有コンテキストへの記録エラー: {e}")
+    
+    def get_progress_monitor_data(self) -> dict:
+        """進捗モニターから最新データを取得（外部アクセス用）"""
+        if hasattr(self, 'progress_monitor'):
+            return self.progress_monitor.get_latest_progress() or {}
+        return {}
+    
+    def trigger_manual_progress_collection(self):
+        """手動進捗収集をトリガー（外部アクセス用）"""
+        if hasattr(self, 'progress_monitor'):
+            self.progress_monitor.collect_progress_manually()
+            self.logger.info("手動進捗収集をトリガーしました")

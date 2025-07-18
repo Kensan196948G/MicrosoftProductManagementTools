@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-07-18T20:50:42.488281",
+  "duration_seconds": 6.454955,
+  "target_coverage": 85.0,
+  "achieved_coverage": 49.449230769230766,
+  "coverage_achieved": false,
+  "test_results": [],
+  "quality_metrics": {},
+  "recommendations": [
+    "目標カバレッジまで 35.6% 不足しています",
+    "統合テストの追加を推奨します"
+  ]
+}

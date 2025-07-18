@@ -1,0 +1,137 @@
+# エスカレーション基準設定ファイル
+# Python移行プロジェクト用 - 2025/01/18
+# アーキテクト設計 - 拡張版
+
+escalation_criteria:
+  immediate:  # 即時エスカレーション
+    - test_coverage_below: 85
+    - build_failures_consecutive: 3
+    - repair_loops_exceed: 7
+    - api_response_time_over: 3.0  # seconds
+    - gui_components_incomplete: 10  # 26機能中
+    - memory_usage_over: 90  # メモリ使用率90%以上
+    - error_rate_over: 5.0  # エラー率5%以上
+    - critical_component_failure: true  # 重要コンポーネント障害
+  
+  warning:  # 30分後エスカレーション
+    - test_coverage_below: 88
+    - repair_loops_exceed: 5
+    - progress_completion_below: 80  # 24h before deadline
+    - api_endpoints_incomplete: 5  # 20エンドポイント中
+    - api_response_time_over: 2.0  # API応答時間2秒以上
+    - memory_usage_over: 75  # メモリ使用率75%以上
+    - error_rate_over: 2.0  # エラー率2%以上
+    - dependency_vulnerability: true  # 依存関係脆弱性検出
+  
+  notice:  # 2時間後エスカレーション
+    - test_coverage_below: 90
+    - repair_loops_exceed: 3
+    - progress_completion_below: 85  # 48h before deadline
+    - api_response_time_over: 1.5
+    - memory_usage_over: 60
+    - error_rate_over: 1.0
+  
+  notification_channels:
+    critical:
+      - tmux_message_to_architect
+      - tmux_shared_context_update
+      - email_alert
+      - teams_notification
+      - slack_webhook
+      - escalation_log
+    warning:
+      - tmux_message_to_architect
+      - dashboard_alert
+      - teams_notification
+      - warning_log
+    notice:
+      - dashboard_alert
+      - notice_log
+
+# 役割別の閾値設定
+role_specific_thresholds:
+  architect:
+    design_completion_target: 95
+    review_response_time: 4  # hours
+  
+  backend:
+    api_completion_target: 85
+    test_coverage_minimum: 90
+    response_time_max: 2.0  # seconds
+  
+  frontend:
+    gui_completion_target: 85
+    ui_test_coverage: 90
+    component_quality_score: 85
+  
+  tester:
+    overall_coverage_target: 90
+    regression_test_pass_rate: 100
+    compatibility_test_pass_rate: 95
+  
+  devops:
+    ci_pipeline_success_rate: 95
+    deployment_readiness_score: 90
+    monitoring_uptime: 99.9
+
+# レポート設定
+reporting:
+  frequency:
+    progress_collection: "0 */4 * * *"  # 4時間ごと
+    daily_standup: "0 9 * * *"         # 毎日9時
+    weekly_summary: "0 17 * * 5"       # 金曜17時
+  
+  output_formats:
+    - json
+    - markdown
+    - html_dashboard
+  
+  retention_days: 30
+
+# 自動対応設定
+auto_response:
+  build_failure:
+    retry_count: 3
+    cleanup_before_retry: true
+    fallback_to_previous_version: true
+  
+  test_failure:
+    retry_count: 2
+    isolate_failing_tests: true
+    generate_detailed_report: true
+  
+  resource_exhaustion:
+    automatic_cleanup: true
+    scale_resources: true
+    alert_devops: true
+
+# 品質ゲート設定
+quality_gates:
+  release_ready:
+    test_coverage_minimum: 95
+    build_success_rate: 100
+    api_response_time_max: 1.0
+    memory_usage_max: 50
+    error_rate_max: 0.1
+  
+  development_baseline:
+    test_coverage_minimum: 90
+    build_success_rate: 90
+    api_response_time_max: 2.0
+    memory_usage_max: 70
+    error_rate_max: 1.0
+
+# 管理設定
+management:
+  escalation_timeout:
+    immediate: 0  # 即座
+    warning: 30  # 30分
+    notice: 120  # 2時間
+  
+  auto_resolution_timeout: 300  # 5分
+  max_escalation_attempts: 3
+  escalation_log_retention_days: 30
+  dashboard_refresh_interval: 60  # 60秒
+
+version: "1.0.0"
+last_updated: "2025-01-18T15:30:00Z"
