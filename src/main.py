@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Main entry point for Microsoft365 Management Tools
+完全版 Python Edition v2.0 - GUI/CLI 統合ランチャー
 """
 
 import sys
 import logging
 import argparse
+import os
 from pathlib import Path
 
 # Add src to Python path
@@ -13,18 +15,21 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.config import Config
 from src.core.logging_config import setup_logging
-from src.gui.main_window import MainWindow
-from src.cli.cli_app import CLIApp
 
 
 def main_gui():
-    """Launch GUI application."""
+    """Launch GUI application with PowerShell compatibility."""
     setup_logging()
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info("Starting Microsoft365 Management Tools GUI...")
+        logger.info("🚀 Microsoft365 Management Tools GUI 起動中...")
         
+        # Platform check
+        if sys.platform not in ["win32", "darwin", "linux"]:
+            logger.error(f"未対応のプラットフォーム: {sys.platform}")
+            sys.exit(1)
+            
         # Load configuration
         config = Config()
         config.load()
@@ -34,22 +39,48 @@ def main_gui():
             import ctypes
             try:
                 ctypes.windll.ole32.CoInitialize()
-            except:
-                pass
+                logger.info("Windows COM初期化完了")
+            except Exception as e:
+                logger.warning(f"Windows COM初期化失敗: {e}")
         
         # Launch GUI
         from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import QLocale, Qt
+        from PyQt6.QtGui import QFont
+        from src.gui.main_window import MainWindow
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+        
         app = QApplication(sys.argv)
         app.setApplicationName("Microsoft365 Management Tools")
         app.setOrganizationName("Enterprise IT")
+        app.setApplicationVersion("2.0")
+        
+        # Set application font
+        try:
+            font = QFont("Yu Gothic UI", 9)
+            app.setFont(font)
+        except Exception:
+            pass
+        
+        # Set locale to Japanese
+        QLocale.setDefault(QLocale(QLocale.Language.Japanese, QLocale.Country.Japan))
+        
+        logger.info("PyQt6 アプリケーション初期化完了")
         
         window = MainWindow(config)
         window.show()
         
+        logger.info("GUI アプリケーション起動完了")
         sys.exit(app.exec())
         
+    except ImportError as e:
+        logger.error(f"PyQt6インポートエラー: {e}")
+        print("エラー: PyQt6がインストールされていません。")
+        print("インストール: pip install PyQt6")
+        sys.exit(1)
     except Exception as e:
-        logger.error(f"Failed to start GUI: {e}", exc_info=True)
+        logger.error(f"GUI起動失敗: {e}", exc_info=True)
         sys.exit(1)
 
 
@@ -98,6 +129,7 @@ def main_cli():
         config.load()
         
         # Launch CLI
+        from src.cli.cli_app import CLIApp
         cli = CLIApp(config)
         
         if args.command:
@@ -117,11 +149,19 @@ def main_cli():
 
 def main():
     """Main entry point - determine GUI or CLI mode."""
+    # Show banner
+    print("=" * 80)
+    print("🚀 Microsoft 365 統合管理ツール - 完全版 Python Edition v2.0")
+    print("   PowerShell GUI完全互換 - 26機能搭載")
+    print("=" * 80)
+    
     if len(sys.argv) > 1 and sys.argv[1] in ["cli", "--cli", "-c"]:
         # Remove the CLI flag and run CLI
         sys.argv.pop(1)
+        print("📋 CLI モードで起動中...")
         main_cli()
     else:
+        print("🖥️  GUI モードで起動中...")
         main_gui()
 
 

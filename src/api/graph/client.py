@@ -1,10 +1,14 @@
 """
 Microsoft Graph API client implementation.
+Python equivalent of PowerShell RealM365DataProvider.psm1.
 Provides authentication and API access for Microsoft 365 services.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+import time
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List, Union
+from dataclasses import dataclass
 import asyncio
 from msal import ConfidentialClientApplication, PublicClientApplication
 import requests
@@ -12,23 +16,73 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from src.core.config import Config
+from src.core.auth.retry_handler import RetryHandler
+
+
+@dataclass
+class CacheEntry:
+    """Cache entry for API data."""
+    data: Any
+    last_updated: Optional[datetime]
+    ttl: int  # Time to live in seconds
+    
+    def is_valid(self) -> bool:
+        """Check if cache entry is still valid."""
+        if not self.last_updated or not self.data:
+            return False
+        
+        elapsed = datetime.now() - self.last_updated
+        return elapsed.total_seconds() < self.ttl
+
+
+@dataclass
+class PerformanceMetrics:
+    """Performance metrics tracking."""
+    api_call_count: int = 0
+    cache_hit_count: int = 0
+    total_response_time: float = 0.0
+    last_reset_time: Optional[datetime] = None
+    
+    def __post_init__(self) -> None:
+        if not self.last_reset_time:
+            self.last_reset_time = datetime.now()
 
 
 class GraphClient:
     """
     Microsoft Graph API client with authentication support.
-    Supports certificate-based and client secret authentication.
+    Python equivalent of PowerShell RealM365DataProvider.psm1.
+    Supports certificate-based and client secret authentication with caching.
     """
     
     GRAPH_API_ENDPOINT = 'https://graph.microsoft.com'
     DEFAULT_SCOPES = ['https://graph.microsoft.com/.default']
     
-    def __init__(self, config: Config):
+    def __init__(self, config: Config) -> None:
         self.config = config
         self.logger = logging.getLogger(__name__)
         self.access_token = None
         self.app = None
         self.session = self._create_session()
+        self.retry_handler = RetryHandler()
+        
+        # Initialize caching system (matches PowerShell implementation)
+        self.data_cache: Dict[str, CacheEntry] = {
+            'users': CacheEntry(None, None, 300),      # 5 minutes
+            'groups': CacheEntry(None, None, 600),     # 10 minutes
+            'licenses': CacheEntry(None, None, 1800),  # 30 minutes
+            'mailboxes': CacheEntry(None, None, 900),  # 15 minutes
+            'teams_usage': CacheEntry(None, None, 3600), # 1 hour
+            'reports': CacheEntry(None, None, 1800),   # 30 minutes
+        }
+        
+        # Performance metrics (matches PowerShell implementation)
+        self.performance_metrics = PerformanceMetrics()
+        
+        # Connection state tracking
+        self.graph_connected = False
+        self.last_connection_check = None
+        self.token_expiry_time = None
         
     def _create_session(self) -> requests.Session:
         """Create HTTP session with retry logic."""
@@ -47,7 +101,7 @@ class GraphClient:
         
         return session
     
-    def initialize(self):
+    def initialize(self) -> None:
         """Initialize the Graph client with authentication."""
         auth_method = self.config.get('Authentication.AuthMethod', 'Certificate')
         
@@ -62,7 +116,7 @@ class GraphClient:
             
         self.logger.info(f"Graph client initialized with {auth_method} authentication")
     
-    def _init_certificate_auth(self):
+    def _init_certificate_auth(self) -> None:
         """Initialize certificate-based authentication with enhanced error handling."""
         # Support both new and legacy config structures
         cert_path = (self.config.get('Authentication.CertificatePath') or 
@@ -134,7 +188,7 @@ class GraphClient:
             self.logger.error(f"証明書認証の初期化に失敗しました: {e}")
             raise
     
-    def _init_client_secret_auth(self):
+    def _init_client_secret_auth(self) -> None:
         """Initialize client secret authentication with enhanced error handling."""
         # Support both new and legacy config structures
         tenant_id = (self.config.get('Authentication.TenantId') or 
@@ -159,7 +213,7 @@ class GraphClient:
             self.logger.error(f"クライアント秘密認証の初期化に失敗しました: {e}")
             raise
     
-    def _init_interactive_auth(self):
+    def _init_interactive_auth(self) -> None:
         """Initialize interactive authentication."""
         self.app = PublicClientApplication(
             self.config.get('Authentication.ClientId'),
@@ -212,7 +266,7 @@ class GraphClient:
             self.logger.error(f"トークン取得中にエラーが発生: {e}")
             raise
     
-    def _ensure_token(self):
+    def _ensure_token(self) -> None:
         """Ensure we have a valid access token."""
         if not self.access_token:
             self.acquire_token()

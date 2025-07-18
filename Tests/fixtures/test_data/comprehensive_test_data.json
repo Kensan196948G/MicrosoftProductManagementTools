@@ -1,0 +1,483 @@
+{
+  "users": [
+    {
+      "id": "user_001",
+      "displayName": "山田太郎",
+      "userPrincipalName": "yamada@contoso.com",
+      "mail": "yamada@contoso.com",
+      "jobTitle": "プロジェクトマネージャー",
+      "department": "情報システム部",
+      "accountEnabled": true,
+      "createdDateTime": "2023-01-15T09:00:00Z",
+      "lastSignInDateTime": "2025-07-18T08:30:00Z",
+      "assignedLicenses": [
+        {
+          "skuId": "c42b9cae-ea4f-4ab7-9717-81576235ccac",
+          "skuPartNumber": "ENTERPRISEPACK"
+        }
+      ],
+      "mfaEnabled": true,
+      "conditionalAccessStatus": "enabled"
+    },
+    {
+      "id": "user_002", 
+      "displayName": "佐藤花子",
+      "userPrincipalName": "sato@contoso.com",
+      "mail": "sato@contoso.com",
+      "jobTitle": "システムエンジニア",
+      "department": "開発部",
+      "accountEnabled": true,
+      "createdDateTime": "2023-02-20T10:00:00Z",
+      "lastSignInDateTime": "2025-07-18T07:45:00Z",
+      "assignedLicenses": [
+        {
+          "skuId": "c42b9cae-ea4f-4ab7-9717-81576235ccac",
+          "skuPartNumber": "ENTERPRISEPACK"
+        }
+      ],
+      "mfaEnabled": true,
+      "conditionalAccessStatus": "enabled"
+    },
+    {
+      "id": "user_003",
+      "displayName": "田中一郎",
+      "userPrincipalName": "tanaka@contoso.com", 
+      "mail": "tanaka@contoso.com",
+      "jobTitle": "営業部長",
+      "department": "営業部",
+      "accountEnabled": true,
+      "createdDateTime": "2023-03-10T11:00:00Z",
+      "lastSignInDateTime": "2025-07-17T17:20:00Z",
+      "assignedLicenses": [
+        {
+          "skuId": "6fd2c87f-b296-42f0-b197-1e91e994b900",
+          "skuPartNumber": "ENTERPRISEPREMIUM"
+        }
+      ],
+      "mfaEnabled": false,
+      "conditionalAccessStatus": "disabled"
+    }
+  ],
+  "licenses": [
+    {
+      "skuId": "c42b9cae-ea4f-4ab7-9717-81576235ccac",
+      "skuPartNumber": "ENTERPRISEPACK",
+      "productName": "Office 365 Enterprise E3",
+      "prepaidUnits": {
+        "enabled": 100,
+        "suspended": 0,
+        "warning": 0
+      },
+      "consumedUnits": 85,
+      "servicePlans": [
+        {
+          "servicePlanId": "57ff2da0-773e-42df-b2af-ffb7a2317929",
+          "servicePlanName": "TEAMS1",
+          "provisioningStatus": "Success"
+        },
+        {
+          "servicePlanId": "9f431833-0334-42de-a7dc-70aa40db46db",
+          "servicePlanName": "EXCHANGE_S_ENTERPRISE",
+          "provisioningStatus": "Success"
+        }
+      ]
+    },
+    {
+      "skuId": "6fd2c87f-b296-42f0-b197-1e91e994b900",
+      "skuPartNumber": "ENTERPRISEPREMIUM",
+      "productName": "Office 365 Enterprise E5",
+      "prepaidUnits": {
+        "enabled": 50,
+        "suspended": 0,
+        "warning": 0
+      },
+      "consumedUnits": 12,
+      "servicePlans": [
+        {
+          "servicePlanId": "57ff2da0-773e-42df-b2af-ffb7a2317929",
+          "servicePlanName": "TEAMS1",
+          "provisioningStatus": "Success"
+        },
+        {
+          "servicePlanId": "9f431833-0334-42de-a7dc-70aa40db46db",
+          "servicePlanName": "EXCHANGE_S_ENTERPRISE",
+          "provisioningStatus": "Success"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "group_001",
+      "displayName": "情報システム部",
+      "mail": "it-department@contoso.com",
+      "groupTypes": ["Unified"],
+      "membershipRule": "user.department -eq \"情報システム部\"",
+      "members": ["user_001", "user_002"]
+    },
+    {
+      "id": "group_002",
+      "displayName": "営業部",
+      "mail": "sales@contoso.com",
+      "groupTypes": ["Unified"],
+      "membershipRule": "user.department -eq \"営業部\"",
+      "members": ["user_003"]
+    }
+  ],
+  "mailboxes": [
+    {
+      "Identity": "yamada@contoso.com",
+      "DisplayName": "山田太郎",
+      "PrimarySmtpAddress": "yamada@contoso.com",
+      "RecipientTypeDetails": "UserMailbox",
+      "ProhibitSendQuota": "50 GB",
+      "ProhibitSendReceiveQuota": "50 GB",
+      "IssueWarningQuota": "49 GB",
+      "UseDatabaseQuotaDefaults": false,
+      "MaxSendSize": "25 MB",
+      "MaxReceiveSize": "25 MB",
+      "DeliverToMailboxAndForward": false,
+      "ForwardingAddress": null,
+      "HiddenFromAddressListsEnabled": false,
+      "LitigationHoldEnabled": true,
+      "RetentionPolicy": "Default MRM Policy",
+      "SingleItemRecoveryEnabled": true,
+      "ArchiveStatus": "Active",
+      "ArchiveQuota": "100 GB",
+      "ArchiveWarningQuota": "90 GB"
+    },
+    {
+      "Identity": "sato@contoso.com",
+      "DisplayName": "佐藤花子",
+      "PrimarySmtpAddress": "sato@contoso.com",
+      "RecipientTypeDetails": "UserMailbox",
+      "ProhibitSendQuota": "50 GB",
+      "ProhibitSendReceiveQuota": "50 GB",
+      "IssueWarningQuota": "49 GB",
+      "UseDatabaseQuotaDefaults": false,
+      "MaxSendSize": "25 MB",
+      "MaxReceiveSize": "25 MB",
+      "DeliverToMailboxAndForward": false,
+      "ForwardingAddress": null,
+      "HiddenFromAddressListsEnabled": false,
+      "LitigationHoldEnabled": true,
+      "RetentionPolicy": "Default MRM Policy",
+      "SingleItemRecoveryEnabled": true,
+      "ArchiveStatus": "Active",
+      "ArchiveQuota": "100 GB",
+      "ArchiveWarningQuota": "90 GB"
+    }
+  ],
+  "messageTrace": [
+    {
+      "MessageId": "msg_001",
+      "SenderAddress": "yamada@contoso.com",
+      "RecipientAddress": "sato@contoso.com",
+      "Subject": "プロジェクト進捗について",
+      "Status": "Delivered",
+      "ToIP": "40.97.116.14",
+      "FromIP": "40.97.116.15",
+      "Size": 1024,
+      "MessageTraceId": "trace_001",
+      "Received": "2025-07-18T08:30:00Z",
+      "Index": 0
+    },
+    {
+      "MessageId": "msg_002",
+      "SenderAddress": "external@example.com",
+      "RecipientAddress": "yamada@contoso.com",
+      "Subject": "営業資料について",
+      "Status": "FilteredAsSpam",
+      "ToIP": "40.97.116.14",
+      "FromIP": "192.168.1.100",
+      "Size": 2048,
+      "MessageTraceId": "trace_002",
+      "Received": "2025-07-18T09:15:00Z",
+      "Index": 1
+    }
+  ],
+  "teamsUsage": [
+    {
+      "userPrincipalName": "yamada@contoso.com",
+      "displayName": "山田太郎",
+      "lastActivityDate": "2025-07-18",
+      "teamChatMessageCount": 25,
+      "privateChatMessageCount": 15,
+      "callCount": 8,
+      "meetingCount": 12,
+      "audioDuration": 180,
+      "videoDuration": 120,
+      "screenShareDuration": 60,
+      "meetingCreatedCount": 5,
+      "meetingAttendedCount": 12,
+      "adHocMeetingCount": 3,
+      "scheduledMeetingCount": 9,
+      "reportPeriod": "7",
+      "reportRefreshDate": "2025-07-18"
+    },
+    {
+      "userPrincipalName": "sato@contoso.com",
+      "displayName": "佐藤花子",
+      "lastActivityDate": "2025-07-18",
+      "teamChatMessageCount": 18,
+      "privateChatMessageCount": 22,
+      "callCount": 5,
+      "meetingCount": 8,
+      "audioDuration": 120,
+      "videoDuration": 90,
+      "screenShareDuration": 45,
+      "meetingCreatedCount": 2,
+      "meetingAttendedCount": 8,
+      "adHocMeetingCount": 2,
+      "scheduledMeetingCount": 6,
+      "reportPeriod": "7",
+      "reportRefreshDate": "2025-07-18"
+    }
+  ],
+  "oneDriveUsage": [
+    {
+      "userPrincipalName": "yamada@contoso.com",
+      "displayName": "山田太郎",
+      "siteUrl": "https://contoso-my.sharepoint.com/personal/yamada_contoso_com",
+      "storageUsed": 1073741824,
+      "storageAllocated": 1099511627776,
+      "fileCount": 1250,
+      "activeFileCount": 450,
+      "lastActivityDate": "2025-07-18",
+      "isDeleted": false,
+      "deletedDate": null,
+      "reportPeriod": "7",
+      "reportRefreshDate": "2025-07-18"
+    },
+    {
+      "userPrincipalName": "sato@contoso.com",
+      "displayName": "佐藤花子",
+      "siteUrl": "https://contoso-my.sharepoint.com/personal/sato_contoso_com",
+      "storageUsed": 2147483648,
+      "storageAllocated": 1099511627776,
+      "fileCount": 2100,
+      "activeFileCount": 680,
+      "lastActivityDate": "2025-07-18",
+      "isDeleted": false,
+      "deletedDate": null,
+      "reportPeriod": "7",
+      "reportRefreshDate": "2025-07-18"
+    }
+  ],
+  "signInLogs": [
+    {
+      "id": "signin_001",
+      "createdDateTime": "2025-07-18T08:30:00Z",
+      "userPrincipalName": "yamada@contoso.com",
+      "userId": "user_001",
+      "appDisplayName": "Microsoft Teams",
+      "appId": "1fec8e78-bce4-4aaf-ab1b-5451cc387264",
+      "ipAddress": "203.0.113.1",
+      "clientAppUsed": "Browser",
+      "correlationId": "correlation_001",
+      "conditionalAccessStatus": "success",
+      "isInteractive": true,
+      "riskDetail": "none",
+      "riskLevelAggregated": "none",
+      "riskLevelDuringSignIn": "none",
+      "riskState": "none",
+      "location": {
+        "city": "Tokyo",
+        "state": "Tokyo",
+        "countryOrRegion": "JP",
+        "geoCoordinates": {
+          "altitude": null,
+          "latitude": 35.6762,
+          "longitude": 139.6503
+        }
+      },
+      "deviceDetail": {
+        "deviceId": "device_001",
+        "displayName": "DESKTOP-ABC123",
+        "operatingSystem": "Windows 11",
+        "browser": "Chrome",
+        "isCompliant": true,
+        "isManaged": true,
+        "trustType": "Azure AD registered"
+      },
+      "status": {
+        "errorCode": 0,
+        "failureReason": null,
+        "additionalDetails": null
+      },
+      "authenticationDetails": [
+        {
+          "authenticationMethod": "Password",
+          "authenticationStepDateTime": "2025-07-18T08:30:00Z",
+          "authenticationStepRequirement": "Primary authentication",
+          "authenticationStepResultDetail": "Correct password",
+          "succeeded": true
+        }
+      ]
+    },
+    {
+      "id": "signin_002",
+      "createdDateTime": "2025-07-18T07:45:00Z",
+      "userPrincipalName": "sato@contoso.com",
+      "userId": "user_002",
+      "appDisplayName": "Office 365 Exchange Online",
+      "appId": "00000002-0000-0ff1-ce00-000000000000",
+      "ipAddress": "203.0.113.2",
+      "clientAppUsed": "Exchange ActiveSync",
+      "correlationId": "correlation_002",
+      "conditionalAccessStatus": "success",
+      "isInteractive": false,
+      "riskDetail": "none",
+      "riskLevelAggregated": "none",
+      "riskLevelDuringSignIn": "none",
+      "riskState": "none",
+      "location": {
+        "city": "Osaka",
+        "state": "Osaka",
+        "countryOrRegion": "JP",
+        "geoCoordinates": {
+          "altitude": null,
+          "latitude": 34.6937,
+          "longitude": 135.5023
+        }
+      },
+      "deviceDetail": {
+        "deviceId": "device_002",
+        "displayName": "iPhone-XYZ789",
+        "operatingSystem": "iOS 17.5",
+        "browser": "Mobile Safari",
+        "isCompliant": true,
+        "isManaged": true,
+        "trustType": "Azure AD registered"
+      },
+      "status": {
+        "errorCode": 0,
+        "failureReason": null,
+        "additionalDetails": null
+      },
+      "authenticationDetails": [
+        {
+          "authenticationMethod": "Previously satisfied",
+          "authenticationStepDateTime": "2025-07-18T07:45:00Z",
+          "authenticationStepRequirement": "Primary authentication",
+          "authenticationStepResultDetail": "Previously satisfied",
+          "succeeded": true
+        }
+      ]
+    }
+  ],
+  "conditionalAccessPolicies": [
+    {
+      "id": "policy_001",
+      "displayName": "MFA Required for All Users",
+      "state": "enabled",
+      "sessionControls": {
+        "applicationEnforcedRestrictions": null,
+        "cloudAppSecurity": null,
+        "persistentBrowser": null,
+        "signInFrequency": {
+          "value": 1,
+          "type": "hours"
+        }
+      },
+      "grantControls": {
+        "operator": "OR",
+        "builtInControls": [
+          "mfa"
+        ],
+        "customAuthenticationFactors": [],
+        "termsOfUse": []
+      },
+      "conditions": {
+        "applications": {
+          "includeApplications": ["All"],
+          "excludeApplications": []
+        },
+        "users": {
+          "includeUsers": ["All"],
+          "excludeUsers": []
+        },
+        "locations": {
+          "includeLocations": ["All"],
+          "excludeLocations": []
+        }
+      }
+    }
+  ],
+  "performance": {
+    "exchangeOnline": {
+      "responseTime": {
+        "average": 250,
+        "min": 120,
+        "max": 580,
+        "unit": "ms"
+      },
+      "availability": 99.95,
+      "errorRate": 0.05,
+      "throughput": 1500
+    },
+    "microsoftTeams": {
+      "responseTime": {
+        "average": 180,
+        "min": 90,
+        "max": 450,
+        "unit": "ms"
+      },
+      "availability": 99.98,
+      "errorRate": 0.02,
+      "throughput": 2200
+    },
+    "sharePoint": {
+      "responseTime": {
+        "average": 320,
+        "min": 180,
+        "max": 720,
+        "unit": "ms"
+      },
+      "availability": 99.92,
+      "errorRate": 0.08,
+      "throughput": 1800
+    }
+  },
+  "security": {
+    "incidents": [
+      {
+        "id": "incident_001",
+        "title": "Suspicious Sign-in Activity",
+        "severity": "Medium",
+        "status": "Active",
+        "createdDateTime": "2025-07-18T09:00:00Z",
+        "lastUpdateDateTime": "2025-07-18T09:15:00Z",
+        "classification": "TruePositive",
+        "determination": "MultiStagedAttack",
+        "assignedTo": "security@contoso.com",
+        "tags": ["sign-in", "suspicious-activity"],
+        "comments": [
+          {
+            "message": "Investigating unusual sign-in pattern",
+            "createdByDisplayName": "Security Team",
+            "createdDateTime": "2025-07-18T09:05:00Z"
+          }
+        ]
+      }
+    ],
+    "alerts": [
+      {
+        "id": "alert_001",
+        "title": "Impossible travel activity",
+        "severity": "High",
+        "status": "New",
+        "createdDateTime": "2025-07-18T08:45:00Z",
+        "userPrincipalName": "tanaka@contoso.com",
+        "category": "CredentialAccess",
+        "eventDateTime": "2025-07-18T08:30:00Z",
+        "vendorInformation": {
+          "provider": "Microsoft Cloud App Security",
+          "providerVersion": "2.0",
+          "subProvider": "Microsoft Cloud App Security",
+          "vendor": "Microsoft"
+        }
+      }
+    ]
+  }
+}

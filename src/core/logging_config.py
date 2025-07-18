@@ -1,23 +1,28 @@
 """
 Logging configuration for Microsoft365 Management Tools.
-Provides colored console output and file logging with rotation.
+Python equivalent of PowerShell Logging.psm1.
+Provides structured logging with audit trail support and GUI integration.
 """
 
+import json
 import logging
 import logging.handlers
 import os
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any, Optional, Union, Callable
+from enum import Enum
 import colorlog
 
 
 def setup_logging(
     log_level: str = "INFO",
     log_dir: str = "Logs",
-    log_file: str = None,
+    log_file: Optional[str] = None,
     console: bool = True,
     file: bool = True
-):
+) -> None:
     """
     Setup logging configuration.
     
@@ -109,11 +114,11 @@ class GuiLogHandler(logging.Handler):
     Emits log records to GUI components.
     """
     
-    def __init__(self, callback):
+    def __init__(self, callback: Callable[[str, str], None]) -> None:
         super().__init__()
         self.callback = callback
         
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         """Emit a log record to GUI."""
         try:
             msg = self.format(record)

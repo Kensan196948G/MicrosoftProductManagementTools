@@ -1,0 +1,136 @@
+# Microsoft 365管理ツール - テスト専用依存関係
+# Dev1 - Test/QA Developer による基盤構築
+# このファイルはテスト実行に必要な追加パッケージを定義します
+# 本番環境の依存関係はrequirements.txtに記載されています
+
+# ===================
+# Core Testing Framework
+# ===================
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-xdist==3.5.0              # 並列テスト実行
+pytest-timeout==2.2.0            # タイムアウト管理
+pytest-mock==3.12.0              # モック作成支援
+pytest-asyncio==0.23.3           # 非同期テスト対応
+pytest-html==4.1.1               # HTMLレポート生成
+pytest-json-report==1.5.0        # JSONレポート生成
+pytest-benchmark==4.0.0          # パフォーマンステスト
+
+# ===================
+# GUI Testing
+# ===================
+pytest-qt==4.3.1                 # PyQt6 GUIテスト
+pytest-screenshot==0.1.0         # スクリーンショット取得
+
+# ===================
+# API/HTTP Testing
+# ===================
+requests-mock==1.11.0            # HTTP リクエストモック
+responses==0.24.1                # HTTP レスポンスモック
+vcrpy==5.1.0                     # HTTP 相互作用記録/再生
+httpx==0.26.0                    # 非同期HTTPクライアント
+
+# ===================
+# Test Data Generation
+# ===================
+faker==22.0.0                    # テストデータ生成
+factory-boy==3.3.0               # テストオブジェクト生成
+hypothesis==6.96.1               # プロパティベーステスト
+
+# ===================
+# Mocking & Patching
+# ===================
+unittest-xml-reporting==3.2.0    # XML テストレポート
+freezegun==1.4.0                 # 日時モック
+moto==4.2.12                     # AWS サービスモック（将来の拡張用）
+
+# ===================
+# Code Quality & Analysis
+# ===================
+pytest-flake8==1.1.1             # Flake8統合
+pytest-mypy==0.10.3              # 型チェック統合
+pytest-black==0.3.12             # コードフォーマット検証
+pytest-isort==4.0.0              # インポート順序検証
+pytest-pylint==0.21.0            # Pylint統合
+
+# ===================
+# Coverage & Reporting
+# ===================
+coverage[toml]==7.4.0            # カバレッジ測定
+coverage-badge==1.1.0            # カバレッジバッジ生成
+pytest-cov-context==0.2.0        # コンテキスト別カバレッジ
+
+# ===================
+# PowerShell Compatibility Testing
+# ===================
+pywinpty==2.0.12                 # Windows PTY（PowerShellターミナル制御）
+paramiko==3.4.0                  # SSH（リモートPowerShell実行用）
+psutil==5.9.7                    # プロセス監視
+
+# ===================
+# Test Environment Management
+# ===================
+python-dotenv==1.0.0             # 環境変数管理
+testcontainers==3.7.1            # コンテナベーステスト（将来の拡張用）
+
+# ===================
+# Documentation Testing
+# ===================
+pytest-doctest-custom==1.0.0     # カスタムdoctestサポート
+sphinx-testing==1.0.1            # ドキュメントテスト
+
+# ===================
+# Security Testing
+# ===================
+bandit==1.7.6                    # セキュリティ脆弱性スキャン
+safety==3.0.1                    # 依存関係セキュリティチェック
+
+# ===================
+# Performance & Memory Testing
+# ===================
+memory-profiler==0.61.0          # メモリ使用量プロファイリング
+pytest-memray==1.5.0             # メモリリーク検出
+locust==2.20.0                   # 負荷テスト（将来の拡張用）
+
+# ===================
+# Debugging & Inspection
+# ===================
+pytest-pdb==0.3.1                # PDBデバッガー統合
+pytest-pudb==0.7.0               # PuDBデバッガー統合
+pytest-clarity==1.0.1            # アサーションエラー詳細表示
+
+# ===================
+# Test Organization
+# ===================
+pytest-ordering==0.6              # テスト実行順序制御
+pytest-dependency==0.6.0         # テスト依存関係管理
+pytest-repeat==0.9.3             # テスト反復実行
+
+# ===================
+# Data Validation
+# ===================
+jsonschema==4.20.0               # JSONスキーマ検証
+pydantic==2.5.3                  # データ検証（モデル定義）
+
+# ===================
+# File & I/O Testing
+# ===================
+pyfakefs==5.3.2                  # ファイルシステムモック
+pytest-datadir==1.5.0            # テストデータディレクトリ管理
+pytest-tempdir==2019.10.12       # 一時ディレクトリ管理
+
+# ===================
+# Compatibility Testing
+# ===================
+tox==4.11.4                      # 複数環境テスト
+nox==2023.4.22                   # 複数環境テスト（代替）
+
+# ===================
+# Additional Utilities
+# ===================
+deepdiff==6.7.1                  # オブジェクト詳細比較
+pytest-sugar==0.9.7              # テスト実行UI改善
+pytest-instafail==0.5.0          # 即座のエラー表示
+pytest-picked==0.5.0             # 変更ファイルのみテスト
+pytest-testmon==2.1.0            # 変更影響範囲テスト
+pytest-env==1.1.3                # 環境変数設定
