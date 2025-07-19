@@ -3,24 +3,45 @@ Write-Host "=== Microsoft 365管理ツール 全機能テスト ===" -Foreground
 Write-Host ""
 
 # Microsoft Graph認証
-Write-Host "📡 Microsoft Graph 認証テスト" -ForegroundColor Yellow
+Write-Host "📡 Microsoft Graph 証明書ベース認証テスト" -ForegroundColor Yellow
 try {
     Import-Module Microsoft.Graph.Authentication -Force
     
     $clientId = "22e5d6e4-805f-4516-af09-ff09c7c224c4"
     $tenantId = "a7232f7a-a9e5-4f71-9372-dc8b1c6645ea"
-    $clientSecret = "YOUR_CLIENT_SECRET"
+    $certThumbprint = "94B6BAF7E9E459F2280F665CA5B6F17AC554A7E6"
+    $certPath = "Certificates/mycert.pfx"
+    $certPassword = "armageddon2002"
     
-    $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
-    Connect-MgGraph -TenantId $tenantId -ClientSecretCredential $credential -NoWelcome
+    # 証明書ベース認証でConnect-MgGraph
+    if (Test-Path $certPath) {
+        $securePassword = ConvertTo-SecureString -String $certPassword -AsPlainText -Force
+        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath, $securePassword)
+        
+        $connectParams = @{
+            ClientId = $clientId
+            TenantId = $tenantId
+            Certificate = $cert
+            NoWelcome = $true
+        }
+        Connect-MgGraph @connectParams
+    } else {
+        # フォールバック: 証明書拇印による認証
+        $connectParams = @{
+            ClientId = $clientId
+            TenantId = $tenantId
+            CertificateThumbprint = $certThumbprint
+            NoWelcome = $true
+        }
+        Connect-MgGraph @connectParams
+    }
     
-    Write-Host "✅ Microsoft Graph認証成功" -ForegroundColor Green
+    Write-Host "✅ Microsoft Graph証明書ベース認証成功" -ForegroundColor Green
     $context = Get-MgContext
     Write-Host "   認証タイプ: $($context.AuthType)" -ForegroundColor Gray
     Write-Host ""
 } catch {
-    Write-Host "❌ Microsoft Graph認証失敗: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "❌ Microsoft Graph証明書ベース認証失敗: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host ""
 }
 

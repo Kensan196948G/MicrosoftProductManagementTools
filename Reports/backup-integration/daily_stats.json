@@ -1,0 +1,15 @@
+{
+    "generated_at": "",
+    "backup_statistics": {
+        "total_backups": 18,
+        "total_size": "353M",
+        "success_rate": 93.7,
+        "successful_backups_24h": 15,
+        "total_attempts_24h": 16
+    },
+    "system_status": {
+        "cron_integration_active": true,
+        "github_actions_compatible": true,
+        "last_verification": ""
+    }
+}

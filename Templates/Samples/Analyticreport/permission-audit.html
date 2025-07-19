@@ -3,17 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microsoft 365 権限監査レポート</title>
+    <title>権限監査レポート - Microsoft 365統合管理ツール</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
+    <script>
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
     
     <style>
         * {
@@ -178,56 +226,138 @@
     </style>
 </head>
 <body>
+    <!-- ヘッダー -->
     <header class="header">
         <div class="container">
             <h1>
                 <i class="fas fa-user-shield"></i>
-                Microsoft 365 権限監査レポート
+                権限監査レポート - Microsoft 365統合管理ツール
             </h1>
             <div class="meta-info">
                 <div class="stats">
                     <div class="stat-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>レポート生成日時: {{REPORT_DATE}}</span>
+                        <i class="fas fa-calendar"></i>
+                        <span>レポート日: {{REPORT_DATE}}</span>
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-users-cog"></i>
-                        <span>管理者数: <strong id="totalRecords">{{TOTAL_ADMINS}}</strong> 人</span>
+                        <span>総権限数: <strong id="totalRecords">{{TOTAL_PERMISSIONS}}</strong> 件</span>
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-users"></i>
-                        <span>総ユーザー数: <strong>{{TOTAL_USERS}}</strong> 人</span>
+                        <span>表示中: <strong id="visibleRecords">{{TOTAL_PERMISSIONS}}</strong> 件</span>
                     </div>
                     <div class="stat-item">
-                        <i class="fas fa-server"></i>
-                        <span>実行システム: {{SYSTEM_INFO}}</span>
+                        <i class="fas fa-database"></i>
+                        <span>データソース: {{DATA_SOURCE}}</span>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- メインコンテンツ -->
     <main class="container">
+        <!-- アクションボタンセクション -->
+        <section class="action-section">
+            <button class="btn btn-primary" onclick="downloadCSV()">
+                <i class="fas fa-file-csv"></i>
+                CSVファイルをダウンロード
+            </button>
+            <button class="btn btn-secondary" onclick="downloadPDF()">
+                <i class="fas fa-file-pdf"></i>
+                PDFファイルをダウンロード
+            </button>
+            <button class="btn btn-print" onclick="printHTML()">
+                <i class="fas fa-print"></i>
+                HTMLファイル印刷
+            </button>
+        </section>
+
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-row">
+                    <!-- 検索ボックス -->
+                    <div class="search-container">
+                        <label for="searchInput">検索</label>
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               class="search-box" 
+                               placeholder="ユーザー名、部署、管理者ロール等で検索..."
+                               autocomplete="off">
+                    </div>
+                    
+                    <!-- フィルタードロップダウン -->
+                    <div class="filter-dropdown">
+                        <label for="roleFilter">管理者ロール</label>
+                        <select id="roleFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="全体管理者">全体管理者</option>
+                            <option value="ユーザー管理者">ユーザー管理者</option>
+                            <option value="閲覧者">閲覧者</option>
+                            <option value="ゲスト">ゲスト</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <label for="mfaFilter">MFA状況</label>
+                        <select id="mfaFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="有効">有効</option>
+                            <option value="無効">無効</option>
+                            <option value="必須">必須</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i>
+                            リセット
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- データテーブル -->
         <section class="table-container">
             <div class="table-header">
-                <div class="table-title">
+                <h2 class="table-title">
                     <i class="fas fa-clipboard-check"></i>
-                    ユーザー権限割り当て状況
-                </div>
+                    Microsoft 365ユーザー権限監査詳細
+                </h2>
             </div>
             
             <div class="table-wrapper">
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>ユーザー名</th>
-                            <th>メールアドレス</th>
-                            <th>部署</th>
-                            <th>管理者ロール</th>
-                            <th>アクセス権限</th>
-                            <th>最終ログイン</th>
-                            <th>MFA状況</th>
-                            <th>ステータス</th>
+                            <th onclick="sortTable('ユーザー名')">
+                                ユーザー名 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('メールアドレス')">
+                                メールアドレス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('部署')">
+                                部署 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('管理者ロール')">
+                                管理者ロール <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('アクセス権限')">
+                                アクセス権限 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('最終ログイン')">
+                                最終ログイン <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('MFA状況')">
+                                MFA状況 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('ステータス')">
+                                ステータス <i class="fas fa-sort sort-icon"></i>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -238,10 +368,290 @@
         </section>
     </main>
 
+    <!-- フッター -->
     <footer class="footer">
         <p><strong>Microsoft 365統合管理ツール</strong> - 権限監査レポート</p>
         <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on {{REPORT_DATE}}</p>
         <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
     </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // グローバル変数
+        let tableData = [];
+        let filteredData = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('権限監査レポート初期化開始');
+            initializeTable();
+            setupEventListeners();
+            console.log('権限監査レポート初期化完了');
+        });
+        
+        // テーブル初期化
+        function initializeTable() {
+            const table = document.getElementById('dataTable');
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            tableData = [];
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                const rowData = {
+                    'ユーザー名': cells[0]?.textContent.trim() || '',
+                    'メールアドレス': cells[1]?.textContent.trim() || '',
+                    '部署': cells[2]?.textContent.trim() || '',
+                    '管理者ロール': cells[3]?.textContent.trim() || '',
+                    'アクセス権限': cells[4]?.textContent.trim() || '',
+                    '最終ログイン': cells[5]?.textContent.trim() || '',
+                    'MFA状況': cells[6]?.textContent.trim() || '',
+                    'ステータス': cells[7]?.textContent.trim() || '',
+                    _element: row,
+                    _index: index
+                };
+                tableData.push(rowData);
+            });
+            
+            filteredData = [...tableData];
+            updateStats();
+        }
+        
+        // イベントリスナー設定
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const roleFilter = document.getElementById('roleFilter');
+            const mfaFilter = document.getElementById('mfaFilter');
+            
+            searchInput.addEventListener('input', applyFilters);
+            roleFilter.addEventListener('change', applyFilters);
+            mfaFilter.addEventListener('change', applyFilters);
+        }
+        
+        // フィルター適用
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const roleFilter = document.getElementById('roleFilter').value;
+            const mfaFilter = document.getElementById('mfaFilter').value;
+            
+            filteredData = tableData.filter(row => {
+                // 検索フィルター
+                if (searchQuery) {
+                    const searchMatch = 
+                        row['ユーザー名'].toLowerCase().includes(searchQuery) ||
+                        row['メールアドレス'].toLowerCase().includes(searchQuery) ||
+                        row['部署'].toLowerCase().includes(searchQuery) ||
+                        row['管理者ロール'].toLowerCase().includes(searchQuery);
+                    if (!searchMatch) return false;
+                }
+                
+                // ロールフィルター
+                if (roleFilter && row['管理者ロール'] !== roleFilter) {
+                    return false;
+                }
+                
+                // MFAフィルター
+                if (mfaFilter && row['MFA状況'] !== mfaFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            updateTable();
+            updateStats();
+        }
+        
+        // テーブル表示更新
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            // 全行を非表示
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // フィルター済みデータのみ表示
+            filteredData.forEach(rowData => {
+                if (rowData._element) {
+                    rowData._element.style.display = '';
+                }
+            });
+        }
+        
+        // 統計更新
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = tableData.length;
+            document.getElementById('visibleRecords').textContent = filteredData.length;
+        }
+        
+        // テーブルソート
+        function sortTable(columnName) {
+            if (sortColumn === columnName) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnName;
+                sortDirection = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let valueA = a[columnName];
+                let valueB = b[columnName];
+                
+                // 文字列比較
+                valueA = valueA.toString().toLowerCase();
+                valueB = valueB.toString().toLowerCase();
+                
+                if (sortDirection === 'asc') {
+                    return valueA.localeCompare(valueB, 'ja');
+                } else {
+                    return valueB.localeCompare(valueA, 'ja');
+                }
+            });
+            
+            updateSortIcons();
+            updateTable();
+        }
+        
+        // ソートアイコン更新
+        function updateSortIcons() {
+            const headers = document.querySelectorAll('#dataTable th');
+            headers.forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (icon) {
+                    icon.className = 'fas fa-sort sort-icon';
+                    
+                    const headerText = header.textContent.trim().split(' ')[0];
+                    if (headerText === sortColumn) {
+                        if (sortDirection === 'asc') {
+                            header.classList.add('sorted-asc');
+                            icon.className = 'fas fa-sort-up sort-icon';
+                        } else {
+                            header.classList.add('sorted-desc');
+                            icon.className = 'fas fa-sort-down sort-icon';
+                        }
+                    }
+                }
+            });
+        }
+        
+        // フィルターリセット
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            document.getElementById('mfaFilter').value = '';
+            
+            filteredData = [...tableData];
+            sortColumn = null;
+            sortDirection = 'asc';
+            
+            updateTable();
+            updateStats();
+            updateSortIcons();
+            showNotification('フィルターをリセットしました', 'info');
+        }
+        
+        // CSV ダウンロード
+        function downloadCSV() {
+            showNotification('📄 CSV生成中...', 'info');
+            
+            const headers = ['ユーザー名', 'メールアドレス', '部署', '管理者ロール', 'アクセス権限', '最終ログイン', 'MFA状況', 'ステータス'];
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
+            
+            filteredData.forEach(row => {
+                const rowData = headers.map(header => {
+                    let value = row[header] || '';
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            const now = new Date();
+            const filename = `権限監査レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.csv`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            showNotification('✅ CSVダウンロード完了！', 'success');
+        }
+        
+        // PDF ダウンロード
+        function downloadPDF() {
+            showNotification('📄 PDF生成中...', 'info');
+            
+            const now = new Date();
+            const filename = `権限監査レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
+            
+            // html2pdfを使用
+            if (typeof html2pdf !== 'undefined') {
+                const element = document.body;
+                const options = {
+                    margin: [10, 10, 10, 10],
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2, 
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'landscape',
+                        compress: true
+                    },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+                
+                html2pdf().set(options).from(element).save().then(() => {
+                    showNotification('✅ PDFダウンロード完了！', 'success');
+                }).catch(error => {
+                    console.error('PDF生成エラー:', error);
+                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                });
+            } else {
+                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+            }
+        }
+        
+        // HTML 印刷
+        function printHTML() {
+            showNotification('🖨️ 印刷準備中...', 'info');
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+        
+        // 通知表示
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>

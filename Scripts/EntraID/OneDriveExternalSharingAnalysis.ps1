@@ -93,10 +93,13 @@ function Get-OneDriveExternalSharingAnalysis {
                             # クライアントシークレット認証を優先実行
                             if ($graphConfig.ClientSecret) {
                                 Write-Log "クライアントシークレット認証を試行中..." -Level "Info"
-                                $clientSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
-                                $credential = New-Object System.Management.Automation.PSCredential($graphConfig.ClientId, $clientSecret)
-                                
-                                Connect-MgGraph -ClientSecretCredential $credential -TenantId $graphConfig.TenantId -NoWelcome
+                                $connectParams = @{
+                                    ClientId     = $graphConfig.ClientId      # 文字列でOK
+                                    TenantId     = $graphConfig.TenantId      # 文字列でOK
+                                    ClientSecret = $graphConfig.ClientSecret  # 文字列でOK（ConvertTo-SecureString不要！）
+                                    NoWelcome    = $true
+                                }
+                                Connect-MgGraph @connectParams
                                 $authSuccess = $true
                                 Write-Log "クライアントシークレット認証成功" -Level "Info"
                             }
@@ -136,10 +139,13 @@ function Get-OneDriveExternalSharingAnalysis {
                         
                         if ($clientId -and $clientSecret -and $tenantId) {
                             Write-Log "環境変数から認証情報を使用..." -Level "Info"
-                            $clientSecretSecure = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-                            $credential = New-Object System.Management.Automation.PSCredential($clientId, $clientSecretSecure)
-                            
-                            Connect-MgGraph -ClientSecretCredential $credential -TenantId $tenantId -NoWelcome
+                            $connectParams = @{
+                                ClientId     = $clientId      # 文字列でOK
+                                TenantId     = $tenantId      # 文字列でOK
+                                ClientSecret = $clientSecret  # 文字列でOK（ConvertTo-SecureString不要！）
+                                NoWelcome    = $true
+                            }
+                            Connect-MgGraph @connectParams
                             $authSuccess = $true
                             Write-Log "環境変数ベース認証成功" -Level "Info"
                         } else {

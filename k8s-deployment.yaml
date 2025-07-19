@@ -1,0 +1,427 @@
+# Microsoft 365 Management Tools - Phase 2 Enterprise Kubernetes Deployment
+# Production-ready Kubernetes configuration with 99.9% availability
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: microsoft-365-tools
+  labels:
+    name: microsoft-365-tools
+    environment: production
+    version: "2.0"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: m365-config
+  namespace: microsoft-365-tools
+data:
+  LOG_LEVEL: "INFO"
+  ENABLE_CACHE: "true"
+  ENABLE_BATCHING: "true"
+  MAX_WORKERS: "4"
+  REQUEST_TIMEOUT: "30"
+  HEALTH_CHECK_INTERVAL: "30"
+  AZURE_KEYVAULT_URL: ""
+  PYTHONPATH: "/app/src"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: m365-secrets
+  namespace: microsoft-365-tools
+type: Opaque
+data:
+  # Base64 encoded values - to be set via CI/CD pipeline
+  AZURE_TENANT_ID: ""
+  AZURE_CLIENT_ID: ""
+  AZURE_CLIENT_SECRET: ""
+  AZURE_CLIENT_CERTIFICATE_PATH: ""
+  AZURE_CLIENT_CERTIFICATE_PASSWORD: ""
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m365-tools-deployment
+  namespace: microsoft-365-tools
+  labels:
+    app: m365-tools
+    version: "2.0"
+    tier: production
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: m365-tools
+  template:
+    metadata:
+      labels:
+        app: m365-tools
+        version: "2.0"
+        tier: production
+    spec:
+      serviceAccountName: m365-tools-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: m365-tools
+        image: microsoft365tools:2.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: m365-config
+        - secretRef:
+            name: m365-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+        - name: app-reports
+          mountPath: /app/Reports
+        - name: app-config
+          mountPath: /app/Config
+        - name: azure-keyvault-cert
+          mountPath: /app/certificates
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: app-logs
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: app-reports
+        persistentVolumeClaim:
+          claimName: m365-reports-pvc
+      - name: app-config
+        configMap:
+          name: m365-config
+      - name: azure-keyvault-cert
+        secret:
+          secretName: azure-keyvault-cert
+          optional: true
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      tolerations:
+      - key: "production"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - m365-tools
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: m365-tools-service
+  namespace: microsoft-365-tools
+  labels:
+    app: m365-tools
+    service: m365-tools
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: m365-tools
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: m365-tools-sa
+  namespace: microsoft-365-tools
+  labels:
+    app: m365-tools
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: m365-tools-role
+  namespace: microsoft-365-tools
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: m365-tools-rolebinding
+  namespace: microsoft-365-tools
+subjects:
+- kind: ServiceAccount
+  name: m365-tools-sa
+  namespace: microsoft-365-tools
+roleRef:
+  kind: Role
+  name: m365-tools-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: m365-reports-pvc
+  namespace: microsoft-365-tools
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: m365-tools-ingress
+  namespace: microsoft-365-tools
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/client-body-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - m365-tools.yourdomain.com
+    secretName: m365-tools-tls
+  rules:
+  - host: m365-tools.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: m365-tools-service
+            port:
+              number: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: m365-tools-hpa
+  namespace: microsoft-365-tools
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: m365-tools-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m365-tools-pdb
+  namespace: microsoft-365-tools
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: m365-tools
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: m365-tools-metrics
+  namespace: microsoft-365-tools
+  labels:
+    app: m365-tools
+    service: metrics
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: m365-tools
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: m365-tools-servicemonitor
+  namespace: microsoft-365-tools
+  labels:
+    app: m365-tools
+spec:
+  selector:
+    matchLabels:
+      app: m365-tools
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - microsoft-365-tools
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: m365-monitoring-config
+  namespace: microsoft-365-tools
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+    - job_name: 'm365-tools'
+      static_configs:
+      - targets: ['m365-tools-service:80']
+      metrics_path: /metrics
+      scrape_interval: 30s
+    
+    - job_name: 'kubernetes-pods'
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          - microsoft-365-tools
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name

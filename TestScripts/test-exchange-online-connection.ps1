@@ -32,7 +32,7 @@ try {
         Write-Host "  Organization: $organization" -ForegroundColor Gray
         Write-Host "  AppId: $appId" -ForegroundColor Gray
         Write-Host "  CertificateThumbprint: $certificateThumbprint" -ForegroundColor Gray
-        Write-Host "  CertificatePassword: $($certificatePassword.Substring(0, 3))..." -ForegroundColor Gray
+        Write-Host "  CertificatePassword: $($certificatePassword -and $certificatePassword.Length -gt 3 ? $certificatePassword.Substring(0, 3) + '...' : '[設定済み]')" -ForegroundColor Gray
         
         # 証明書がWindows証明書ストアに存在するか確認
         $installedCert = Get-ChildItem "Cert:\CurrentUser\My" | Where-Object { $_.Thumbprint -eq $certificateThumbprint }

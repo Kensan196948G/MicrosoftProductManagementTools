@@ -110,3 +110,5 @@ graph_token_cache.json
 venv/
 .env/
 Tests/venv_test/
+venv_pyqt6/
+

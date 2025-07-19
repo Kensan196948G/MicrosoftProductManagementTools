@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-07-18T21:07:23.205114",
+  "collection_type": "integrated_dashboard",
+  "panes": {
+    "architect": {
+      "timestamp": "2025-07-18T20:03:02+09:00",
+      "developer": "architect",
+      "metrics": {
+        "design_completion": 95,
+        "api_specs_defined": 18,
+        "bridge_patterns_documented": 12
+      },
+      "status": "active"
+    },
+    "backend": {
+      "timestamp": "2025-07-18T20:03:02+09:00",
+      "developer": "backend",
+      "metrics": {
+        "api_endpoints_completed": 15,
+        "test_coverage": 89.5,
+        "graph_api_integration": "completed",
+        "powershell_bridge_status": "in_progress"
+      }
+    },
+    "frontend": {
+      "timestamp": "2025-07-18T20:03:02+09:00",
+      "developer": "frontend",
+      "metrics": {
+        "gui_components_completed": 18,
+        "pyqt6_coverage": 91.2,
+        "ui_consistency_score": 94
+      }
+    },
+    "tester": {
+      "timestamp": "2025-07-18T20:03:02+09:00",
+      "developer": "tester",
+      "metrics": {
+        "test_coverage": 87.0,
+        "test_cases_written": 156,
+        "regression_tests_passed": 142,
+        "compatibility_score": 96
+      }
+    },
+    "devops": {
+      "timestamp": "2025-07-18T20:04:39+09:00",
+      "developer": "devops",
+      "infrastructure_metrics": {
+        "ci_pipeline_status": "unknown",
+        "docker_build_success_rate": "N/A",
+        "deployment_readiness": "partial",
+        "tmux_environment_health": "healthy"
+      },
+      "automation_status": {
+        "cron_jobs_active": 0,
+        "monitoring_scripts": "operational",
+        "alert_system": "configured"
+      },
+      "system_health": {
+        "disk_usage": "1%",
+        "memory_usage": "31.9%",
+        "load_average": "3.28, 3.59, 2.92"
+      }
+    }
+  },
+  "overall": {
+    "overall_progress": 0.0,
+    "overall_coverage": 0.0,
+    "active_panes": 5,
+    "total_panes": 5,
+    "health_status": "🔴 Critical"
+  }
+}

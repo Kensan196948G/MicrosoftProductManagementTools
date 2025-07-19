@@ -1,0 +1,73 @@
+alerting:
+  enabled: true
+  rules:
+  - condition: error_rate > 0.1
+    name: high_error_rate
+    severity: critical
+  - condition: response_time > 200
+    name: slow_response_time
+    severity: warning
+  - condition: availability < 99.9
+    name: low_availability
+    severity: critical
+applicationObservability:
+  enabled: true
+  receivers:
+    otlp:
+      grpc:
+        enabled: true
+        port: 4317
+      http:
+        enabled: true
+        port: 4318
+cluster:
+  name: microsoft-365-python-migration
+clusterMetrics:
+  enabled: true
+  nodeLabels:
+    application: true
+    environment: true
+    region: true
+  scrapeInterval: 30s
+destinations:
+- basicAuth:
+    password: monitoring-password
+    username: admin
+  name: prometheus
+  type: prometheus
+  url: http://prometheus:9090/api/v1/write
+- basicAuth:
+    password: monitoring-password
+    username: admin
+  name: loki
+  type: loki
+  url: http://loki:3100/api/push
+- logs:
+    enabled: false
+  metrics:
+    enabled: false
+  name: tempo
+  traces:
+    enabled: true
+  type: otlp
+  url: http://tempo:4317
+podLogs:
+  enabled: true
+  namespaces:
+  - default
+  - microsoft-365
+  - production
+  structuredMetadata:
+    application: microsoft-365-python
+    environment: production
+quality_gates:
+  availability: 99.9
+  backup_success_rate: 99.5
+  compliance_score: 90
+  cpu_usage: 70
+  disk_usage: 85
+  error_rate: 0.1
+  memory_usage: 80
+  response_time: 200
+  security_score: 95
+  throughput: 1000

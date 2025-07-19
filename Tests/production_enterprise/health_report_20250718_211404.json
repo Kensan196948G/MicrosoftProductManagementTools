@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-07-18T21:14:04.617707",
+  "production_status": "healthy",
+  "metrics": {
+    "timestamp": "2025-07-18T21:14:04.615976",
+    "uptime": 99.96000000000001,
+    "response_time": 149.0,
+    "error_rate": 0.049,
+    "throughput": 1210.0,
+    "memory_usage": 64.5,
+    "cpu_usage": 54.7,
+    "disk_usage": 44.9,
+    "network_io": 80.0,
+    "active_connections": 150,
+    "queue_depth": 5,
+    "cache_hit_ratio": 95.0
+  },
+  "quality_gates": [
+    {
+      "name": "availability",
+      "threshold": 99.9,
+      "current_value": 99.95,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592844",
+      "trend": "STABLE"
+    },
+    {
+      "name": "response_time",
+      "threshold": 200,
+      "current_value": 150.0,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592874",
+      "trend": "STABLE"
+    },
+    {
+      "name": "error_rate",
+      "threshold": 0.1,
+      "current_value": 0.05,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592879",
+      "trend": "STABLE"
+    },
+    {
+      "name": "throughput",
+      "threshold": 1000,
+      "current_value": 1200.0,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592882",
+      "trend": "STABLE"
+    },
+    {
+      "name": "memory_usage",
+      "threshold": 80,
+      "current_value": 65.0,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592885",
+      "trend": "STABLE"
+    },
+    {
+      "name": "cpu_usage",
+      "threshold": 70,
+      "current_value": 55.0,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592887",
+      "trend": "STABLE"
+    },
+    {
+      "name": "disk_usage",
+      "threshold": 85,
+      "current_value": 45.0,
+      "status": "PASS",
+      "last_check": "2025-07-18T21:14:02.592890",
+      "trend": "STABLE"
+    }
+  ],
+  "active_alerts": 1,
+  "sla_compliance": true
+}

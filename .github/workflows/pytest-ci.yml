@@ -122,16 +122,17 @@ jobs:
         DISPLAY: :99
     
     - name: カバレッジ結果アップロード
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       if: matrix.python-version == '3.11'
       with:
         file: ./coverage-unit-py${{ matrix.python-version }}.xml
         flags: unittests
         name: unit-tests-python-${{ matrix.python-version }}
         fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
     
     - name: テスト結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results-python-${{ matrix.python-version }}
@@ -183,7 +184,7 @@ jobs:
         DISPLAY: :99
     
     - name: 統合テスト結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -224,7 +225,7 @@ jobs:
           -m "compatibility and not requires_powershell and not requires_auth"
     
     - name: 互換性テスト結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: compatibility-test-results
@@ -300,7 +301,7 @@ jobs:
         QT_LOGGING_RULES: '*.debug=false'
     
     - name: GUIテスト結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: gui-test-results
@@ -345,7 +346,7 @@ jobs:
           -m "unit or compatibility and not requires_auth"
     
     - name: Windows テスト結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: windows-test-results
@@ -383,7 +384,7 @@ jobs:
         safety check
     
     - name: セキュリティスキャン結果アーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
@@ -439,7 +440,7 @@ jobs:
         python-version: '3.11'
     
     - name: 全アーティファクトダウンロード
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts/
     
@@ -454,7 +455,7 @@ jobs:
         python tests/run_test_suite.py --report-only
     
     - name: 包括的レポートアーティファクト保存
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: comprehensive-ci-report
         path: |
@@ -474,13 +475,13 @@ jobs:
       uses: actions/checkout@v4
     
     - name: 包括的レポートダウンロード
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: comprehensive-ci-report
         path: docs/test-reports/
     
     - name: GitHub Pages デプロイ
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs

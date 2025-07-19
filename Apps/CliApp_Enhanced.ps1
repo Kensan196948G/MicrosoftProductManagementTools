@@ -334,8 +334,15 @@ function Execute-CliAction {
             $reportName = "年次レポート"
         }
         "test" {
-            $data = @([PSCustomObject]@{ TestID = "TEST001"; TestName = "認証テスト"; Category = "基本機能"; Priority = "高"; ExecutionStatus = "完了"; Result = "成功"; ExecutionTime = "2.3秒"; ErrorMessage = ""; LastExecutionDate = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") })
-            $reportName = "テスト実行結果"
+            # インタラクティブモードでない場合、またはバッチモードの場合は基本的なテストを実行
+            if ($Batch) {
+                $data = @([PSCustomObject]@{ TestID = "TEST001"; TestName = "認証テスト"; Category = "基本機能"; Priority = "高"; ExecutionStatus = "完了"; Result = "成功"; ExecutionTime = "2.3秒"; ErrorMessage = ""; LastExecutionDate = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") })
+                $reportName = "テスト実行結果"
+            } else {
+                # インタラクティブテストメニューを表示
+                Show-TestMenu
+                return
+            }
         }
         "license" {
             $data = Get-RealData -DataType "LicenseAnalysis"
@@ -527,6 +534,160 @@ function Show-CliHelp {
     
     Write-Host "`n🔗 詳細情報:" -ForegroundColor Yellow
     Write-Host "  詳細な使用方法については CLAUDE.md ファイルを参照してください"
+}
+
+function Show-TestMenu {
+    while ($true) {
+        Write-Host "`n🏢 M365 管理ツール - メニュー" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────"
+        Write-Host "🧪 テストメニュー" -ForegroundColor Yellow
+        Write-Host "────────────────────────────────────────────────────────────────────────────────"
+        Write-Host ""
+        Write-Host "  [1] 🌐 接続テスト"
+        Write-Host "  [2] 📧 Exchange Online テスト"
+        Write-Host "  [3] 💬 Teams API テスト"
+        Write-Host "  [4] 📊 全機能テスト"
+        Write-Host "  [0] ➤ 戻る"
+        Write-Host ""
+        
+        $selection = Read-Host "選択してください [0-4]"
+        
+        switch ($selection) {
+            "1" {
+                Execute-TestScript -TestType "connection"
+            }
+            "2" {
+                Execute-TestScript -TestType "exchange"
+            }
+            "3" {
+                Execute-TestScript -TestType "teams-api"
+            }
+            "4" {
+                Execute-TestScript -TestType "all-features"
+            }
+            "0" {
+                return
+            }
+            default {
+                Write-Host "❌ 無効な選択です。0-4の数字を入力してください。" -ForegroundColor Red
+            }
+        }
+        
+        if ($selection -ne "0") {
+            Write-Host "`nEnterキーを押してメニューに戻る..." -ForegroundColor Yellow
+            Read-Host
+        }
+    }
+}
+
+function Execute-TestScript {
+    param([string]$TestType)
+    
+    $testScriptPath = Join-Path $PSScriptRoot "..\TestScripts\test-$TestType.ps1"
+    
+    try {
+        if (Test-Path $testScriptPath) {
+            Write-Host "🧪 $TestType テストを実行中..." -ForegroundColor Green
+            & $testScriptPath
+        } else {
+            Write-Host "⚠️ テストスクリプトが見つかりません: test-$TestType.ps1" -ForegroundColor Yellow
+            
+            # 代替処理
+            switch ($TestType) {
+                "connection" {
+                    Write-Host "🌐 接続テストを実行中..." -ForegroundColor Green
+                    Test-M365ConnectionCli
+                }
+                "exchange" {
+                    Write-Host "📧 Exchange Online テストを実行中..." -ForegroundColor Green
+                    Test-ExchangeOnlineCli
+                }
+                "teams-api" {
+                    Write-Host "💬 Teams API テストを実行中..." -ForegroundColor Green
+                    Test-TeamsApiCli
+                }
+                "all-features" {
+                    Write-Host "📊 全機能テストを実行中..." -ForegroundColor Green
+                    Test-AllFeaturesCli
+                }
+                default {
+                    Write-Host "❌ 不明なテストタイプ: $TestType" -ForegroundColor Red
+                }
+            }
+        }
+    } catch {
+        Write-Host "❌ テスト実行エラー: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-M365ConnectionCli {
+    Write-Host "🔍 Microsoft 365 接続状態を確認中..." -ForegroundColor Yellow
+    try {
+        $authResult = Test-M365Authentication
+        if ($authResult) {
+            Write-Host "✅ Microsoft Graph: $($authResult.GraphConnected)" -ForegroundColor Green
+            Write-Host "✅ Exchange Online: $($authResult.ExchangeConnected)" -ForegroundColor Green
+        } else {
+            Write-Host "❌ 認証確認に失敗しました" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ 接続テストエラー: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-ExchangeOnlineCli {
+    Write-Host "🔍 Exchange Online セッション状態を確認中..." -ForegroundColor Yellow
+    try {
+        if (Get-Command Get-ConnectionInformation -ErrorAction SilentlyContinue) {
+            $exchangeSession = Get-ConnectionInformation -ErrorAction SilentlyContinue
+            if ($exchangeSession) {
+                Write-Host "✅ Exchange Online: セッション確認成功" -ForegroundColor Green
+                Write-Host "📧 組織: $($exchangeSession.Organization)" -ForegroundColor Cyan
+            } else {
+                Write-Host "❌ Exchange Online: セッション未確立" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "❌ Exchange Online モジュールが見つかりません" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ Exchange Online テストエラー: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-TeamsApiCli {
+    Write-Host "🔍 Teams API 接続状態を確認中..." -ForegroundColor Yellow
+    try {
+        if (Get-Command Get-MgUser -ErrorAction SilentlyContinue) {
+            $users = Get-MgUser -Top 3 -ErrorAction SilentlyContinue
+            if ($users) {
+                Write-Host "✅ Microsoft Graph: ユーザー情報取得成功 ($($users.Count) 件)" -ForegroundColor Green
+            } else {
+                Write-Host "❌ Microsoft Graph: ユーザー情報取得失敗" -ForegroundColor Red
+            }
+            
+            $teams = Get-MgGroup -Filter "resourceProvisioningOptions/Any(x:x eq 'Team')" -Top 3 -ErrorAction SilentlyContinue
+            if ($teams) {
+                Write-Host "✅ Teams API: チーム情報取得成功 ($($teams.Count) 件)" -ForegroundColor Green
+            } else {
+                Write-Host "⚠️ Teams API: チーム情報が見つかりません" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "❌ Microsoft Graph モジュールが見つかりません" -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "❌ Teams API テストエラー: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-AllFeaturesCli {
+    Write-Host "📊 全機能テストを実行中..." -ForegroundColor Green
+    Write-Host "1️⃣ 接続テスト..."
+    Test-M365ConnectionCli
+    Write-Host "`n2️⃣ Exchange Online テスト..."
+    Test-ExchangeOnlineCli
+    Write-Host "`n3️⃣ Teams API テスト..."
+    Test-TeamsApiCli
+    Write-Host "`n✅ 全機能テスト完了" -ForegroundColor Green
 }
 
 # ================================================================================

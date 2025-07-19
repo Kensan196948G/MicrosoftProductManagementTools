@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レポート - Microsoft 365管理ツール</title>
+    <style>
+        body { 
+            font-family: 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: clamp(800px, 90vw, 1400px); 
+            margin: 0 auto; 
+            background: white; 
+            padding: clamp(20px, 3vw, 40px); 
+            border-radius: 12px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #0078d4, #106ebe); 
+            color: white; 
+            padding: clamp(15px, 2vw, 25px); 
+            border-radius: 8px; 
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h1 { 
+            margin: 0; 
+            font-size: clamp(1.5rem, 3vw, 2.2rem); 
+            font-weight: 600;
+        }
+        .timestamp { 
+            margin-top: 10px; 
+            font-size: clamp(0.8rem, 1.5vw, 1rem); 
+            opacity: 0.9;
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        table { 
+            width: 100%; 
+            min-width: 800px;
+            border-collapse: collapse; 
+            font-size: clamp(0.75rem, 1.2vw, 0.9rem);
+            background: white;
+        }
+        th, td { 
+            padding: clamp(6px, 1.2vw, 14px); 
+            text-align: left; 
+            border-bottom: 1px solid #e0e0e0;
+            border-right: 1px solid #f0f0f0;
+            word-wrap: break-word; 
+            overflow-wrap: break-word;
+            vertical-align: top;
+        }
+        th {
+            min-width: clamp(80px, 12vw, 150px);
+            max-width: clamp(120px, 20vw, 250px);
+        }
+        td {
+            min-width: clamp(60px, 10vw, 120px);
+            max-width: clamp(200px, 25vw, 300px);
+        }
+        /* 列幅の動的調整 */
+        th:first-child, td:first-child { 
+            min-width: clamp(100px, 15vw, 180px); /* 名前列 */
+        }
+        th:nth-child(2), td:nth-child(2) { 
+            min-width: clamp(120px, 18vw, 220px); /* メール列 */
+        }
+        th:last-child, td:last-child { 
+            border-right: none;
+            min-width: clamp(80px, 12vw, 140px); /* ステータス列 */
+        }
+        th { 
+            background: linear-gradient(135deg, #0078d4, #106ebe); 
+            color: white; 
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #e3f2fd; transition: background-color 0.2s; }
+        .footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            padding-top: 20px; 
+            border-top: 1px solid #e0e0e0; 
+            color: #666; 
+            font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+        }
+        .record-count {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            color: #0d47a1;
+        }
+        /* タブレット対応 (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            .container {
+                max-width: 95vw;
+                padding: clamp(15px, 2.5vw, 30px);
+            }
+            table {
+                min-width: 600px;
+            }
+            th, td {
+                padding: clamp(4px, 1vw, 10px);
+                font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+            }
+        }
+        
+        /* モバイル対応 (480px - 767px) */
+        @media screen and (max-width: 767px) {
+            .container {
+                max-width: 98vw;
+                padding: clamp(10px, 2vw, 20px);
+                margin: 10px auto;
+            }
+            .header {
+                padding: clamp(10px, 1.5vw, 20px);
+                margin-bottom: 20px;
+            }
+            h1 {
+                font-size: clamp(1.2rem, 4vw, 1.8rem);
+            }
+            .table-container {
+                margin-top: 15px;
+            }
+            table {
+                min-width: 500px;
+            }
+            th, td {
+                padding: clamp(3px, 0.8vw, 8px);
+                font-size: clamp(0.65rem, 1vw, 0.8rem);
+            }
+            .record-count {
+                padding: 8px;
+                font-size: clamp(0.8rem, 1.2vw, 0.9rem);
+            }
+        }
+        
+        /* 小型モバイル対応 (最大479px) */
+        @media screen and (max-width: 479px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                max-width: 100%;
+                padding: 15px;
+                border-radius: 8px;
+            }
+            .header {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            table {
+                min-width: 400px;
+                font-size: 0.7rem;
+            }
+            th, td {
+                padding: 6px 4px;
+            }
+            /* スマートフォンでの列幅調整 */
+            th:first-child, td:first-child { 
+                min-width: 80px; /* 名前列 */
+            }
+            th:nth-child(2), td:nth-child(2) { 
+                min-width: 120px; /* メール列 */
+            }
+            th:last-child, td:last-child { 
+                min-width: 60px; /* ステータス列 */
+            }
+        }
+        
+        /* 印刷対応 */
+        @media print {
+            body { 
+                background: white !important; 
+                padding: 0;
+            }
+            .container { 
+                box-shadow: none; 
+                max-width: 100%;
+                padding: 20px;
+            }
+            .header {
+                background: #0078d4 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            table {
+                min-width: 100%;
+            }
+            th, td { 
+                padding: 6px 8px; 
+                font-size: 0.75rem;
+                border: 1px solid #ccc;
+            }
+            .table-container {
+                overflow: visible;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>レポート</h1>
+            <div class="timestamp">生成日時: 2025年07月19日 20:42:46</div>
+        </div>
+        <div class="record-count">📊 取得レコード数: 10 件</div>
+        <table><thead><tr><th>ユーザー名</th><th>ユーザープリンシパル名</th><th>Teams活動</th><th>活動レベル</th><th>活動スコア</th><th>ステータス</th><th>レポート日</th></tr></thead><tbody><tr><td>ダミーユーザー 1</td><td>dummy1@mirai-const.co.jp</td><td>49</td><td>低</td><td>66</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 2</td><td>dummy2@mirai-const.co.jp</td><td>17</td><td>低</td><td>93</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 3</td><td>dummy3@mirai-const.co.jp</td><td>31</td><td>高</td><td>13</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 4</td><td>dummy4@mirai-const.co.jp</td><td>36</td><td>中</td><td>72</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 5</td><td>dummy5@mirai-const.co.jp</td><td>44</td><td>中</td><td>44</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 6</td><td>dummy6@mirai-const.co.jp</td><td>12</td><td>高</td><td>47</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 7</td><td>dummy7@mirai-const.co.jp</td><td>29</td><td>低</td><td>58</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 8</td><td>dummy8@mirai-const.co.jp</td><td>0</td><td>中</td><td>98</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 9</td><td>dummy9@mirai-const.co.jp</td><td>39</td><td>低</td><td>7</td><td>アクティブ</td><td>2025-07-19</td></tr><tr><td>ダミーユーザー 10</td><td>dummy10@mirai-const.co.jp</td><td>24</td><td>高</td><td>15</td><td>アクティブ</td><td>2025-07-19</td></tr>        </tbody>
+            </table>
+        </div>
+        <div class="footer">
+            <p>🚀 Microsoft 365統合管理ツール - 完全版 v2.0</p>
+            <p>📁 ファイル保存場所: E:\MicrosoftProductManagementTools\Apps\..\Reports\General\レポート_20250719_204246.html</p>
+        </div>
+    </div>
+</body>
+</html>

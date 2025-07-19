@@ -1,66 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { MainDashboard } from '@pages/MainDashboard/MainDashboard';
-import { theme, darkTheme } from '@/theme';
-import { AppState, User } from '@types/index';
+// Microsoft 365 Management Tools - Main Application Component
+// PowerShell GUI 互換 React アプリケーション
 
-// Mock user data
-const mockUser: User = {
-  id: 'user-123',
-  displayName: 'Admin User',
-  userPrincipalName: 'admin@company.com',
-  mail: 'admin@company.com',
-  mfaEnabled: true,
-  accountEnabled: true,
-  lastSignInDateTime: new Date().toISOString(),
-  createdDateTime: new Date().toISOString(),
-  department: 'IT',
-  jobTitle: 'System Administrator',
-  usageLocation: 'JP',
-  assignedLicenses: []
-};
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { MainDashboard } from './components/dashboard/MainDashboard';
+import { NotFound } from './components/error/NotFound';
+import { LoadingSpinner } from './components/shared/LoadingSpinner';
+import { useAppStore } from './store/appStore';
+import { useAuth, useSystemStatus } from './hooks/useApi';
 
-function App() {
-  const [appState, setAppState] = useState<AppState>({
-    currentTab: 'regular-reports',
-    isLoading: false,
-    reports: [],
-    notifications: [],
-    user: mockUser,
-    theme: 'light'
-  });
+// Lazy Loading Components
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Reports = React.lazy(() => import('./pages/Reports'));
+const Logs = React.lazy(() => import('./pages/Logs'));
+const MonitoringPage = React.lazy(() => import('./pages/MonitoringPage'));
 
-  const handleAppStateChange = (newState: Partial<AppState>) => {
-    setAppState(prev => ({ ...prev, ...newState }));
-  };
+const App: React.FC = () => {
+  const { loadSettings } = useAppStore();
+  const { isCheckingAuth } = useAuth();
+  const { isLoading: isSystemLoading } = useSystemStatus();
 
-  // Load theme preference from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-    if (savedTheme) {
-      setAppState(prev => ({ ...prev, theme: savedTheme }));
-    }
-  }, []);
+  // 初期設定の読み込み
+  React.useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
-  // Save theme preference to localStorage
-  useEffect(() => {
-    localStorage.setItem('theme', appState.theme);
-  }, [appState.theme]);
-
-  const currentTheme = appState.theme === 'light' ? theme : darkTheme;
+  // 初期化中のローディング
+  if (isCheckingAuth || isSystemLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner size="large" message="アプリケーションを初期化中..." />
+      </div>
+    );
+  }
 
   return (
-    <ThemeProvider theme={currentTheme}>
-      <CssBaseline />
-      <Router>
-        <MainDashboard
-          appState={appState}
-          onAppStateChange={handleAppStateChange}
-        />
-      </Router>
-    </ThemeProvider>
+    <div className="min-h-screen bg-gray-50">
+      <React.Suspense 
+        fallback={
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <LoadingSpinner size="large" message="ページを読み込み中..." />
+          </div>
+        }
+      >
+        <Routes>
+          {/* メインダッシュボード */}
+          <Route path="/" element={<MainDashboard />} />
+          
+          {/* 機能別ページ */}
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/logs" element={<Logs />} />
+          <Route path="/monitoring" element={<MonitoringPage />} />
+          
+          {/* 404エラー */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </React.Suspense>
+    </div>
   );
-}
+};
 
 export default App;

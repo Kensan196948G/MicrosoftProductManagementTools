@@ -1,0 +1,58 @@
+# Microsoft 365 Management Tools - 統合Cronスケジュール
+# GitHub Actions完全協調・エンタープライズグレード自動化
+
+# ========== 統合バックアップ・監視システム ==========
+
+# 01:00 UTC - プリバックアップ検証（GitHub Actions連携）
+0 1 * * * /mnt/e/MicrosoftProductManagementTools/cron_integration_manager.sh pre-backup >> /mnt/e/MicrosoftProductManagementTools/logs/cron_integration.log 2>&1
+
+# 毎30分 - 統合バックアップ実行（GitHub Actions協調制御）
+*/30 * * * * /mnt/e/MicrosoftProductManagementTools/cron_integration_manager.sh main >> /mnt/e/MicrosoftProductManagementTools/logs/cron_integration.log 2>&1
+
+# 03:00 UTC - ポストバックアップ検証（GitHub Actions連携）
+0 3 * * * /mnt/e/MicrosoftProductManagementTools/cron_integration_manager.sh post-backup >> /mnt/e/MicrosoftProductManagementTools/logs/cron_integration.log 2>&1
+
+# 18:00 UTC - 統合レポート生成準備（GitHub Actions連携）
+0 18 * * * /mnt/e/MicrosoftProductManagementTools/cron_integration_manager.sh report-prep >> /mnt/e/MicrosoftProductManagementTools/logs/cron_integration.log 2>&1
+
+# ========== 既存品質監視システム（GitHub Actions協調対応） ==========
+
+# 4時間ごとの品質チェック（GitHub Actions協調）
+0 */4 * * * /mnt/e/MicrosoftProductManagementTools/cron_integration_manager.sh quality-coord && cd /mnt/e/MicrosoftProductManagementTools && python3 tests/automation/quality_monitor.py >> logs/quality_monitor.log 2>&1
+
+# 02:00 UTC - 毎日のレグレッションテスト（GitHub Actions pytest-compatibility-tests.yml協調）
+0 2 * * * cd /mnt/e/MicrosoftProductManagementTools && python3 tests/standalone_tests.py >> logs/regression_daily.log 2>&1
+
+# 毎時のスタンドアロンテスト（バックアップ実行時間を回避）
+5 * * * * cd /mnt/e/MicrosoftProductManagementTools && python3 tests/standalone_tests.py >> logs/hourly_tests.log 2>&1
+
+# 03:30 UTC - 毎日の品質レポート生成（ポストバックアップ検証後）
+30 3 * * * cd /mnt/e/MicrosoftProductManagementTools && python3 tests/automation/quality_monitor.py > reports/progress/daily_quality_report_$(date +\%Y\%m\%d).json 2>&1
+
+# 06:00 UTC - 週次の包括的テスト（月曜日、主要活動時間を回避）
+0 6 * * 1 cd /mnt/e/MicrosoftProductManagementTools && python3 tests/run_all_tests.py >> logs/weekly_comprehensive.log 2>&1
+
+# 07:00 UTC - 月次のテストカバレッジ分析（毎月1日）
+0 7 1 * * cd /mnt/e/MicrosoftProductManagementTools && python3 tests/automation/quality_monitor.py > reports/progress/monthly_coverage_$(date +\%Y\%m).json 2>&1
+
+# ========== 高度統合機能 ==========
+
+# 12:00 UTC - 日次バックアップ統計レポート生成
+0 12 * * * cd /mnt/e/MicrosoftProductManagementTools && echo "{\"daily_backup_summary\": \"$(date)\", \"backup_count\": \"$(find /mnt/e/MicrosoftProductManagementTools-BackUp -name 'MicrosoftProductManagementTools-*' -type d -newermt '24 hours ago' | wc -l)\"}" > reports/backup-integration/daily_backup_summary.json
+
+# 00:30 UTC - 日次ログローテーション
+30 0 * * * find /mnt/e/MicrosoftProductManagementTools/logs -name "*.log" -size +100M -exec gzip {} \; 2>/dev/null
+
+# 04:00 UTC - 週次古いバックアップクリーンアップ（日曜日）
+0 4 * * 0 find /mnt/e/MicrosoftProductManagementTools-BackUp -name "MicrosoftProductManagementTools-*" -type d -mtime +7 -exec rm -rf {} \; >> /mnt/e/MicrosoftProductManagementTools/logs/cleanup.log 2>&1
+
+# 05:00 UTC - 月次アーカイブ作成（毎月1日）
+0 5 1 * * cd /mnt/e/MicrosoftProductManagementTools && tar -czf "/mnt/e/MicrosoftProductManagementTools-BackUp/monthly_archive_$(date +\%Y\%m).tar.gz" reports/ logs/ >> logs/archive.log 2>&1
+
+# ========== 監視・アラート ==========
+
+# 毎15分 - システムヘルスチェック
+*/15 * * * * df -h /mnt/e 2>/dev/null | awk 'NR==2 {if(int($5) > 95) print "DISK_CRITICAL: " $5 " used"}' >> /mnt/e/MicrosoftProductManagementTools/logs/system_alerts.log
+
+# 01:05 UTC - GitHub Actions連携ステータス確認
+5 1 * * * if [ ! -f /mnt/e/MicrosoftProductManagementTools/.backup_status ]; then echo "[$(date)] GitHub Actions連携ステータスファイル不足" >> /mnt/e/MicrosoftProductManagementTools/logs/github_actions_sync.log; fi

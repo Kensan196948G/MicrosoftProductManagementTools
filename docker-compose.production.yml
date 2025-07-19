@@ -1,0 +1,488 @@
+version: '3.8'
+
+# Microsoft 365 Management Tools - Production Deployment
+# Enterprise-grade Docker Compose configuration with high availability
+
+services:
+  # Main FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    image: microsoft365-tools:latest
+    container_name: m365-api
+    restart: unless-stopped
+    
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - WORKERS=4
+      - MAX_REQUESTS=1000
+      - MAX_REQUESTS_JITTER=50
+      - KEEPALIVE=2
+      
+      # Database
+      - DATABASE_URL=postgresql://m365user:${POSTGRES_PASSWORD}@postgres:5432/microsoft365_tools
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_MAX_OVERFLOW=30
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_POOL_SIZE=10
+      
+      # Microsoft Graph
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET}
+      
+      # Security
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      
+      # Monitoring
+      - AZURE_MONITOR_CONNECTION_STRING=${AZURE_MONITOR_CONNECTION_STRING}
+      - LOG_ANALYTICS_WORKSPACE_ID=${LOG_ANALYTICS_WORKSPACE_ID}
+      
+      # Alerts & Notifications
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - ALERT_FROM_EMAIL=${ALERT_FROM_EMAIL}
+      - ALERT_TO_EMAILS=${ALERT_TO_EMAILS}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+      
+      # Backup & DR
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - BACKUP_AZURE_CONTAINER=${BACKUP_AZURE_CONTAINER}
+    
+    ports:
+      - "8000:8000"
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+      - ./Config:/app/Config:ro
+    
+    networks:
+      - m365-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.m365-api.rule=Host(`api.microsoft365tools.company.com`)"
+      - "traefik.http.routers.m365-api.tls=true"
+      - "traefik.http.routers.m365-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.m365-api.loadbalancer.server.port=8000"
+
+  # Load Balancer & Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: m365-traefik
+    restart: unless-stopped
+    
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--accesslog=true"
+      - "--log.level=INFO"
+    
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/acme.json:/acme.json
+      - ./logs/traefik:/var/log/traefik
+    
+    networks:
+      - m365-network
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.microsoft365tools.company.com`)"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_USERS}"
+      - "traefik.http.routers.traefik.middlewares=auth"
+
+  # PostgreSQL Database with High Availability
+  postgres:
+    image: postgres:15-alpine
+    container_name: m365-postgres
+    restart: unless-stopped
+    
+    environment:
+      - POSTGRES_DB=microsoft365_tools
+      - POSTGRES_USER=m365user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups/postgres:/backups
+      - ./scripts/postgres:/docker-entrypoint-initdb.d:ro
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "5432:5432"
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U m365user -d microsoft365_tools"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Redis Cache with Persistence
+  redis:
+    image: redis:7-alpine
+    container_name: m365-redis
+    restart: unless-stopped
+    
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    
+    volumes:
+      - redis_data:/data
+      - ./Config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "6379:6379"
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: m365-prometheus
+    restart: unless-stopped
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    
+    volumes:
+      - ./Config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "9090:9090"
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.microsoft365tools.company.com`)"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: m365-grafana
+    restart: unless-stopped
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_SERVER_DOMAIN=grafana.microsoft365tools.company.com
+      - GF_SERVER_ROOT_URL=https://grafana.microsoft365tools.company.com
+    
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./Config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./Config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "3000:3000"
+    
+    depends_on:
+      - prometheus
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.microsoft365tools.company.com`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: m365-node-exporter
+    restart: unless-stopped
+    
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "9100:9100"
+
+  # cAdvisor for Container Metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: m365-cadvisor
+    restart: unless-stopped
+    
+    privileged: true
+    
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "8081:8080"
+
+  # Automated Backup Service
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    image: microsoft365-backup:latest
+    container_name: m365-backup
+    restart: unless-stopped
+    
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=microsoft365_tools
+      - POSTGRES_USER=m365user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - BACKUP_AZURE_CONTAINER=${BACKUP_AZURE_CONTAINER}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+    
+    volumes:
+      - ./backups:/backups
+      - ./data:/app/data:ro
+      - ./Config:/app/Config:ro
+    
+    networks:
+      - m365-network
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Log Aggregation with Loki
+  loki:
+    image: grafana/loki:latest
+    container_name: m365-loki
+    restart: unless-stopped
+    
+    command: -config.file=/etc/loki/local-config.yaml
+    
+    volumes:
+      - ./Config/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "3100:3100"
+
+  # Log Collection with Promtail
+  promtail:
+    image: grafana/promtail:latest
+    container_name: m365-promtail
+    restart: unless-stopped
+    
+    command: -config.file=/etc/promtail/config.yml
+    
+    volumes:
+      - ./Config/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    
+    networks:
+      - m365-network
+    
+    depends_on:
+      - loki
+
+  # Alertmanager for Alert Routing
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: m365-alertmanager
+    restart: unless-stopped
+    
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alertmanager.microsoft365tools.company.com'
+    
+    volumes:
+      - ./Config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    
+    networks:
+      - m365-network
+    
+    ports:
+      - "9093:9093"
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.microsoft365tools.company.com`)"
+      - "traefik.http.routers.alertmanager.tls=true"
+      - "traefik.http.routers.alertmanager.tls.certresolver=letsencrypt"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+
+# Named Volumes for Data Persistence
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/postgres
+      o: bind
+  
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/redis
+      o: bind
+  
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/prometheus
+      o: bind
+  
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/grafana
+      o: bind
+  
+  loki_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/loki
+      o: bind
+  
+  alertmanager_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/microsoft365-tools/data/alertmanager
+      o: bind
+
+# Network Configuration
+networks:
+  m365-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16

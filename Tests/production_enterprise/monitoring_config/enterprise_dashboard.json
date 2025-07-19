@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "id": "microsoft-365-enterprise-monitoring",
+    "title": "Microsoft 365 Python Migration - Enterprise Monitoring",
+    "tags": [
+      "enterprise",
+      "microsoft-365",
+      "python",
+      "production"
+    ],
+    "timezone": "UTC",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Production Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "production_status",
+            "legendFormat": "Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "SLA Compliance",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "sla_compliance_percentage",
+            "legendFormat": "SLA Compliance"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 95
+                },
+                {
+                  "color": "green",
+                  "value": 99
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "response_time_ms",
+            "legendFormat": "Response Time (ms)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "error_rate_percentage",
+            "legendFormat": "Error Rate (%)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "System Resources",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "cpu_usage_percentage",
+            "legendFormat": "CPU Usage (%)"
+          },
+          {
+            "expr": "memory_usage_percentage",
+            "legendFormat": "Memory Usage (%)"
+          },
+          {
+            "expr": "disk_usage_percentage",
+            "legendFormat": "Disk Usage (%)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Alerts",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "active_alerts",
+            "legendFormat": "Active Alerts"
+          }
+        ]
+      }
+    ]
+  }
+}

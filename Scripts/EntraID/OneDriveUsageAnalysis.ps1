@@ -57,12 +57,11 @@ function Get-OneDriveUsageAnalysis {
                         # ClientSecret認証を優先で試行
                         if ($graphConfig.ClientSecret -and $graphConfig.ClientSecret -ne "") {
                             Write-Host "🔑 ClientSecret認証でMicrosoft Graphに接続中..." -ForegroundColor Yellow
-                            $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
-                            $credential = New-Object System.Management.Automation.PSCredential ($graphConfig.ClientId, $secureSecret)
-                            
                             $connectParams = @{
-                                TenantId = $graphConfig.TenantId
-                                ClientSecretCredential = $credential
+                                ClientId     = $graphConfig.ClientId      # 文字列でOK
+                                TenantId     = $graphConfig.TenantId      # 文字列でOK
+                                ClientSecret = $graphConfig.ClientSecret  # 文字列でOK（ConvertTo-SecureString不要！）
+                                NoWelcome    = $true
                             }
                             Connect-MgGraph @connectParams
                             Write-Host "✅ Microsoft Graph (ClientSecret) に正常に接続しました" -ForegroundColor Green

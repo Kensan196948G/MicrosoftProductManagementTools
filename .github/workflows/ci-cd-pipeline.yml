@@ -1,0 +1,604 @@
+name: Microsoft 365 Management Tools - CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1'  # 毎週月曜日 2:00 AM
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: 'microsoft365tools.azurecr.io'
+  AZURE_RESOURCE_GROUP: 'microsoft365tools-rg'
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+jobs:
+  # 静的解析・セキュリティチェック
+  static-analysis:
+    name: Static Analysis & Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort bandit safety mypy
+          pip install -r requirements.txt
+          pip install -r src/requirements.txt
+
+      - name: Code formatting check (Black)
+        run: black --check --diff src/
+
+      - name: Import sorting check (isort)
+        run: isort --check-only --diff src/
+
+      - name: Linting (flake8)
+        run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Type checking (mypy)
+        run: mypy src/ --ignore-missing-imports --python-version 3.11
+
+      - name: Security scan (bandit)
+        run: bandit -r src/ -f json -o bandit-report.json
+
+      - name: Dependency vulnerability scan (safety)
+        run: safety check --json --output safety-report.json
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # ユニットテスト・カバレッジ
+  unit-tests:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov pytest-xdist pytest-mock
+          pip install -r requirements.txt
+          pip install -r src/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest Tests/ -v --tb=short --cov=src --cov-report=xml --cov-report=html --cov-report=term-missing --maxfail=5
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            htmlcov/
+            pytest-report.xml
+
+  # 統合テスト
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [static-analysis, unit-tests]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-integration
+          pip install -r requirements.txt
+          pip install -r src/requirements.txt
+
+      - name: Run integration tests
+        env:
+          REDIS_URL: redis://localhost:6379
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        run: |
+          pytest Tests/integration/ -v --tb=short --maxfail=3
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            integration-test-report.xml
+
+  # Docker イメージビルド
+  docker-build:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [static-analysis, unit-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/microsoft365tools
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Docker security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_REGISTRY }}/microsoft365tools:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # パフォーマンステスト
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest-benchmark locust
+          pip install -r requirements.txt
+          pip install -r src/requirements.txt
+
+      - name: Run performance tests
+        run: |
+          pytest Tests/performance/ -v --benchmark-only --benchmark-json=benchmark-results.json
+
+      - name: Run load tests
+        run: |
+          locust -f Tests/load_tests/locustfile.py --headless -u 50 -r 5 -t 300s --html=load-test-report.html
+
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-test-results
+          path: |
+            benchmark-results.json
+            load-test-report.html
+
+  # セキュリティテスト
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install security testing tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest-security owasp-zap-baseline
+          pip install -r requirements.txt
+          pip install -r src/requirements.txt
+
+      - name: Run security tests
+        run: |
+          pytest Tests/security/ -v --tb=short
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.10.0
+        with:
+          target: 'http://localhost:8000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+  # Kubernetes デプロイメント（開発環境）
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [integration-tests, docker-build]
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name microsoft365tools-dev-aks
+
+      - name: Replace tokens in manifests
+        run: |
+          sed -i 's|{{DOCKER_REGISTRY}}|${{ env.DOCKER_REGISTRY }}|g' k8s-deployment.yaml
+          sed -i 's|{{IMAGE_TAG}}|${{ github.sha }}|g' k8s-deployment.yaml
+          sed -i 's|{{ENVIRONMENT}}|development|g' k8s-deployment.yaml
+
+      - name: Deploy to AKS
+        run: |
+          kubectl apply -f k8s-deployment.yaml
+          kubectl rollout status deployment/m365-tools-deployment -n microsoft-365-tools
+
+      - name: Run smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=m365-tools -n microsoft-365-tools --timeout=300s
+          kubectl port-forward svc/m365-tools-service 8080:80 -n microsoft-365-tools &
+          sleep 10
+          curl -f http://localhost:8080/health || exit 1
+
+  # Kubernetes デプロイメント（ステージング環境）
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [integration-tests, docker-build, performance-tests, security-tests]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name microsoft365tools-staging-aks
+
+      - name: Replace tokens in manifests
+        run: |
+          sed -i 's|{{DOCKER_REGISTRY}}|${{ env.DOCKER_REGISTRY }}|g' k8s-deployment.yaml
+          sed -i 's|{{IMAGE_TAG}}|${{ github.sha }}|g' k8s-deployment.yaml
+          sed -i 's|{{ENVIRONMENT}}|staging|g' k8s-deployment.yaml
+
+      - name: Deploy to AKS
+        run: |
+          kubectl apply -f k8s-deployment.yaml
+          kubectl rollout status deployment/m365-tools-deployment -n microsoft-365-tools
+
+      - name: Run end-to-end tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=m365-tools -n microsoft-365-tools --timeout=300s
+          pytest Tests/e2e/ -v --tb=short --maxfail=3
+
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          message: |
+            Deployment to Staging completed successfully!
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref }}
+
+  # 本番環境デプロイメント
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name microsoft365tools-prod-aks
+
+      - name: Replace tokens in manifests
+        run: |
+          sed -i 's|{{DOCKER_REGISTRY}}|${{ env.DOCKER_REGISTRY }}|g' k8s-deployment.yaml
+          sed -i 's|{{IMAGE_TAG}}|${{ github.sha }}|g' k8s-deployment.yaml
+          sed -i 's|{{ENVIRONMENT}}|production|g' k8s-deployment.yaml
+
+      - name: Blue-Green Deployment
+        run: |
+          # 現在のデプロイメントを取得
+          CURRENT_COLOR=$(kubectl get deployment m365-tools-deployment -n microsoft-365-tools -o jsonpath='{.metadata.labels.color}' || echo "blue")
+          
+          # 新しいカラーを決定
+          if [ "$CURRENT_COLOR" = "blue" ]; then
+            NEW_COLOR="green"
+          else
+            NEW_COLOR="blue"
+          fi
+          
+          echo "Deploying to $NEW_COLOR environment"
+          
+          # 新しいカラーでデプロイ
+          sed -i "s|app: m365-tools|app: m365-tools-$NEW_COLOR|g" k8s-deployment.yaml
+          sed -i "s|name: m365-tools-deployment|name: m365-tools-deployment-$NEW_COLOR|g" k8s-deployment.yaml
+          kubectl apply -f k8s-deployment.yaml
+          
+          # デプロイメント完了を待機
+          kubectl rollout status deployment/m365-tools-deployment-$NEW_COLOR -n microsoft-365-tools
+          
+          # ヘルスチェック
+          kubectl wait --for=condition=ready pod -l app=m365-tools-$NEW_COLOR -n microsoft-365-tools --timeout=300s
+          
+          # サービスを新しいカラーに切り替え
+          kubectl patch service m365-tools-service -n microsoft-365-tools -p '{"spec":{"selector":{"app":"m365-tools-'$NEW_COLOR'"}}}'
+          
+          # 古いデプロイメントを削除
+          kubectl delete deployment m365-tools-deployment-$CURRENT_COLOR -n microsoft-365-tools --ignore-not-found=true
+
+      - name: Run production smoke tests
+        run: |
+          # 外部エンドポイントでのスモークテスト
+          curl -f https://microsoft365tools.yourdomain.com/health || exit 1
+          curl -f https://microsoft365tools.yourdomain.com/api/v1/status || exit 1
+
+      - name: Notify production deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#production'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          message: |
+            🚀 Production deployment completed successfully!
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref }}
+            Environment: Production
+            Time: ${{ github.event.head_commit.timestamp }}
+
+  # 品質ゲート
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [static-analysis, unit-tests, integration-tests, performance-tests, security-tests]
+    if: always()
+    steps:
+      - name: Check quality gate
+        run: |
+          if [ "${{ needs.static-analysis.result }}" != "success" ]; then
+            echo "❌ Static analysis failed"
+            exit 1
+          fi
+          
+          if [ "${{ needs.unit-tests.result }}" != "success" ]; then
+            echo "❌ Unit tests failed"
+            exit 1
+          fi
+          
+          if [ "${{ needs.integration-tests.result }}" != "success" ]; then
+            echo "❌ Integration tests failed"
+            exit 1
+          fi
+          
+          if [ "${{ needs.performance-tests.result }}" != "success" ]; then
+            echo "⚠️  Performance tests failed, but deployment can continue"
+          fi
+          
+          if [ "${{ needs.security-tests.result }}" != "success" ]; then
+            echo "❌ Security tests failed"
+            exit 1
+          fi
+          
+          echo "✅ All quality gates passed"
+
+  # 監視・アラート設定
+  setup-monitoring:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Azure Monitor alerts
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file azure-monitor-alerts.json \
+            --parameters alertsEnabled=true \
+            --parameters notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+
+      - name: Configure Application Insights
+        run: |
+          az monitor app-insights component create \
+            --app microsoft365tools-prod \
+            --location japaneast \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --kind web
+
+  # 自動化レポート生成
+  generate-reports:
+    name: Generate Reports
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate consolidated report
+        run: |
+          python Scripts/generate_pipeline_report.py \
+            --artifacts-path artifacts/ \
+            --output-path pipeline-report.html \
+            --github-context "${{ toJson(github) }}"
+
+      - name: Upload pipeline report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-report
+          path: pipeline-report.html
+
+      - name: Send report to email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: 'Microsoft 365 Tools - Pipeline Report (${{ github.sha }})'
+          body: |
+            Pipeline execution completed for commit ${{ github.sha }}
+            Branch: ${{ github.ref }}
+            Status: ${{ job.status }}
+            
+            Please find the detailed report attached.
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          attachments: pipeline-report.html
+
+  # クリーンアップ
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-production, setup-monitoring]
+    if: always()
+    steps:
+      - name: Cleanup old Docker images
+        run: |
+          # 古いイメージを削除（7日以上前）
+          OLD_IMAGES=$(az acr repository show-tags --name microsoft365tools --repository microsoft365tools --output table --query "[?createdTime<'$(date -d '7 days ago' -Iso-8601)'].name" -o tsv)
+          for IMAGE in $OLD_IMAGES; do
+            az acr repository delete --name microsoft365tools --image microsoft365tools:$IMAGE --yes
+          done
+
+      - name: Archive logs
+        run: |
+          # ログをアーカイブ
+          echo "Archiving deployment logs..."
+          # 実際の実装では、ログ収集・アーカイブ処理を実装

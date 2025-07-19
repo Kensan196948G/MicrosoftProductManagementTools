@@ -73,9 +73,13 @@ function Get-TeamsConfigurationAnalysis {
                         # 認証方式の選択（ClientSecret優先、フォールバックで証明書）
                         if ($graphConfig.ClientSecret -and $graphConfig.ClientSecret.Trim() -ne "") {
                             Write-Host "   ClientSecret認証でMicrosoft Graphに接続中..." -ForegroundColor Gray
-                            $secureSecret = ConvertTo-SecureString $graphConfig.ClientSecret -AsPlainText -Force
-                            $credential = New-Object System.Management.Automation.PSCredential($graphConfig.ClientId, $secureSecret)
-                            Connect-MgGraph -TenantId $graphConfig.TenantId -ClientSecretCredential $credential -NoWelcome
+                            $connectParams = @{
+                                ClientId     = $graphConfig.ClientId      # 文字列でOK
+                                TenantId     = $graphConfig.TenantId      # 文字列でOK
+                                ClientSecret = $graphConfig.ClientSecret  # 文字列でOK（ConvertTo-SecureString不要！）
+                                NoWelcome    = $true
+                            }
+                            Connect-MgGraph @connectParams
                         } else {
                             # フォールバック: 証明書認証
                             Write-Host "   証明書認証でMicrosoft Graphに接続中..." -ForegroundColor Gray

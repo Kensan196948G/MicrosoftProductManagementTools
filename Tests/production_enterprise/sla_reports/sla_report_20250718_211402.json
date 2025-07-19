@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-07-18T21:14:02.603450",
+  "reporting_period": "hourly",
+  "sla_metrics": {
+    "availability": {
+      "target": 99.9,
+      "actual": 99.95,
+      "violation": false
+    },
+    "response_time": {
+      "target": 200,
+      "actual": 150.0,
+      "violation": false
+    },
+    "error_rate": {
+      "target": 0.1,
+      "actual": 0.05,
+      "violation": false
+    },
+    "throughput": {
+      "target": 1000,
+      "actual": 1200.0,
+      "violation": false
+    },
+    "recovery_time": {
+      "target": 3600,
+      "actual": 0,
+      "violation": false
+    }
+  },
+  "overall_sla_compliance": true,
+  "violations": []
+}

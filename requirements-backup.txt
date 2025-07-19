@@ -1,0 +1,27 @@
+# Backup Service Requirements
+# Minimal dependencies for automated backup functionality
+
+# Core backup functionality
+psycopg2-binary==2.9.7
+redis==4.6.0
+
+# Cloud storage
+boto3==1.28.85
+azure-storage-blob==12.19.0
+azure-identity==1.15.0
+
+# Compression and encryption
+cryptography==41.0.7
+
+# Scheduling
+APScheduler==3.10.4
+
+# Configuration and logging
+pydantic==2.4.2
+python-dotenv==1.0.0
+
+# HTTP client for health checks
+httpx==0.25.0
+
+# System monitoring
+psutil==5.9.6

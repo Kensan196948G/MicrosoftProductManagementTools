@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-07-18T21:14:02.595643",
+  "threats_detected": [],
+  "vulnerabilities_found": [],
+  "risk_level": "LOW",
+  "recommendations": [
+    "現在のセキュリティレベルは良好です。継続的な監視を維持してください。"
+  ]
+}

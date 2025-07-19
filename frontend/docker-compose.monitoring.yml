@@ -1,0 +1,340 @@
+# Microsoft 365 Management Tools - 監視システム用 Docker Compose
+# 24/7本格運用監視システム - 統合デプロイメント
+
+version: '3.8'
+
+services:
+  # フロントエンド（React）
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: m365-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./healthcheck.html:/usr/share/nginx/html/health.html:ro
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_MONITORING_ENABLED=true
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`m365-tools.local`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+  # バックエンド（Python FastAPI）
+  backend:
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    container_name: m365-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/m365_tools
+      - REDIS_URL=redis://redis:6379
+      - MONITORING_ENABLED=true
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ../src:/app:ro
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.m365-tools.local`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+  # データベース（PostgreSQL）
+  postgres:
+    image: postgres:15-alpine
+    container_name: m365-postgres
+    environment:
+      - POSTGRES_DB=m365_tools
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=ja_JP.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+    ports:
+      - "5432:5432"
+
+  # Redis（キャッシュ・セッション管理）
+  redis:
+    image: redis:7-alpine
+    container_name: m365-redis
+    command: redis-server --appendonly yes --requirepass redispassword
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+    ports:
+      - "6379:6379"
+
+  # 監視システム（Prometheus）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: m365-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # メトリクス可視化（Grafana）
+  grafana:
+    image: grafana/grafana:latest
+    container_name: m365-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_FROM_ADDRESS=monitoring@m365-tools.local
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+  # ログ集約（ELK Stack）
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: m365-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    container_name: m365-logstash
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./monitoring/logstash/config:/usr/share/logstash/config:ro
+      - ./logs:/var/log/app:ro
+    ports:
+      - "5044:5044"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: m365-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # アラート管理（AlertManager）
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: m365-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # アップタイム監視（Uptime Kuma）
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: m365-uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # リバースプロキシ（Traefik）
+  traefik:
+    image: traefik:v2.10
+    container_name: m365-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./ssl:/etc/traefik/ssl:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # メトリクス収集（Node Exporter）
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: m365-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # cAdvisor（コンテナメトリクス）
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: m365-cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # バックアップ（定期バックアップ）
+  backup:
+    image: alpine:latest
+    container_name: m365-backup
+    volumes:
+      - postgres_data:/backup/postgres:ro
+      - redis_data:/backup/redis:ro
+      - grafana_data:/backup/grafana:ro
+      - ./backup-script.sh:/backup-script.sh:ro
+    command: sh -c "chmod +x /backup-script.sh && crond -f"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - grafana
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+  alertmanager_data:
+  uptime_kuma_data:
+
+networks:
+  app-network:
+    driver: bridge
+
+# ヘルスチェック用の設定
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+# 共通環境変数
+x-common-variables: &common-variables
+  TZ: Asia/Tokyo
+  LANG: ja_JP.UTF-8
+  LC_ALL: ja_JP.UTF-8

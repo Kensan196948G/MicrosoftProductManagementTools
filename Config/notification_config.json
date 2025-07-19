@@ -1,0 +1,133 @@
+{
+  "notification_system": {
+    "enabled": true,
+    "version": "2.0",
+    "priority_channels": ["microsoft_teams", "gmail"]
+  },
+  
+  "microsoft_teams": {
+    "enabled": true,
+    "webhook": "TEAMS_WEBHOOK_NOT_SET",
+    "webhook_setup_instructions": {
+      "step1": "Microsoft Teamsで通知を受信したいチャンネルを開く",
+      "step2": "チャンネル名の横の「...」→「コネクタ」をクリック",
+      "step3": "「Incoming Webhook」を検索して「構成」をクリック",
+      "step4": "名前を「Microsoft 365 Tools」に設定",
+      "step5": "生成されたWebhook URLをこの設定ファイルの'webhook'に設定",
+      "example_webhook": "https://yourcompany.webhook.office.com/webhookb2/12345678-1234-1234-1234-123456789012@12345678-1234-1234-1234-123456789012/IncomingWebhook/abcdefghijklmnopqrstuvwxyz/12345678-1234-1234-1234-123456789012"
+    },
+    "notification_settings": {
+      "backup_success": true,
+      "backup_failure": true,
+      "github_actions": true,
+      "security_alerts": true,
+      "system_health": true,
+      "daily_summary": true
+    },
+    "formatting": {
+      "use_adaptive_cards": true,
+      "include_dashboard_link": true,
+      "color_coding": true
+    }
+  },
+  
+  "gmail": {
+    "enabled": true,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "YOUR_GMAIL_ADDRESS@gmail.com",
+    "app_password": "YOUR_APP_PASSWORD_HERE",
+    "app_password_setup_instructions": {
+      "step1": "Googleアカウントにログインして「アカウント」→「セキュリティ」へ",
+      "step2": "「2段階認証プロセス」が有効になっていることを確認",
+      "step3": "「アプリパスワード」をクリック",
+      "step4": "「アプリを選択」で「メール」、「デバイスを選択」で「その他」を選択",
+      "step5": "「Microsoft 365 Tools」と入力して「生成」をクリック",
+      "step6": "生成された16桁のパスワードをこの設定ファイルの'app_password'に設定",
+      "security_note": "通常のGoogleパスワードではなく、専用のアプリパスワードを使用してください"
+    },
+    "recipients": [
+      "admin@yourcompany.com",
+      "backup-team@yourcompany.com"
+    ],
+    "notification_settings": {
+      "backup_success": false,
+      "backup_failure": true,
+      "github_actions": false,
+      "security_alerts": true,
+      "system_health": true,
+      "daily_summary": true
+    },
+    "email_formatting": {
+      "use_html": true,
+      "include_system_info": true,
+      "attach_logs": false,
+      "priority_marking": true
+    }
+  },
+  
+  "slack": {
+    "enabled": false,
+    "note": "Slack未導入のため無効化済み"
+  },
+  
+  "notification_rules": {
+    "escalation": {
+      "backup_failure_consecutive": {
+        "threshold": 2,
+        "action": "send_to_all_channels",
+        "cooldown_minutes": 30
+      },
+      "system_critical": {
+        "threshold": 1,
+        "action": "immediate_notification",
+        "channels": ["microsoft_teams", "gmail"]
+      }
+    },
+    "rate_limiting": {
+      "max_notifications_per_hour": 50,
+      "emergency_bypass": true
+    },
+    "quiet_hours": {
+      "enabled": false,
+      "start_time": "22:00",
+      "end_time": "06:00",
+      "timezone": "Asia/Tokyo",
+      "emergency_override": true
+    }
+  },
+  
+  "dependencies": {
+    "required_packages": {
+      "sendemail": {
+        "install_command": "sudo apt-get install sendemail",
+        "description": "Gmail送信用（推奨）"
+      },
+      "msmtp": {
+        "install_command": "sudo apt-get install msmtp",
+        "description": "Gmail送信用（代替）"
+      },
+      "curl": {
+        "install_command": "sudo apt-get install curl",
+        "description": "Teams Webhook送信用"
+      }
+    },
+    "python_modules": {
+      "json": "標準ライブラリ",
+      "sys": "標準ライブラリ"
+    }
+  },
+  
+  "testing": {
+    "test_commands": {
+      "teams_test": "./notification_system_enhanced.sh test",
+      "gmail_test": "./notification_system_enhanced.sh test",
+      "validation": "./notification_system_enhanced.sh validate"
+    },
+    "expected_behavior": {
+      "teams_success": "Microsoft Teamsチャンネルに通知カードが表示される",
+      "gmail_success": "指定したGmailアドレスにHTML形式のメールが届く",
+      "error_handling": "設定不備の場合はログに警告メッセージが記録される"
+    }
+  }
+}

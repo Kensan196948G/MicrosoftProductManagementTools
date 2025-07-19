@@ -1,0 +1,90 @@
+{
+  "slack_integration": {
+    "enabled": true,
+    "webhooks": {
+      "backup_channel": "https://hooks.slack.com/services/YOUR/BACKUP/WEBHOOK",
+      "monitoring_channel": "https://hooks.slack.com/services/YOUR/MONITORING/WEBHOOK",
+      "emergency_channel": "https://hooks.slack.com/services/YOUR/EMERGENCY/WEBHOOK",
+      "deployments_channel": "https://hooks.slack.com/services/YOUR/DEPLOYMENTS/WEBHOOK"
+    },
+    "notification_settings": {
+      "backup_success": {
+        "enabled": true,
+        "channel": "backup_channel",
+        "priority": "normal"
+      },
+      "backup_failure": {
+        "enabled": true,
+        "channel": "emergency_channel",
+        "priority": "critical"
+      },
+      "github_actions": {
+        "enabled": true,
+        "channel": "monitoring_channel",
+        "priority": "normal"
+      },
+      "security_alerts": {
+        "enabled": true,
+        "channel": "emergency_channel",
+        "priority": "critical"
+      },
+      "system_health": {
+        "enabled": true,
+        "channel": "monitoring_channel",
+        "priority": "normal"
+      },
+      "deployments": {
+        "enabled": true,
+        "channel": "deployments_channel",
+        "priority": "high"
+      }
+    },
+    "rate_limiting": {
+      "max_notifications_per_hour": 100,
+      "emergency_bypass": true
+    },
+    "formatting": {
+      "include_hostname": true,
+      "include_timestamp": true,
+      "include_process_id": true,
+      "emoji_enabled": true
+    }
+  },
+  "escalation_rules": {
+    "backup_failure_consecutive": {
+      "threshold": 3,
+      "action": "emergency_escalation",
+      "cooldown_minutes": 30
+    },
+    "system_critical_health": {
+      "threshold": 1,
+      "action": "emergency_escalation",
+      "cooldown_minutes": 15
+    },
+    "security_high_severity": {
+      "threshold": 1,
+      "action": "immediate_escalation",
+      "cooldown_minutes": 5
+    }
+  },
+  "integration_endpoints": {
+    "microsoft_teams": {
+      "enabled": false,
+      "webhook": "https://YOUR-TENANT.webhook.office.com/webhookb2/YOUR-WEBHOOK"
+    },
+    "email_notifications": {
+      "enabled": false,
+      "smtp_server": "smtp.office365.com",
+      "smtp_port": 587,
+      "recipients": [
+        "admin@yourcompany.com",
+        "backup-team@yourcompany.com"
+      ]
+    },
+    "azure_monitor": {
+      "enabled": false,
+      "workspace_id": "YOUR-WORKSPACE-ID",
+      "shared_key": "YOUR-SHARED-KEY"
+    }
+  }
+}
