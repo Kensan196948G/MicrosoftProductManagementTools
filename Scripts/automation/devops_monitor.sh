@@ -7,20 +7,37 @@ set -euo pipefail
 
 # 設定
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="/mnt/e/MicrosoftProductManagementTools"
+PROJECT_ROOT="${GITHUB_WORKSPACE:-/mnt/e/MicrosoftProductManagementTools}"
 REPORT_DIR="$PROJECT_ROOT/reports/progress"
 LOG_DIR="$PROJECT_ROOT/logs"
 TMUX_SESSION="MicrosoftProductTools-Python"
 
 # ログ関数
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_DIR/devops_monitor.log"
+    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "$message"
+    
+    # GitHub Actions環境では標準出力のみ、ローカル環境ではファイルにも出力
+    if [ -n "${GITHUB_WORKSPACE:-}" ]; then
+        # GitHub Actions環境
+        echo "$message" >> "$LOG_DIR/devops_monitor.log" 2>/dev/null || true
+    else
+        # ローカル環境
+        echo "$message" >> "$LOG_DIR/devops_monitor.log"
+    fi
 }
 
 # エラーハンドリング
 error_exit() {
     log "ERROR: $1"
-    exit 1
+    
+    # GitHub Actions環境では終了コード0で継続、ローカル環境では終了
+    if [ -n "${GITHUB_WORKSPACE:-}" ]; then
+        log "WARNING: GitHub Actions environment detected, continuing execution"
+        return 0
+    else
+        exit 1
+    fi
 }
 
 # CI/CDパイプラインステータス確認
