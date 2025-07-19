@@ -35,6 +35,12 @@ Python移行プロジェクト管理コマンド:
   $0 context7-integration               # Context7統合機能テスト
   $0 collect-reports                     # Python Developer報告収集
   $0 manager-report                      # Product Manager統合報告作成
+  $0 send-to-cto "報告内容"              # CTOへの報告送信
+  $0 manager-to-all-devs "指示内容"      # Manager→全Developer一括送信
+  $0 reset-all-prompts                  # 全ペイン Claude Code プロンプトリセット
+  $0 reset-prompt [エージェント名]       # 個別ペイン プロンプトリセット
+  $0 instant [エージェント名] "メッセージ" # 即時伝達（超高速送信）
+  $0 instant-broadcast "メッセージ"      # 即時一斉伝達（全Developer同時）
 
 Python移行専門タスク分配:
   $0 frontend|ui "PowerShell GUI→React移行"      # Dev0: PowerShell Forms→React+TypeScript 💻
@@ -77,11 +83,19 @@ load_pane_mapping() {
 # セッション名を動的に検出
 detect_active_session() {
     # Microsoft 365 Python Migration Project セッションを検索
-    local sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^MicrosoftProductTools-Python\|^Microsoft365-Python-Migration")
+    local sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^MicrosoftProductTools-Python")
     
     if [[ -n "$sessions" ]]; then
         # 複数ある場合は最初の一つを使用
         echo "$sessions" | head -n1
+        return 0
+    fi
+    
+    # Microsoft365-Python-Migration パターンも検索
+    local sessions2=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^Microsoft365-Python-Migration")
+    
+    if [[ -n "$sessions2" ]]; then
+        echo "$sessions2" | head -n1
         return 0
     fi
     
@@ -234,6 +248,48 @@ check_pane() {
     check_pane_exists "$1"
 }
 
+# 緊急指示メッセージ判定機能
+is_urgent_message() {
+    local message="$1"
+    
+    # 緊急指示キーワードパターン
+    local urgent_patterns=(
+        "緊急指示"
+        "緊急連絡"
+        "緊急事態" 
+        "緊急対応"
+        "緊急停止"
+        "緊急会議"
+        "緊急報告"
+        "緊急確認"
+        "緊急実行"
+        "緊急修正"
+        "即座"
+        "即時"
+        "直ちに"
+        "至急"
+        "URGENT"
+        "EMERGENCY"
+        "CRITICAL"
+        "【緊急】"
+        "【URGENT】"
+        "【至急】"
+        "【即時】"
+        "🚨"
+        "⚡"
+        "🔥"
+    )
+    
+    # パターンマッチング
+    for pattern in "${urgent_patterns[@]}"; do
+        if [[ "$message" == *"$pattern"* ]]; then
+            return 0  # 緊急指示と判定
+        fi
+    done
+    
+    return 1  # 通常メッセージ
+}
+
 # 改良版メッセージ送信
 send_enhanced_message() {
     local target="$1"
@@ -248,31 +304,82 @@ send_enhanced_message() {
         return 1
     fi
     
-    # 1. プロンプトクリア（より確実に）
-    tmux send-keys -t "$target" C-c
-    sleep 0.4
+    # 緊急指示自動判定
+    local instant_mode="${INSTANT_DELIVERY:-false}"
     
-    # 2. 追加のクリア（念のため）
-    tmux send-keys -t "$target" C-u
-    sleep 0.2
-    
-    # 3. メッセージ送信（改行を含む場合は複数行で送信）
-    # 改行が含まれる場合は行ごとに分けて送信
-    if [[ "$message" == *$'\n'* ]]; then
-        # 改行で分割して各行を送信
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            tmux send-keys -t "$target" "$line"
-            tmux send-keys -t "$target" C-m
-            sleep 0.2
-        done <<< "$message"
-    else
-        # 単一行の場合は従来通り
-        tmux send-keys -t "$target" "$message"
-        sleep 0.3
-        tmux send-keys -t "$target" C-m
+    # メッセージ内容による自動即時伝達判定
+    if [[ "$instant_mode" == "false" ]]; then
+        if is_urgent_message "$message"; then
+            instant_mode="true"
+            echo "🚨 緊急指示を検出 - 自動的に即時伝達モードに切り替えます"
+        fi
     fi
     
-    sleep 0.5
+    if [[ "$instant_mode" == "true" ]]; then
+        # 即時伝達モード: 最小限のクリア
+        tmux send-keys -t "$target" C-c
+        sleep 0.1
+        tmux send-keys -t "$target" C-u
+        sleep 0.1
+    else
+        # 通常モード: 完全クリア
+        # Ctrl+C で現在の入力を中断
+        tmux send-keys -t "$target" C-c
+        sleep 0.5
+        
+        # ESC で Claude Code のモードをリセット  
+        tmux send-keys -t "$target" Escape
+        sleep 0.3
+        
+        # Ctrl+U で入力行全体をクリア
+        tmux send-keys -t "$target" C-u
+        sleep 0.3
+        
+        # Ctrl+L で画面をクリア（オプション）
+        tmux send-keys -t "$target" C-l
+        sleep 0.3
+        
+        # 追加の確実なクリア（Claude Code 対応）
+        tmux send-keys -t "$target" C-c
+        sleep 0.2
+    fi
+    
+    # 3. メッセージ送信
+    if [[ "$instant_mode" == "true" ]]; then
+        # 即時伝達モード: 最短時間で送信
+        if [[ "$message" == *$'\n'* ]]; then
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                tmux send-keys -t "$target" "$line"
+                tmux send-keys -t "$target" C-m
+                sleep 0.05  # 最小待機時間
+            done <<< "$message"
+        else
+            tmux send-keys -t "$target" "$message"
+            sleep 0.1
+            tmux send-keys -t "$target" C-m
+        fi
+        sleep 0.2  # 即時完了
+        
+        # 即時伝達では送信後クリアなし（高速化）
+    else
+        # 通常モード: 確実性重視
+        if [[ "$message" == *$'\n'* ]]; then
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                tmux send-keys -t "$target" "$line"
+                tmux send-keys -t "$target" C-m
+                sleep 0.2
+            done <<< "$message"
+        else
+            tmux send-keys -t "$target" "$message"
+            sleep 0.3
+            tmux send-keys -t "$target" C-m
+        fi
+        sleep 0.5
+        
+        # 4. 送信後の追加クリア（メッセージ残留防止）
+        tmux send-keys -t "$target" C-u
+        sleep 0.2
+    fi
     
     echo "✅ 送信完了: $agent_name に自動実行されました"
     return 0
@@ -358,13 +465,9 @@ resolve_target() {
     fi
     
     case $agent in
-        "ceo")
-            # マッピング情報を読み込んでCEOの場所を確認
-            if load_pane_mapping && [[ "$LAYOUT_TYPE" == "hierarchical" ]]; then
-                echo "$session_name:0.$CEO_PANE"  # 階層レイアウトでは検出されたセッション内
-            else
-                echo "$session_name:0.1"  # 現在の構成ではCEOはペイン1
-            fi
+        "ceo"|"cto")
+            # CTOとCEOは同じペイン（ペイン1）
+            echo "$session_name:0.1"
             return 0
             ;;
         "manager")
@@ -537,72 +640,35 @@ get_cto_members() {
     local session_name=$(detect_active_session)
     
     # Microsoft 365 Python Migration Project session structure
-    case "$session_name" in
-        "MicrosoftProductTools-Python-5team")
-            echo "$session_name:1:CTO-Technical-Leadership"
-            ;;
-        "MicrosoftProductTools-Python-8team")
-            echo "$session_name:1:CTO-Technical-Leadership"
-            ;;
-        "Microsoft365-Python-Migration")
-            echo "$session_name:1:CTO-Technical-Leadership"
-            ;;
-        *)
-            echo "$session_name:1:CTO-Technical-Leadership"
-            ;;
-    esac
+    echo "$session_name:1:CTO-Technical-Leadership"
 }
 
 get_manager_members() {
     local session_name=$(detect_active_session)
     
     # Microsoft 365 Python Migration Project session structure
-    case "$session_name" in
-        "MicrosoftProductTools-Python-5team")
-            echo "$session_name:0:Product-Manager-Migration-Coordination"
-            ;;
-        "MicrosoftProductTools-Python-8team")
-            echo "$session_name:0:Product-Manager-Migration-Coordination"
-            ;;
-        "Microsoft365-Python-Migration")
-            echo "$session_name:0:Product-Manager-Migration-Coordination"
-            ;;
-        *)
-            echo "$session_name:0:Product-Manager-Migration-Coordination"
-            ;;
-    esac
+    echo "$session_name:0:Product-Manager-Migration-Coordination"
 }
 
 get_developer_members() {
     local session_name=$(detect_active_session)
     
-    # Microsoft 365 Python Migration Project session structure
-    case "$session_name" in
-        "MicrosoftProductTools-Python-5team")
-            echo "$session_name:2:Python-Dev0-PowerShell-Forms-to-React-Migration💻"
-            echo "$session_name:3:Python-Dev1-PowerShell-Scripts-to-Python-FastAPI-Migration⚙️"
-            echo "$session_name:4:Python-Dev2-PowerShell-Tests-to-pytest-Migration🔒"
-            ;;
-        "MicrosoftProductTools-Python-8team")
-            echo "$session_name:2:Python-Dev0-PowerShell-Forms-to-React-Migration💻"
-            echo "$session_name:3:Python-Dev1-PowerShell-Scripts-to-Python-FastAPI-Migration⚙️"
-            echo "$session_name:4:Python-Dev2-PowerShell-Tests-to-pytest-Migration🔒"
-            echo "$session_name:5:Python-Dev3-PowerShell-Environment-to-Docker-Migration🧪"
-            echo "$session_name:6:Python-Dev4-PowerShell-CSV-to-PostgreSQL-Migration🚀"
-            echo "$session_name:7:Python-Dev5-PowerShell-UI-to-React-UX-Migration📊"
-            ;;
-        "Microsoft365-Python-Migration")
-            echo "$session_name:2:Python-Dev0-PowerShell-Forms-to-React-Migration💻"
-            echo "$session_name:3:Python-Dev1-PowerShell-Scripts-to-Python-FastAPI-Migration⚙️"
-            echo "$session_name:4:Python-Dev2-PowerShell-Tests-to-pytest-Migration🔒"
-            echo "$session_name:5:Python-Dev3-PowerShell-Environment-to-Docker-Migration🧪"
-            echo "$session_name:6:Python-Dev4-PowerShell-CSV-to-PostgreSQL-Migration🚀"
-            echo "$session_name:7:Python-Dev5-PowerShell-UI-to-React-UX-Migration📊"
-            ;;
-        *)
-            echo "$session_name:2:Python-Developer-Migration-Specialist"
-            ;;
-    esac
+    # 現在のセッションのペイン数を取得して動的に決定
+    local pane_count=$(tmux list-panes -t "$session_name" -F "#{pane_index}" | wc -l)
+    
+    # ペイン2以降がDeveloper (Manager=0, CTO=1を除く)
+    for ((i=2; i<pane_count; i++)); do
+        local dev_num=$((i-2))
+        case $dev_num in
+            0) echo "$session_name:$i:Python-Dev0-PowerShell-Forms-to-React-Migration💻" ;;
+            1) echo "$session_name:$i:Python-Dev1-PowerShell-Scripts-to-Python-FastAPI-Migration⚙️" ;;
+            2) echo "$session_name:$i:Python-Dev2-PowerShell-Tests-to-pytest-Migration🔒" ;;
+            3) echo "$session_name:$i:Python-Dev3-PowerShell-Environment-to-Docker-Migration🧪" ;;
+            4) echo "$session_name:$i:Python-Dev4-PowerShell-CSV-to-PostgreSQL-Migration🚀" ;;
+            5) echo "$session_name:$i:Python-Dev5-PowerShell-UI-to-React-UX-Migration📊" ;;
+            *) echo "$session_name:$i:Python-Developer-Migration-Specialist" ;;
+        esac
+    done
 }
 
 get_all_members() {
@@ -624,7 +690,15 @@ send_hierarchical_message() {
         return 1
     fi
     
-    h_log_info "送信中: $role ($session:$pane) へ"
+    # 緊急指示自動判定（階層的メッセージ用）
+    local instant_mode="false"
+    if is_urgent_message "$message"; then
+        instant_mode="true"
+        echo "🚨 緊急指示を検出 - 階層的メッセージも即時伝達モードで送信"
+    fi
+    
+    # 統一された送信表示フォーマット
+    echo "📤 送信中: $role へメッセージを送信..."
     
     local formatted_message="【$timestamp】$message
 
@@ -633,18 +707,41 @@ send_hierarchical_message() {
 対応要求: 即座に作業を開始し、完了後に報告してください"
     
     # プロンプトクリアしてメッセージ送信
-    tmux send-keys -t "$session:$pane" C-c 2>/dev/null
-    sleep 0.3
-    tmux send-keys -t "$session:$pane" C-u 2>/dev/null
-    sleep 0.2
+    local target="$session:0.$pane"
     
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        tmux send-keys -t "$session:$pane" "$line"
-        tmux send-keys -t "$session:$pane" C-m
+    if [[ "$instant_mode" == "true" ]]; then
+        # 即時伝達モード
+        tmux send-keys -t "$target" C-c 2>/dev/null
         sleep 0.1
-    done <<< "$formatted_message"
+        tmux send-keys -t "$target" C-u 2>/dev/null
+        sleep 0.1
+        
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            tmux send-keys -t "$target" "$line"
+            tmux send-keys -t "$target" C-m
+            sleep 0.05
+        done <<< "$formatted_message"
+        
+        sleep 0.2
+    else
+        # 通常モード
+        tmux send-keys -t "$target" C-c 2>/dev/null
+        sleep 0.3
+        tmux send-keys -t "$target" C-u 2>/dev/null
+        sleep 0.2
+        
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            tmux send-keys -t "$target" "$line"
+            tmux send-keys -t "$target" C-m
+            sleep 0.1
+        done <<< "$formatted_message"
+        
+        sleep 0.3
+    fi
     
-    sleep 0.3
+    # 統一された送信完了表示
+    echo "✅ 送信完了: $role に自動実行されました"
+    
     echo "[$timestamp] $role ($session:$pane) <- $message" >> "$HIERARCHICAL_LOG_FILE"
     return 0
 }
@@ -759,6 +856,59 @@ dev_assign() {
     fi
 }
 
+# Manager→全Developer一括送信
+manager_to_all_devs() {
+    local message="$1"
+    if [[ -z "$message" ]]; then
+        h_log_error "送信メッセージが指定されていません"
+        return 1
+    fi
+    
+    h_log_info "👔 Manager→全Developer一括送信開始: $message"
+    
+    local success_count=0
+    local total_count=0
+    
+    echo ""
+    echo "📡 Manager指示を全Developerに送信中..."
+    echo ""
+    
+    # 全Developerに送信
+    while IFS=: read -r session pane role; do
+        ((total_count++))
+        
+        # dev0, dev1, dev2 形式の表示名を作成
+        local dev_num=$((pane-2))
+        local display_name="dev$dev_num"
+        
+        local manager_message="【Manager指示】$message
+
+指示者: Product Manager
+対象: $role
+対応要求: 即座に作業を開始し、完了後にManagerに報告してください。
+受信時刻: $(date '+%Y-%m-%d %H:%M:%S')"
+        
+        # 統一フォーマットで表示・送信
+        local target="$session:0.$pane"
+        if send_enhanced_message "$target" "$manager_message" "$display_name"; then
+            ((success_count++))
+            log_message "$display_name" "$manager_message"
+        else
+            echo "❌ 送信失敗: $display_name"
+        fi
+        
+        echo ""
+        sleep 0.3
+    done < <(get_developer_members)
+    
+    echo "🎯 Manager→Developer一括送信完了:"
+    echo "   送信成功: $success_count/$total_count Developer"
+    echo "   メッセージ: \"$message\""
+    echo "   ログ: logs/communication.log に記録済み"
+    
+    h_log_success "Manager→全Developer送信完了: $success_count/$total_count 送信成功"
+}
+
 # Launch Claude with context file for specific role
 launch_claude_with_context() {
     local target_role="$1"
@@ -806,10 +956,14 @@ assign_specialized_task() {
         return 1
     fi
     
-    local config=$(detect_team_configuration)
+    local session_name=$(detect_active_session)
+    if [[ $? -ne 0 || -z "$session_name" ]]; then
+        h_log_error "有効なセッションが見つかりません"
+        return 1
+    fi
+    
     local target_pane=""
     local target_role=""
-    local session_name="claude-team-$config"
     
     case "$specialty" in
         "frontend"|"ui")
@@ -821,36 +975,20 @@ assign_specialized_task() {
             target_role="Dev1-Backend-API⚙️"
             ;;
         "qa"|"test")
-            if [[ "$config" == "2devs" ]]; then
-                h_log_error "QA/Test専門担当は4 Developers以上の構成でのみ利用可能です"
-                return 1
-            fi
             target_pane="4"
             target_role="Dev2-QA-Test🔒"
             ;;
         "infra"|"devops")
-            if [[ "$config" == "2devs" ]]; then
-                h_log_error "Infrastructure/DevOps専門担当は4 Developers以上の構成でのみ利用可能です"
-                return 1
-            fi
-            target_pane="5"
-            target_role="Dev3-Infrastructure-DevOps🧪"
+            target_pane="3"
+            target_role="Dev1-Infrastructure-DevOps🧪"
             ;;
         "database"|"design")
-            if [[ "$config" != "6devs" ]]; then
-                h_log_error "Database/Design専門担当は6 Developers構成でのみ利用可能です"
-                return 1
-            fi
-            target_pane="6"
-            target_role="Dev4-Database-Design🚀"
+            target_pane="4"
+            target_role="Dev2-Database-Design🚀"
             ;;
         "ux"|"quality")
-            if [[ "$config" != "6devs" ]]; then
-                h_log_error "UI/UX/Quality専門担当は6 Developers構成でのみ利用可能です"
-                return 1
-            fi
-            target_pane="7"
-            target_role="Dev5-UI-UX-Quality📊"
+            target_pane="2"
+            target_role="Dev0-UI-UX-Quality📊"
             ;;
         *)
             h_log_error "不明な専門分野: $specialty"
@@ -864,8 +1002,11 @@ assign_specialized_task() {
 専門領域: あなたの$specialty専門性を最大限活用して実装してください。
 担当者: $target_role"
     
-    if send_hierarchical_message "$session_name" "$target_pane" "$target_role" "$specialized_task"; then
+    local target="$session_name:0.$target_pane"
+    
+    if send_enhanced_message "$target" "$specialized_task" "$target_role"; then
         h_log_success "$specialty専門タスク分配完了: $target_role に送信"
+        log_message "$target_role" "$specialized_task"
         return 0
     else
         h_log_error "タスク送信に失敗しました: $target_role"
@@ -924,7 +1065,8 @@ collect_reports() {
     
     h_log_success "報告収集要求完了: $success_count 名のDeveloperに送信"
     
-    send_hierarchical_message "manager" "1" "Manager-Report-Collector" "【報告収集開始】Developerからの進捗報告を収集し、統合レポートを作成してください"
+    local session_name=$(detect_active_session)
+    send_hierarchical_message "$session_name" "0" "Manager-Report-Collector" "【報告収集開始】Developerからの進捗報告を収集し、統合レポートを作成してください"
 }
 
 # Manager統合報告作成
@@ -938,10 +1080,199 @@ manager_report() {
 2. 各専門分野の状況
 3. 発生している課題・リスク
 4. 必要なリソース・サポート
-5. 次期計画・提案"
+5. 次期計画・提案
+
+完了後: ./tmux/send-message.sh cto \"【Manager統合報告】\" で報告を送信してください"
     
-    send_hierarchical_message "manager" "2" "Manager-CTO-Reporter" "$report_task"
+    local session_name=$(detect_active_session)
+    send_hierarchical_message "$session_name" "0" "Manager-CTO-Reporter" "$report_task"
     h_log_success "Manager統合報告作成指示完了"
+}
+
+# 全ペイン Claude Code プロンプトリセット機能
+reset_all_prompts() {
+    echo "🔄 全ペイン Claude Code プロンプトリセット開始..."
+    
+    local session_name=$(detect_active_session)
+    if [[ $? -ne 0 || -z "$session_name" ]]; then
+        echo "❌ 有効なセッションが見つかりません"
+        return 1
+    fi
+    
+    local success_count=0
+    local total_count=0
+    
+    # Manager, CTO, 全Developer をリセット
+    local all_panes=(0 1 2 3 4)  # ペイン0-4
+    
+    for pane in "${all_panes[@]}"; do
+        ((total_count++))
+        local target="$session_name:0.$pane"
+        local role=""
+        
+        case $pane in
+            0) role="Manager" ;;
+            1) role="CTO" ;;
+            2) role="Dev0" ;;
+            3) role="Dev1" ;;
+            4) role="Dev2" ;;
+            *) role="Unknown" ;;
+        esac
+        
+        echo "🔄 リセット中: $role (ペイン$pane)"
+        
+        if reset_single_prompt "$target" "$role"; then
+            ((success_count++))
+            echo "✅ リセット完了: $role"
+        else
+            echo "❌ リセット失敗: $role"
+        fi
+        
+        sleep 0.5
+    done
+    
+    echo ""
+    echo "🎯 プロンプトリセット完了:"
+    echo "   成功: $success_count/$total_count ペイン"
+    echo "   セッション: $session_name"
+    
+    return 0
+}
+
+# 単一ペインのプロンプトリセット
+reset_single_prompt() {
+    local target="$1"
+    local role="$2"
+    
+    # 1. 強制中断
+    tmux send-keys -t "$target" C-c 2>/dev/null
+    sleep 0.3
+    
+    # 2. ESC でモードリセット
+    tmux send-keys -t "$target" Escape 2>/dev/null
+    sleep 0.2
+    
+    # 3. 入力行クリア
+    tmux send-keys -t "$target" C-u 2>/dev/null
+    sleep 0.2
+    
+    # 4. 画面クリア
+    tmux send-keys -t "$target" C-l 2>/dev/null
+    sleep 0.2
+    
+    # 5. 追加の確実なクリア
+    tmux send-keys -t "$target" C-c 2>/dev/null
+    sleep 0.2
+    tmux send-keys -t "$target" C-u 2>/dev/null
+    sleep 0.2
+    
+    # 6. 空のエンター（プロンプト再表示）
+    tmux send-keys -t "$target" C-m 2>/dev/null
+    sleep 0.3
+    
+    return 0
+}
+
+# 即時ブロードキャスト機能
+instant_broadcast_message() {
+    local message="$1"
+    
+    local session_name=$(detect_active_session)
+    if [[ $? -ne 0 || -z "$session_name" ]]; then
+        echo "❌ 有効なセッションが見つかりません"
+        return 1
+    fi
+    
+    local success_count=0
+    local total_count=0
+    
+    echo "⚡ 即時一斉伝達開始..."
+    echo ""
+    
+    # 全Developer（ペイン2-4）に即時送信
+    local all_panes=(2 3 4)
+    
+    for pane in "${all_panes[@]}"; do
+        ((total_count++))
+        local target="$session_name:0.$pane"
+        local dev_num=$((pane-2))
+        local display_name="dev$dev_num"
+        
+        # 即時送信（並列実行）
+        echo "⚡ 即時送信: $display_name"
+        
+        if send_enhanced_message "$target" "$message" "$display_name"; then
+            ((success_count++))
+            log_message "$display_name" "$message"
+        fi
+        
+        # 即時送信のため待機時間なし
+    done
+    
+    echo ""
+    echo "⚡ 即時一斉伝達完了:"
+    echo "   送信成功: $success_count/$total_count Developer"
+    echo "   送信時間: 約0.5秒"
+    echo "   メッセージ: \"$message\""
+    
+    return 0
+}
+
+# 個別ペインリセット機能
+reset_prompt() {
+    local agent="$1"
+    if [[ -z "$agent" ]]; then
+        echo "❌ エラー: リセット対象を指定してください"
+        echo "使用方法: $0 reset-prompt [manager|cto|dev0|dev1|dev2]"
+        return 1
+    fi
+    
+    echo "🔄 個別プロンプトリセット: $agent"
+    
+    local target
+    target=$(resolve_target "$agent")
+    
+    if [[ $? -ne 0 ]]; then
+        echo "❌ エラー: 無効なエージェント名 '$agent'"
+        return 1
+    fi
+    
+    if reset_single_prompt "$target" "$agent"; then
+        echo "✅ プロンプトリセット完了: $agent ($target)"
+        return 0
+    else
+        echo "❌ プロンプトリセット失敗: $agent"
+        return 1
+    fi
+}
+
+# CTOへの報告送信機能
+send_to_cto() {
+    local report="$1"
+    if [[ -z "$report" ]]; then
+        h_log_error "CTO報告内容が指定されていません"
+        return 1
+    fi
+    
+    h_log_info "📤 CTO への報告送信開始"
+    
+    local session_name=$(detect_active_session)
+    local cto_target="$session_name:0.1"
+    
+    local cto_report="【進捗報告受信】$report
+
+受信時刻: $(date '+%Y-%m-%d %H:%M:%S')
+送信者: プロジェクト管理システム
+対応要求: 内容を確認し、必要に応じて指示を発出してください"
+    
+    if send_enhanced_message "$cto_target" "$cto_report" "CTO-Technical-Leadership"; then
+        h_log_success "CTO報告送信完了"
+        log_message "CTO-Technical-Leadership" "$cto_report"
+        return 0
+    else
+        h_log_error "CTO報告送信に失敗しました"
+        return 1
+    fi
 }
 
 # 階層的組織状況表示
@@ -1208,6 +1539,60 @@ main() {
             ;;
         "manager-report")
             manager_report
+            exit $?
+            ;;
+        "send-to-cto")
+            send_to_cto "$2"
+            exit $?
+            ;;
+        "manager-to-all-devs")
+            manager_to_all_devs "$2"
+            exit $?
+            ;;
+        "reset-all-prompts")
+            reset_all_prompts
+            exit $?
+            ;;
+        "reset-prompt")
+            reset_prompt "$2"
+            exit $?
+            ;;
+        "instant")
+            # 即時伝達モード送信
+            if [[ $# -lt 3 ]]; then
+                echo "使用方法: $0 instant [agent] [message]"
+                echo "例: $0 instant manager \"緊急メッセージ\""
+                exit 1
+            fi
+            export INSTANT_DELIVERY=true
+            agent="$2"
+            message="$3"
+            
+            target=$(resolve_target "$agent")
+            if [[ $? -ne 0 ]]; then
+                echo "❌ エラー: 無効なエージェント名 '$agent'"
+                exit 1
+            fi
+            
+            # 即時送信実行
+            if send_enhanced_message "$target" "$message" "$agent"; then
+                log_message "$agent" "$message"
+                echo "⚡ 即時伝達完了: $agent"
+                exit 0
+            else
+                echo "❌ 即時伝達失敗: $agent"
+                exit 1
+            fi
+            ;;
+        "instant-broadcast")
+            # 即時伝達ブロードキャスト
+            if [[ $# -lt 2 ]]; then
+                echo "使用方法: $0 instant-broadcast [message]"
+                echo "例: $0 instant-broadcast \"緊急一斉連絡\""
+                exit 1
+            fi
+            export INSTANT_DELIVERY=true
+            instant_broadcast_message "$2"
             exit $?
             ;;
         "--status")

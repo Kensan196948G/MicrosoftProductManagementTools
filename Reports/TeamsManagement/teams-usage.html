@@ -9,11 +9,34 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- PDF生成ライブラリ（CDNフォールバック対応） -->
+    <script>
+        // Primary CDN for html2pdf.js
+        function loadScript(src, fallback) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => {
+                    console.warn(`Failed to load from ${src}, trying fallback...`);
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = fallback;
+                    fallbackScript.onload = resolve;
+                    fallbackScript.onerror = reject;
+                    document.head.appendChild(fallbackScript);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Load PDF libraries with fallbacks
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 
+                  'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                  'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                  'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js');
+    </script>
     
     <style>
         * {
@@ -31,7 +54,7 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #0f1419 0%, #2c3e50 100%);
+            background: linear-gradient(135deg, #6264a7 0%, #464775 100%);
             color: white;
             padding: 2rem;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -175,6 +198,238 @@
         .footer p {
             margin-bottom: 0.5rem;
         }
+
+        /* 拡張機能用スタイル */
+        .controls-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e8ecef;
+        }
+
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-filter-section {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e8ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #6264a7;
+            box-shadow: 0 0 0 3px rgba(98, 100, 167, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .filter-group select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e8ecef;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: white;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #6264a7;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6264a7 0%, #464775 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(98, 100, 167, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .pagination-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pagination-controls button {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .pagination-controls button:hover:not(:disabled) {
+            background: #f8f9fa;
+        }
+
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.1rem;
+            color: #6264a7;
+        }
+
+        .loading-spinner i {
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* レスポンシブデザイン */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header .stats {
+                gap: 1rem;
+            }
+
+            .controls-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-filter-section {
+                flex-direction: column;
+            }
+
+            .search-box {
+                min-width: auto;
+            }
+
+            table {
+                min-width: 600px;
+            }
+
+            .filter-group {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* 印刷用スタイル */
+        @media print {
+            .controls-section,
+            .pagination-info,
+            .action-buttons {
+                display: none !important;
+            }
+
+            .table-container {
+                box-shadow: none;
+                border: 1px solid #000;
+            }
+
+            .header {
+                background: #6264a7 !important;
+                print-color-adjust: exact;
+            }
+
+            body {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -208,6 +463,92 @@
     </header>
 
     <main class="container">
+        <!-- 検索・フィルタ・操作パネル -->
+        <section class="controls-section">
+            <div class="controls-header">
+                <div class="search-filter-section">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="ユーザー名、部署名で検索..." autocomplete="off">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="departmentFilter"><i class="fas fa-building"></i></label>
+                        <select id="departmentFilter">
+                            <option value="">すべての部署</option>
+                            <option value="営業部">営業部</option>
+                            <option value="総務部">総務部</option>
+                            <option value="開発部">開発部</option>
+                            <option value="人事部">人事部</option>
+                            <option value="マーケティング部">マーケティング部</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="usageLevelFilter"><i class="fas fa-chart-line"></i></label>
+                        <select id="usageLevelFilter">
+                            <option value="">すべての利用レベル</option>
+                            <option value="高">高利用</option>
+                            <option value="中">中利用</option>
+                            <option value="低">低利用</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="statusFilter"><i class="fas fa-toggle-on"></i></label>
+                        <select id="statusFilter">
+                            <option value="">すべてのステータス</option>
+                            <option value="アクティブ">アクティブ</option>
+                            <option value="非アクティブ">非アクティブ</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF出力
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i>
+                        CSV出力
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.print()">
+                        <i class="fas fa-print"></i>
+                        印刷
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                        更新
+                    </button>
+                </div>
+            </div>
+            
+            <div class="pagination-info">
+                <span id="recordCount">表示中: 1-5 / 総計: 350件</span>
+                <div class="pagination-controls">
+                    <button id="firstPage" onclick="goToPage(1)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button id="prevPage" onclick="previousPage()">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <span id="pageInfo">1 / 70</span>
+                    <button id="nextPage" onclick="nextPage()">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button id="lastPage" onclick="goToPage(70)">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="loading-spinner" id="loadingSpinner">
+            <i class="fas fa-spinner"></i>
+            データを読み込み中...
+        </div>
+
         <section class="table-container">
             <div class="table-header">
                 <div class="table-title">
@@ -232,61 +573,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr>
-                            <td>田中 太郎</td>
-                            <td>営業部</td>
-                            <td>2025-07-16 09:30</td>
-                            <td>45</td>
-                            <td>320</td>
-                            <td>1,250</td>
-                            <td>8</td>
-                            <td><span class="badge badge-high">高</span></td>
-                            <td><span class="badge badge-active">アクティブ</span></td>
-                        </tr>
-                        <tr>
-                            <td>佐藤 花子</td>
-                            <td>総務部</td>
-                            <td>2025-07-16 08:15</td>
-                            <td>32</td>
-                            <td>180</td>
-                            <td>890</td>
-                            <td>5</td>
-                            <td><span class="badge badge-medium">中</span></td>
-                            <td><span class="badge badge-active">アクティブ</span></td>
-                        </tr>
-                        <tr>
-                            <td>鈴木 一郎</td>
-                            <td>開発部</td>
-                            <td>2025-07-15 18:20</td>
-                            <td>28</td>
-                            <td>95</td>
-                            <td>650</td>
-                            <td>12</td>
-                            <td><span class="badge badge-medium">中</span></td>
-                            <td><span class="badge badge-active">アクティブ</span></td>
-                        </tr>
-                        <tr>
-                            <td>高橋 美穂</td>
-                            <td>人事部</td>
-                            <td>2025-07-14 16:45</td>
-                            <td>12</td>
-                            <td>45</td>
-                            <td>320</td>
-                            <td>3</td>
-                            <td><span class="badge badge-medium">中</span></td>
-                            <td><span class="badge badge-inactive">非アクティブ</span></td>
-                        </tr>
-                        <tr>
-                            <td>山田 健太</td>
-                            <td>マーケティング部</td>
-                            <td>2025-07-16 11:20</td>
-                            <td>38</td>
-                            <td>240</td>
-                            <td>1,100</td>
-                            <td>7</td>
-                            <td><span class="badge badge-high">高</span></td>
-                            <td><span class="badge badge-active">アクティブ</span></td>
-                        </tr>
+                        {{TEAMS_USAGE_DATA}}
                     </tbody>
                 </table>
             </div>
@@ -298,5 +585,302 @@
         <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on 2025-07-16 14:00</p>
         <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
     </footer>
+
+    <script>
+        // データ管理とフィルタリング機能
+        let currentData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTableData();
+            setupEventListeners();
+            updateDisplay();
+        });
+
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const departmentFilter = document.getElementById('departmentFilter');
+            const usageLevelFilter = document.getElementById('usageLevelFilter');
+            const statusFilter = document.getElementById('statusFilter');
+
+            // リアルタイム検索とフィルタリング
+            searchInput.addEventListener('input', debounce(applyFilters, 300));
+            departmentFilter.addEventListener('change', applyFilters);
+            usageLevelFilter.addEventListener('change', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+
+            // 検索提案機能
+            searchInput.addEventListener('focus', showSearchSuggestions);
+            searchInput.addEventListener('blur', hideSearchSuggestions);
+        }
+
+        // テーブルデータの読み込み
+        function loadTableData() {
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+            
+            currentData = [];
+            for (let row of rows) {
+                if (row.cells.length > 0) {
+                    const rowData = {
+                        username: row.cells[0].textContent.trim(),
+                        department: row.cells[1].textContent.trim(),
+                        lastAccess: row.cells[2].textContent.trim(),
+                        meetingCount: parseInt(row.cells[3].textContent.trim()),
+                        chatCount: parseInt(row.cells[4].textContent.trim()),
+                        storageUsage: parseFloat(row.cells[5].textContent.replace(/,/g, '').trim()),
+                        appCount: parseInt(row.cells[6].textContent.trim()),
+                        usageLevel: row.cells[7].textContent.trim(),
+                        status: row.cells[8].textContent.trim(),
+                        element: row
+                    };
+                    currentData.push(rowData);
+                }
+            }
+            filteredData = [...currentData];
+        }
+
+        // フィルタリング機能
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const departmentFilter = document.getElementById('departmentFilter').value;
+            const usageLevelFilter = document.getElementById('usageLevelFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            filteredData = currentData.filter(item => {
+                const matchesSearch = !searchTerm || 
+                    item.username.toLowerCase().includes(searchTerm) ||
+                    item.department.toLowerCase().includes(searchTerm);
+                
+                const matchesDepartment = !departmentFilter || item.department === departmentFilter;
+                const matchesUsageLevel = !usageLevelFilter || item.usageLevel.includes(usageLevelFilter);
+                const matchesStatus = !statusFilter || item.status.includes(statusFilter);
+
+                return matchesSearch && matchesDepartment && matchesUsageLevel && matchesStatus;
+            });
+
+            currentPage = 1;
+            updateDisplay();
+            updatePaginationInfo();
+        }
+
+        // 表示の更新
+        function updateDisplay() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            // すべての行を非表示
+            currentData.forEach(item => {
+                item.element.style.display = 'none';
+            });
+
+            // 現在のページのデータのみ表示
+            pageData.forEach(item => {
+                item.element.style.display = '';
+            });
+
+            // 統計情報の更新
+            document.getElementById('totalRecords').textContent = filteredData.length;
+        }
+
+        // ページネーション情報の更新
+        function updatePaginationInfo() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            const startRecord = (currentPage - 1) * itemsPerPage + 1;
+            const endRecord = Math.min(currentPage * itemsPerPage, filteredData.length);
+
+            document.getElementById('recordCount').textContent = 
+                `表示中: ${startRecord}-${endRecord} / 総計: ${filteredData.length}件`;
+            document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+
+            // ボタンの状態更新
+            document.getElementById('firstPage').disabled = currentPage === 1;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+            document.getElementById('lastPage').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        // ページネーション機能
+        function goToPage(page) {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                updateDisplay();
+                updatePaginationInfo();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateDisplay();
+                updatePaginationInfo();
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateDisplay();
+                updatePaginationInfo();
+            }
+        }
+
+        // PDF出力機能
+        function exportToPDF() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            loadingSpinner.style.display = 'block';
+
+            // CDNフォールバック機能付きPDF生成
+            generatePDF().finally(() => {
+                loadingSpinner.style.display = 'none';
+            });
+        }
+
+        async function generatePDF() {
+            try {
+                if (typeof html2pdf !== 'undefined') {
+                    // html2pdf.jsを使用
+                    const element = document.documentElement;
+                    const opt = {
+                        margin: 1,
+                        filename: 'teams-usage-report.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+                    };
+                    await html2pdf().set(opt).from(element).save();
+                } else if (typeof window.jsPDF !== 'undefined' && typeof html2canvas !== 'undefined') {
+                    // jsPDF + html2canvasのフォールバック
+                    const canvas = await html2canvas(document.body);
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new window.jsPDF('l', 'mm', 'a4');
+                    const imgWidth = 297;
+                    const pageHeight = 210;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                    pdf.save('teams-usage-report.pdf');
+                } else {
+                    // 最終フォールバック：印刷ダイアログ
+                    alert('PDF生成ライブラリが利用できません。印刷機能をご利用ください。');
+                    window.print();
+                }
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                alert('PDF生成中にエラーが発生しました。印刷機能をお試しください。');
+                window.print();
+            }
+        }
+
+        // CSV出力機能
+        function exportToCSV() {
+            const headers = ['ユーザー名', '部署', '最終アクセス', '月間会議参加数', '月間チャット数', 'ストレージ使用量(MB)', 'アプリ使用数', '利用レベル', 'ステータス'];
+            
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
+            
+            filteredData.forEach(item => {
+                const row = [
+                    `"${item.username}"`,
+                    `"${item.department}"`,
+                    `"${item.lastAccess}"`,
+                    item.meetingCount,
+                    item.chatCount,
+                    item.storageUsage,
+                    item.appCount,
+                    `"${item.usageLevel}"`,
+                    `"${item.status}"`
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'teams-usage-report.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // データ更新機能
+        function refreshData() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            loadingSpinner.style.display = 'block';
+            
+            // 実際の実装では、ここでサーバーからデータを再取得
+            setTimeout(() => {
+                loadTableData();
+                applyFilters();
+                loadingSpinner.style.display = 'none';
+                
+                // 成功メッセージ（オプション）
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> 更新完了';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }, 1000);
+        }
+
+        // 検索提案機能
+        function showSearchSuggestions() {
+            // 実装可能な拡張機能：検索履歴や人気の検索キーワードを表示
+        }
+
+        function hideSearchSuggestions() {
+            // 検索提案を非表示
+        }
+
+        // デバウンス機能（パフォーマンス最適化）
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ソート機能（追加拡張）
+        function sortTable(columnIndex, dataType = 'string') {
+            // 実装可能な拡張機能：テーブルヘッダークリックでソート
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'f':
+                        e.preventDefault();
+                        document.getElementById('searchInput').focus();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        window.print();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        exportToCSV();
+                        break;
+                }
+            }
+        });
+    </script>
 </body>
 </html>

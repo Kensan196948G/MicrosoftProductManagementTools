@@ -2102,6 +2102,226 @@ function Create-ActionButton {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $Text
     $button.Location = New-Object System.Drawing.Point($X, $Y)
+    $button.Size = New-Object System.Drawing.Size(190, 50)
+    $button.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10, [System.Drawing.FontStyle]::Bold)
+    $button.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+    $button.ForeColor = [System.Drawing.Color]::White
+    $button.FlatStyle = "Flat"
+    $button.FlatAppearance.BorderSize = 1
+    $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
+    $button.Cursor = "Hand"
+    
+    # ホバー効果
+    $button.Add_MouseEnter({
+        try {
+            $this.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
+        } catch { }
+    })
+    
+    $button.Add_MouseLeave({
+        try {
+            if ($this.Enabled) {
+                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+            }
+        } catch { }
+    })
+    
+    $button.Add_MouseDown({
+        try {
+            $this.BackColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
+        } catch { }
+    })
+    
+    $button.Add_MouseUp({
+        try {
+            if ($this.ClientRectangle.Contains($this.PointToClient([System.Windows.Forms.Cursor]::Position))) {
+                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
+            } else {
+                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+            }
+        } catch { }
+    })
+    
+    # HTMLテンプレートマッピング辞書
+    $templateMapping = @{
+        # 定期レポート (Regularreports)
+        "DailyReport" = "daily-report.html"
+        "WeeklyReport" = "weekly-report.html"
+        "MonthlyReport" = "monthly-report.html"
+        "YearlyReport" = "yearly-report.html"
+        "TestExecution" = "test-execution.html"
+        "ShowLatestDailyReport" = "user-daily-activity.html"
+        
+        # 分析レポート (Analyticreport)
+        "LicenseAnalysis" = "LicenseAnalysis.html"
+        "UsageAnalysis" = "usage-analysis.html"
+        "PerformanceAnalysis" = "performance-analysis.html"
+        "SecurityAnalysis" = "security-analysis.html"
+        "PermissionAudit" = "permission-audit.html"
+        
+        # Entra ID管理 (EntraIDManagement)
+        "UserList" = "user-list.html"
+        "MFAStatus" = "mfa-status.html"
+        "ConditionalAccess" = "conditional-access.html"
+        "SignInLogs" = "signin-logs.html"
+        
+        # Exchange Online管理 (ExchangeOnlineManagement)
+        "MailboxManagement" = "mailbox-management.html"
+        "MailFlowAnalysis" = "mail-flow-analysis.html"
+        "SpamProtectionAnalysis" = "spam-protection-analysis.html"
+        "MailDeliveryAnalysis" = "mail-delivery-analysis.html"
+        
+        # Teams管理 (TeamsManagement)
+        "TeamsUsage" = "teams-usage.html"
+        "TeamsSettingsAnalysis" = "teams-settings-analysis.html"
+        "MeetingQualityAnalysis" = "meeting-quality-analysis.html"
+        "TeamsAppAnalysis" = "teams-app-analysis.html"
+        
+        # OneDrive管理 (OneDriveManagement)
+        "StorageAnalysis" = "storage-analysis.html"
+        "SharingAnalysis" = "sharing-analysis.html"
+        "SyncErrorAnalysis" = "sync-error-analysis.html"
+        "ExternalSharingAnalysis" = "external-sharing-analysis.html"
+    }
+    
+    # テンプレートサブフォルダマッピング
+    $folderMapping = @{
+        "DailyReport" = "Regularreports"; "WeeklyReport" = "Regularreports"; "MonthlyReport" = "Regularreports"
+        "YearlyReport" = "Regularreports"; "TestExecution" = "Regularreports"; "ShowLatestDailyReport" = "Regularreports"
+        "LicenseAnalysis" = "Analyticreport"; "UsageAnalysis" = "Analyticreport"; "PerformanceAnalysis" = "Analyticreport"
+        "SecurityAnalysis" = "Analyticreport"; "PermissionAudit" = "Analyticreport"
+        "UserList" = "EntraIDManagement"; "MFAStatus" = "EntraIDManagement"; "ConditionalAccess" = "EntraIDManagement"; "SignInLogs" = "EntraIDManagement"
+        "MailboxManagement" = "ExchangeOnlineManagement"; "MailFlowAnalysis" = "ExchangeOnlineManagement"; "SpamProtectionAnalysis" = "ExchangeOnlineManagement"; "MailDeliveryAnalysis" = "ExchangeOnlineManagement"
+        "TeamsUsage" = "TeamsManagement"; "TeamsSettingsAnalysis" = "TeamsManagement"; "MeetingQualityAnalysis" = "TeamsManagement"; "TeamsAppAnalysis" = "TeamsManagement"
+        "StorageAnalysis" = "OneDriveManagement"; "SharingAnalysis" = "OneDriveManagement"; "SyncErrorAnalysis" = "OneDriveManagement"; "ExternalSharingAnalysis" = "OneDriveManagement"
+    }
+    
+    # ボタンクリックイベント
+    $actionRef = $Action
+    $button.Add_Click({
+        param($sender, $e)
+        
+        if ($sender -and $sender.GetType().Name -eq 'Button') {
+            $originalText = $sender.Text
+            Write-GuiLog "🔽 ボタンクリック開始: $originalText" "INFO"
+            $sender.Text = "🔄 処理中..."
+            $sender.Enabled = $false
+            
+            try {
+                Set-GuiProgress -Value 20 -Status "データ処理中..."
+                
+                # データ取得
+                $data = switch ($actionRef) {
+                    "DailyReport" { 
+                        Get-RealM365Data -DataType "DailyActivity" -MaxUsers 999999
+                    }
+                    default {
+                        Get-RealM365Data -DataType "DailyActivity" -MaxUsers 999999
+                    }
+                }
+                
+                if ($data -and $data.Count -gt 0) {
+                    Set-GuiProgress -Value 50 -Status "HTMLテンプレート処理中..."
+                    
+                    # レポート名とファイルパス設定
+                    $reportName = "${actionRef}日次レポート"
+                    $safeReportName = $reportName -replace '[\\/:*?"<>|]', '_'
+                    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                    $reportsDir = Join-Path $PSScriptRoot "..\Reports\General"
+                    
+                    if (-not (Test-Path $reportsDir)) {
+                        New-Item -ItemType Directory -Path $reportsDir -Force | Out-Null
+                    }
+                    
+                    $csvPath = Join-Path $reportsDir "${safeReportName}_${timestamp}.csv"
+                    $htmlPath = Join-Path $reportsDir "${safeReportName}_${timestamp}.html"
+                    
+                    # CSV出力
+                    $data | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
+                    Write-GuiLog "✅ CSVファイル出力完了: $csvPath" "SUCCESS"
+                    
+                    # HTMLテンプレート処理
+                    $templateFile = $templateMapping[$actionRef]
+                    $templateFolder = $folderMapping[$actionRef]
+                    
+                    if ($templateFile -and $templateFolder) {
+                        $templatePath = Join-Path $PSScriptRoot "..\Templates\Samples\$templateFolder\$templateFile"
+                        
+                        if (Test-Path $templatePath) {
+                            Set-GuiProgress -Value 80 -Status "HTMLレポート生成中..."
+                            
+                            $htmlContent = Get-Content $templatePath -Raw -Encoding UTF8
+                            
+                            # プレースホルダー置換
+                            $reportDate = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
+                            $dataSource = "実データ（Microsoft 365）"
+                            
+                            $htmlContent = $htmlContent -replace "{{REPORT_DATE}}", $reportDate
+                            $htmlContent = $htmlContent -replace "{{TOTAL_USERS}}", $data.Count
+                            $htmlContent = $htmlContent -replace "{{DATA_SOURCE}}", $dataSource
+                            $htmlContent = $htmlContent -replace "{{REPORT_TYPE}}", $actionRef
+                            
+                            # テーブルデータ生成
+                            $tableData = ""
+                            foreach ($row in $data) {
+                                $tableData += "<tr>"
+                                $tableData += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザー名' ?? ''))</td>"
+                                $tableData += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザープリンシパル名' ?? ''))</td>"
+                                $tableData += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'Teams活動' ?? '0'))</td>"
+                                $tableData += "<td><span class='badge badge-info'>$([System.Web.HttpUtility]::HtmlEncode($row.'活動レベル' ?? '低'))</span></td>"
+                                $tableData += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'活動スコア' ?? '0'))</td>"
+                                $tableData += "<td><span class='badge badge-success'>$([System.Web.HttpUtility]::HtmlEncode($row.'ステータス' ?? 'アクティブ'))</span></td>"
+                                $tableData += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'レポート日' ?? (Get-Date -Format 'yyyy-MM-dd')))</td>"
+                                $tableData += "</tr>"
+                            }
+                            
+                            $htmlContent = $htmlContent -replace "{{TABLE_DATA}}", $tableData
+                            $htmlContent = $htmlContent -replace "{{DAILY_ACTIVITY_DATA}}", $tableData
+                            $htmlContent = $htmlContent -replace "{{USER_DATA}}", $tableData
+                            $htmlContent = $htmlContent -replace "{{REPORT_DATA}}", $tableData
+                            
+                            # HTMLファイル出力
+                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
+                            Write-GuiLog "✅ HTMLファイル出力完了: $htmlPath" "SUCCESS"
+                            
+                            # ファイル自動表示
+                            try {
+                                Start-Process $htmlPath -ErrorAction Stop
+                                Write-GuiLog "✅ レポートを開きました" "SUCCESS"
+                            } catch {
+                                Write-GuiLog "⚠️ ファイルを開けませんでした: $($_.Exception.Message)" "WARNING"
+                            }
+                            
+                            Set-GuiProgress -Value 100 -Status "完了"
+                            Write-GuiLog "$reportName が正常に生成されました" "SUCCESS" -ShowNotification
+                            
+                        } else {
+                            Write-GuiLog "⚠️ テンプレートファイルが見つかりません: $templatePath" "WARNING"
+                        }
+                    } else {
+                        Write-GuiLog "⚠️ テンプレートマッピングが見つかりません: $actionRef" "WARNING"
+                    }
+                } else {
+                    Write-GuiLog "⚠️ データの取得に失敗しました" "WARNING"
+                }
+                
+            } catch {
+                Write-GuiLog "❌ レポート生成エラー: $($_.Exception.Message)" "ERROR" -ShowNotification
+            } finally {
+                $sender.Text = $originalText
+                $sender.Enabled = $true
+                $sender.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+                Set-GuiProgress -Hide
+                Write-GuiLog "🔼 ボタンクリック完了: $originalText" "INFO"
+            }
+        }
+    }.GetNewClosure())
+    
+    return $button
+    
+    $button = New-Object System.Windows.Forms.Button
+    $button.Text = $Text
+    $button.Location = New-Object System.Drawing.Point($X, $Y)
     $button.Size = New-Object System.Drawing.Size(190, 50)  # 幅を10px拡張してテキストの読みやすさ向上
     $button.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10, [System.Drawing.FontStyle]::Bold)
     # モダンなボタンスタイリング
@@ -2182,6 +2402,60 @@ function Create-ActionButton {
             try {
                 # データを取得
                 Set-GuiProgress -Value 20 -Status "データ処理中..."
+                # HTMLテンプレートマッピング辞書
+                $templateMapping = @{
+                    # 定期レポート (Regularreports)
+                    "DailyReport" = "daily-report.html"
+                    "WeeklyReport" = "weekly-report.html"
+                    "MonthlyReport" = "monthly-report.html"
+                    "YearlyReport" = "yearly-report.html"
+                    "TestExecution" = "test-execution.html"
+                    "ShowLatestDailyReport" = "user-daily-activity.html"
+                    
+                    # 分析レポート (Analyticreport)
+                    "LicenseAnalysis" = "LicenseAnalysis.html"
+                    "UsageAnalysis" = "usage-analysis.html"
+                    "PerformanceAnalysis" = "performance-analysis.html"
+                    "SecurityAnalysis" = "security-analysis.html"
+                    "PermissionAudit" = "permission-audit.html"
+                    
+                    # Entra ID管理 (EntraIDManagement)
+                    "UserList" = "user-list.html"
+                    "MFAStatus" = "mfa-status.html"
+                    "ConditionalAccess" = "conditional-access.html"
+                    "SignInLogs" = "signin-logs.html"
+                    
+                    # Exchange Online管理 (ExchangeOnlineManagement)
+                    "MailboxManagement" = "mailbox-management.html"
+                    "MailFlowAnalysis" = "mail-flow-analysis.html"
+                    "SpamProtectionAnalysis" = "spam-protection-analysis.html"
+                    "MailDeliveryAnalysis" = "mail-delivery-analysis.html"
+                    
+                    # Teams管理 (TeamsManagement)
+                    "TeamsUsage" = "teams-usage.html"
+                    "TeamsSettingsAnalysis" = "teams-settings-analysis.html"
+                    "MeetingQualityAnalysis" = "meeting-quality-analysis.html"
+                    "TeamsAppAnalysis" = "teams-app-analysis.html"
+                    
+                    # OneDrive管理 (OneDriveManagement)
+                    "StorageAnalysis" = "storage-analysis.html"
+                    "SharingAnalysis" = "sharing-analysis.html"
+                    "SyncErrorAnalysis" = "sync-error-analysis.html"
+                    "ExternalSharingAnalysis" = "external-sharing-analysis.html"
+                }
+                
+                # テンプレートサブフォルダマッピング
+                $folderMapping = @{
+                    "DailyReport" = "Regularreports"; "WeeklyReport" = "Regularreports"; "MonthlyReport" = "Regularreports"
+                    "YearlyReport" = "Regularreports"; "TestExecution" = "Regularreports"; "ShowLatestDailyReport" = "Regularreports"
+                    "LicenseAnalysis" = "Analyticreport"; "UsageAnalysis" = "Analyticreport"; "PerformanceAnalysis" = "Analyticreport"
+                    "SecurityAnalysis" = "Analyticreport"; "PermissionAudit" = "Analyticreport"
+                    "UserList" = "EntraIDManagement"; "MFAStatus" = "EntraIDManagement"; "ConditionalAccess" = "EntraIDManagement"; "SignInLogs" = "EntraIDManagement"
+                    "MailboxManagement" = "ExchangeOnlineManagement"; "MailFlowAnalysis" = "ExchangeOnlineManagement"; "SpamProtectionAnalysis" = "ExchangeOnlineManagement"; "MailDeliveryAnalysis" = "ExchangeOnlineManagement"
+                    "TeamsUsage" = "TeamsManagement"; "TeamsSettingsAnalysis" = "TeamsManagement"; "MeetingQualityAnalysis" = "TeamsManagement"; "TeamsAppAnalysis" = "TeamsManagement"
+                    "StorageAnalysis" = "OneDriveManagement"; "SharingAnalysis" = "OneDriveManagement"; "SyncErrorAnalysis" = "OneDriveManagement"; "ExternalSharingAnalysis" = "OneDriveManagement"
+                }
+                
                 $data = switch ($actionRef) {
                     # 定期レポート
                     "DailyReport" { 
@@ -2348,47 +2622,121 @@ function Create-ActionButton {
                         # HTML出力
                         Write-GuiLog "📄 HTMLファイル出力中..." "INFO"
                         
-                        # 新しいHTMLテンプレートを読み込み
-                        $templatePath = Join-Path $PSScriptRoot "..\Templates\Samples\daily-report-enhanced.html"
-                        if (Test-Path $templatePath) {
-                            $htmlContent = Get-Content $templatePath -Raw -Encoding UTF8
+                        # HTMLテンプレートロード関数（アクション別）
+                        function Load-HTMLTemplate {
+                            param(
+                                [string]$Action,
+                                [array]$Data,
+                                [hashtable]$TemplateMapping,
+                                [hashtable]$FolderMapping
+                            )
                             
-                            # テンプレート内のプレースホルダーを置換
-                            $reportDate = Get-Date -Format "yyyy年MM月dd日"
-                            $dataSource = if ($data -and $data.Count -gt 0) { "実データ（Microsoft 365）" } else { "ダミーデータ" }
+                            $templateFile = $TemplateMapping[$Action]
+                            $templateFolder = $FolderMapping[$Action]
                             
-                            $htmlContent = $htmlContent -replace "{{REPORT_DATE}}", $reportDate
-                            $htmlContent = $htmlContent -replace "{{TOTAL_USERS}}", $data.Count
-                            $htmlContent = $htmlContent -replace "{{DATA_SOURCE}}", $dataSource
-                            
-                            # テーブルデータを生成
-                            $tableDataHtml = ""
-                            if ($data -and $data.Count -gt 0) {
-                                foreach ($row in $data) {
-                                    $tableDataHtml += "<tr>"
-                                    $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザー名' ?? ''))</td>"
-                                    $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザープリンシパル名' ?? ''))</td>"
-                                    $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'Teams活動' ?? '0'))</td>"
-                                    $tableDataHtml += "<td><span class='badge badge-info'>$([System.Web.HttpUtility]::HtmlEncode($row.'活動レベル' ?? '低'))</span></td>"
-                                    $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'活動スコア' ?? '0'))</td>"
-                                    $tableDataHtml += "<td><span class='badge badge-success'>$([System.Web.HttpUtility]::HtmlEncode($row.'ステータス' ?? 'アクティブ'))</span></td>"
-                                    $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'レポート日' ?? (Get-Date -Format 'yyyy-MM-dd')))</td>"
-                                    $tableDataHtml += "</tr>"
-                                }
-                            } else {
-                                $tableDataHtml = "<tr><td colspan='7' style='text-align: center; padding: 2rem; color: #666;'>📋 データがありません</td></tr>"
+                            if (-not $templateFile -or -not $templateFolder) {
+                                Write-GuiLog "⚠️ テンプレートマッピングが見つかりません: $Action" "WARNING"
+                                return $null
                             }
                             
-                            $htmlContent = $htmlContent -replace "{{DAILY_ACTIVITY_DATA}}", $tableDataHtml
+                            $templatePath = Join-Path $PSScriptRoot "..\Templates\Samples\$templateFolder\$templateFile"
                             
-                            # 新しいテンプレート使用時はHTMLファイル出力して終了
+                            if (-not (Test-Path $templatePath)) {
+                                Write-GuiLog "⚠️ テンプレートファイルが見つかりません: $templatePath" "WARNING"
+                                return $null
+                            }
+                            
+                            try {
+                                $htmlContent = Get-Content $templatePath -Raw -Encoding UTF8
+                                
+                                # 共通プレースホルダーの置換
+                                $reportDate = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
+                                $dataSource = if ($Data -and $Data.Count -gt 0) { "実データ（Microsoft 365）" } else { "ダミーデータ" }
+                                $totalRecords = if ($Data) { $Data.Count } else { 0 }
+                                
+                                $htmlContent = $htmlContent -replace "{{REPORT_DATE}}", $reportDate
+                                $htmlContent = $htmlContent -replace "{{TOTAL_USERS}}", $totalRecords
+                                $htmlContent = $htmlContent -replace "{{TOTAL_RECORDS}}", $totalRecords
+                                $htmlContent = $htmlContent -replace "{{DATA_SOURCE}}", $dataSource
+                                $htmlContent = $htmlContent -replace "{{REPORT_TYPE}}", $Action
+                                
+                                # データテーブル生成（アクション別カスタマイズ）
+                                $tableData = Generate-TableData -Action $Action -Data $Data
+                                $htmlContent = $htmlContent -replace "{{TABLE_DATA}}", $tableData
+                                $htmlContent = $htmlContent -replace "{{DAILY_ACTIVITY_DATA}}", $tableData
+                                $htmlContent = $htmlContent -replace "{{USER_DATA}}", $tableData
+                                $htmlContent = $htmlContent -replace "{{REPORT_DATA}}", $tableData
+                                
+                                Write-GuiLog "✅ HTMLテンプレート読み込み成功: $templateFile" "SUCCESS"
+                                return $htmlContent
+                                
+                            } catch {
+                                Write-GuiLog "❌ HTMLテンプレート読み込みエラー: $($_.Exception.Message)" "ERROR"
+                                return $null
+                            }
+                        }
+                        
+                        # テーブルデータ生成関数（アクション別カスタマイズ）
+                        function Generate-TableData {
+                            param(
+                                [string]$Action,
+                                [array]$Data
+                            )
+                            
+                            if (-not $Data -or $Data.Count -eq 0) {
+                                return "<tr><td colspan='7' style='text-align: center; padding: 2rem; color: #666;'>📋 データがありません</td></tr>"
+                            }
+                            
+                            $tableDataHtml = ""
+                            
+                            switch ($Action) {
+                                { $_ -in @("DailyReport", "WeeklyReport", "MonthlyReport", "YearlyReport", "ShowLatestDailyReport") } {
+                                    # 定期レポート用テーブル
+                                    foreach ($row in $Data) {
+                                        $tableDataHtml += "<tr>"
+                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザー名' ?? ''))</td>"
+                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザープリンシパル名' ?? ''))</td>"
+                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'Teams活動' ?? '0'))</td>"
+                                        $tableDataHtml += "<td><span class='badge badge-info'>$([System.Web.HttpUtility]::HtmlEncode($row.'活動レベル' ?? '低'))</span></td>"
+                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'活動スコア' ?? '0'))</td>"
+                                        $tableDataHtml += "<td><span class='badge badge-success'>$([System.Web.HttpUtility]::HtmlEncode($row.'ステータス' ?? 'アクティブ'))</span></td>"
+                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'レポート日' ?? (Get-Date -Format 'yyyy-MM-dd')))</td>"
+                                        $tableDataHtml += "</tr>"
+                                    }
+                                }
+                                default {
+                                    # 汎用テーブル（他の全機能用）
+                                    if ($Data -and $Data.Count -gt 0) {
+                                        $firstRow = $Data[0]
+                                        $properties = $firstRow.PSObject.Properties.Name
+                                        
+                                        foreach ($row in $Data) {
+                                            $tableDataHtml += "<tr>"
+                                            foreach ($prop in $properties) {
+                                                $value = $row.$prop ?? ''
+                                                $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($value))</td>"
+                                            }
+                                            $tableDataHtml += "</tr>"
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            return $tableDataHtml
+                        }
+                        
+                        # 新しいHTMLテンプレートシステムを使用
+                        $htmlContent = Load-HTMLTemplate -Action $actionRef -Data $data -TemplateMapping $templateMapping -FolderMapping $folderMapping
+                        
+                        if ($htmlContent) {
+                            # HTMLファイル出力
                             $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
                             Write-GuiLog "✅ HTMLファイル出力完了: $htmlPath" "SUCCESS"
                             
                             # HTMLファイルのみを自動表示
                             try {
                                 Start-Process $htmlPath -ErrorAction Stop
-                                Write-GuiLog "✅ 日次レポートを開きました（HTML専用）" "SUCCESS"
+                                Write-GuiLog "✅ レポートを開きました（HTML専用）" "SUCCESS"
                             } catch {
                                 Write-GuiLog "⚠️ ファイルを開けませんでした: $($_.Exception.Message)" "WARNING"
                             }
@@ -2402,355 +2750,34 @@ function Create-ActionButton {
                                 $Script:PromptOutputTextBox.AppendText("📁 HTMLファイルが自動的に開かれます`r`n`r`n")
                                 $Script:PromptOutputTextBox.ScrollToCaret()
                             }
-                            return
-                        } else {
-                            # フォールバック: 基本HTMLテンプレート生成
-                            Write-GuiLog "⚠️ 新しいテンプレートが見つかりません。フォールバックテンプレートを使用します。" "WARNING"
-                            $htmlContent = @"
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>$safeReportName - Microsoft 365管理ツール</title>
-    <style>
-        body { 
-            font-family: 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .container { 
-            max-width: clamp(800px, 90vw, 1400px); 
-            margin: 0 auto; 
-            background: white; 
-            padding: clamp(20px, 3vw, 40px); 
-            border-radius: 12px; 
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-        .header { 
-            background: linear-gradient(135deg, #0078d4, #106ebe); 
-            color: white; 
-            padding: clamp(15px, 2vw, 25px); 
-            border-radius: 8px; 
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        h1 { 
-            margin: 0; 
-            font-size: clamp(1.5rem, 3vw, 2.2rem); 
-            font-weight: 600;
-        }
-        .timestamp { 
-            margin-top: 10px; 
-            font-size: clamp(0.8rem, 1.5vw, 1rem); 
-            opacity: 0.9;
-        }
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        table { 
-            width: 100%; 
-            min-width: 800px;
-            border-collapse: collapse; 
-            font-size: clamp(0.75rem, 1.2vw, 0.9rem);
-            background: white;
-        }
-        th, td { 
-            padding: clamp(6px, 1.2vw, 14px); 
-            text-align: left; 
-            border-bottom: 1px solid #e0e0e0;
-            border-right: 1px solid #f0f0f0;
-            word-wrap: break-word; 
-            overflow-wrap: break-word;
-            vertical-align: top;
-        }
-        th {
-            min-width: clamp(80px, 12vw, 150px);
-            max-width: clamp(120px, 20vw, 250px);
-        }
-        td {
-            min-width: clamp(60px, 10vw, 120px);
-            max-width: clamp(200px, 25vw, 300px);
-        }
-        /* 列幅の動的調整 */
-        th:first-child, td:first-child { 
-            min-width: clamp(100px, 15vw, 180px); /* 名前列 */
-        }
-        th:nth-child(2), td:nth-child(2) { 
-            min-width: clamp(120px, 18vw, 220px); /* メール列 */
-        }
-        th:last-child, td:last-child { 
-            border-right: none;
-            min-width: clamp(80px, 12vw, 140px); /* ステータス列 */
-        }
-        th { 
-            background: linear-gradient(135deg, #0078d4, #106ebe); 
-            color: white; 
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-        }
-        tr:nth-child(even) { background-color: #f8f9fa; }
-        tr:hover { background-color: #e3f2fd; transition: background-color 0.2s; }
-        .footer { 
-            text-align: center; 
-            margin-top: 30px; 
-            padding-top: 20px; 
-            border-top: 1px solid #e0e0e0; 
-            color: #666; 
-            font-size: clamp(0.7rem, 1.1vw, 0.85rem);
-        }
-        .record-count {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-            color: #0d47a1;
-        }
-        /* タブレット対応 (768px - 1024px) */
-        @media screen and (max-width: 1024px) {
-            .container {
-                max-width: 95vw;
-                padding: clamp(15px, 2.5vw, 30px);
-            }
-            table {
-                min-width: 600px;
-            }
-            th, td {
-                padding: clamp(4px, 1vw, 10px);
-                font-size: clamp(0.7rem, 1.1vw, 0.85rem);
-            }
-        }
-        
-        /* モバイル対応 (480px - 767px) */
-        @media screen and (max-width: 767px) {
-            .container {
-                max-width: 98vw;
-                padding: clamp(10px, 2vw, 20px);
-                margin: 10px auto;
-            }
-            .header {
-                padding: clamp(10px, 1.5vw, 20px);
-                margin-bottom: 20px;
-            }
-            h1 {
-                font-size: clamp(1.2rem, 4vw, 1.8rem);
-            }
-            .table-container {
-                margin-top: 15px;
-            }
-            table {
-                min-width: 500px;
-            }
-            th, td {
-                padding: clamp(3px, 0.8vw, 8px);
-                font-size: clamp(0.65rem, 1vw, 0.8rem);
-            }
-            .record-count {
-                padding: 8px;
-                font-size: clamp(0.8rem, 1.2vw, 0.9rem);
-            }
-        }
-        
-        /* 小型モバイル対応 (最大479px) */
-        @media screen and (max-width: 479px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                max-width: 100%;
-                padding: 15px;
-                border-radius: 8px;
-            }
-            .header {
-                padding: 15px;
-                margin-bottom: 15px;
-            }
-            h1 {
-                font-size: 1.4rem;
-            }
-            table {
-                min-width: 400px;
-                font-size: 0.7rem;
-            }
-            th, td {
-                padding: 6px 4px;
-            }
-            /* スマートフォンでの列幅調整 */
-            th:first-child, td:first-child { 
-                min-width: 80px; /* 名前列 */
-            }
-            th:nth-child(2), td:nth-child(2) { 
-                min-width: 120px; /* メール列 */
-            }
-            th:last-child, td:last-child { 
-                min-width: 60px; /* ステータス列 */
-            }
-        }
-        
-        /* 印刷対応 */
-        @media print {
-            body { 
-                background: white !important; 
-                padding: 0;
-            }
-            .container { 
-                box-shadow: none; 
-                max-width: 100%;
-                padding: 20px;
-            }
-            .header {
-                background: #0078d4 !important;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
-            }
-            table {
-                min-width: 100%;
-            }
-            th, td { 
-                padding: 6px 8px; 
-                font-size: 0.75rem;
-                border: 1px solid #ccc;
-            }
-            .table-container {
-                overflow: visible;
-                box-shadow: none;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>$safeReportName</h1>
-            <div class="timestamp">生成日時: $(Get-Date -Format "yyyy年MM月dd日 HH:mm:ss")</div>
-        </div>
-        <div class="record-count">📊 取得レコード数: $($data.Count) 件</div>
-        <table>
-"@
-
-                        # テーブルヘッダーとデータを生成
-                        if ($data -and $data.Count -gt 0) {
-                            $properties = $data[0].PSObject.Properties.Name
-                            $htmlContent += "<thead><tr>"
-                            foreach ($prop in $properties) {
-                                $htmlContent += "<th>$([System.Web.HttpUtility]::HtmlEncode($prop))</th>"
-                            }
-                            $htmlContent += "</tr></thead><tbody>"
                             
-                            # データ行を生成
-                            foreach ($row in $data) {
-                                $htmlContent += "<tr>"
-                                foreach ($prop in $properties) {
-                                    $value = $row.$prop
-                                    if ($value -eq $null) { $value = "" }
-                                    $htmlContent += "<td>$([System.Web.HttpUtility]::HtmlEncode($value.ToString()))</td>"
-                                }
-                                $htmlContent += "</tr>"
-                            }
+                            # プログレスバーを非表示（2秒後）
+                            Start-Sleep -Milliseconds 2000
+                            Set-GuiProgress -Hide
                         } else {
-                            $htmlContent += "<thead><tr><th>データ</th></tr></thead><tbody><tr><td>データが見つかりませんでした</td></tr>"
+                            # フォールバック: シンプルなHTMLレポート生成
+                            Write-GuiLog "⚠️ テンプレートが見つかりません。基本レポートを生成します。" "WARNING"
+                            
+                            # 基本レポート内容を生成
+                            $basicReportContent = "<h1>$reportName</h1><p>データ件数: $($data.Count)</p><p>生成日時: $(Get-Date)</p>"
+                            $basicReportContent | Out-File -FilePath $htmlPath -Encoding UTF8
+                            
+                            Write-GuiLog "✅ 基本レポート生成完了" "SUCCESS"
                         }
-                        
-                        $htmlContent += @"
-        </tbody>
-            </table>
-        </div>
-        <div class="footer">
-            <p>🚀 Microsoft 365統合管理ツール - 完全版 v2.0</p>
-            <p>📁 ファイル保存場所: $htmlPath</p>
-        </div>
-    </div>
-</body>
-</html>
-"@
-                        
-                        $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
-                        Write-GuiLog "✅ HTMLファイル出力完了: $htmlPath" "SUCCESS"
-                        
-                        # ファイルを自動表示
-                        try {
-                            Start-Process $htmlPath -ErrorAction Stop
-                            Write-GuiLog "✅ レポートファイルを開きました（CSV + HTML）" "SUCCESS"
-                        } catch {
-                            Write-GuiLog "⚠️ ファイルを開けませんでした: $($_.Exception.Message)" "WARNING"
-                        }
-                    } catch {
-                        # メインのファイル出力処理のエラーハンドリング
-                        Write-GuiLog "❌ ファイル出力処理でエラーが発生しました: $($_.Exception.Message)" "ERROR"
-                        
-                        # エラー情報をプロンプトタブに表示
-                        if ($Script:PromptOutputTextBox -ne $null) {
-                            $Script:PromptOutputTextBox.AppendText("❌ ファイル出力エラー: $($_.Exception.Message)`r`n")
-                            $Script:PromptOutputTextBox.ScrollToCaret()
-                        }
+                    } else {
+                        Write-GuiLog "⚠️ テンプレートマッピングが見つかりません: $actionRef" "WARNING"
                     }
-                    try { Write-GuiLog "レポートファイル出力完了: $reportName" "SUCCESS" } catch { }
-                    
-                    # 成功メッセージをログとプロンプトタブに表示
-                    Set-GuiProgress -Value 100 -Status "完了"
-                    
-                    # $reportNameが空文字列の場合の対処
-                    $displayReportName = if ([string]::IsNullOrEmpty($reportName)) { "レポート" } else { $reportName }
-                    try { Write-GuiLog "$displayReportName が正常に生成されました" "SUCCESS" -ShowNotification } catch { }
-                    if ($Script:PromptOutputTextBox -ne $null) {
-                        $Script:PromptOutputTextBox.AppendText("✅ $displayReportName が正常に生成されました`r`n")
-                        $Script:PromptOutputTextBox.AppendText("📁 ファイルが自動的に開かれます`r`n`r`n")
-                        $Script:PromptOutputTextBox.ScrollToCaret()
-                    }
-                    
-                    # プログレスバーを非表示（2秒後）
-                    Start-Sleep -Milliseconds 2000
-                    Set-GuiProgress -Hide
                 } else {
-                    Set-GuiProgress -Hide  # プログレスバーを非表示
-                    try { Write-GuiLog "データ取得に失敗しました" "WARNING" -ShowNotification } catch { }
-                    try { Write-GuiErrorLog "データ取得失敗: $reportName" "WARNING" } catch { }
-                    if ($Script:PromptOutputTextBox -ne $null) {
-                        $Script:PromptOutputTextBox.AppendText("⚠️ データの取得に失敗しました: $reportName`r`n")
-                        $Script:PromptOutputTextBox.AppendText("💡 認証状況やネットワーク接続を確認してください`r`n`r`n")
-                        $Script:PromptOutputTextBox.ScrollToCaret()
-                    }
+                    Write-GuiLog "⚠️ データの取得に失敗しました" "WARNING"
                 }
-            } catch {
-                $errorMessage = $_.Exception.Message
-                $errorType = $_.Exception.GetType().Name
-                $stackTrace = $_.ScriptStackTrace
                 
-                # 詳細エラー情報をログに出力
-                try { Write-GuiLog "レポート生成エラー: $errorMessage" "ERROR" -ShowNotification } catch { }
-                try { 
-                    Write-GuiErrorLog "レポート生成エラー詳細: $errorMessage" "ERROR"
-                    Write-GuiErrorLog "エラータイプ: $errorType" "ERROR"  
-                    Write-GuiErrorLog "スタックトレース: $stackTrace" "ERROR"
-                } catch { 
-                    # フォールバック: 直接エラーログテキストボックスに出力
-                    if ($Script:ErrorLogTextBox -ne $null) {
-                        $timestamp = Get-Date -Format "HH:mm:ss"
-                        $Script:ErrorLogTextBox.AppendText("[$timestamp] ❌ レポート生成エラー: $errorMessage`r`n")
-                        $Script:ErrorLogTextBox.AppendText("[$timestamp] 🔍 エラータイプ: $errorType`r`n")
-                        $Script:ErrorLogTextBox.ScrollToCaret()
-                    }
-                }
-                if ($Script:PromptOutputTextBox -ne $null) {
-                    $Script:PromptOutputTextBox.AppendText("❌ レポート生成エラーが発生しました`r`n")
-                    $Script:PromptOutputTextBox.AppendText("🔍 エラー詳細: $($_.Exception.Message)`r`n`r`n")
-                    $Script:PromptOutputTextBox.ScrollToCaret()
-                }
+            } catch {
+                Write-GuiLog "❌ レポート生成エラー: $($_.Exception.Message)" "ERROR" -ShowNotification
             } finally {
                 $sender.Text = $originalText
                 $sender.Enabled = $true
-                $sender.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 212)  # 元の色に戻す
-                Set-GuiProgress -Hide  # プログレスバーを非表示
-                try { Write-GuiLog "レポート生成処理完了" "INFO" } catch { }
+                $sender.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
+                Set-GuiProgress -Hide
                 Write-GuiLog "🔼 ボタンクリック完了: $originalText" "INFO"
             }
         }
@@ -3021,7 +3048,7 @@ try {
         Write-Host "✅ GUIが正常に初期化されました" -ForegroundColor Green
         Write-EarlyLog "GUI初期化完了 - アプリケーション実行開始"
         Write-GuiLog "✅ GUI初期化完了 - アプリケーション実行開始" "SUCCESS"
-        [System.Windows.Forms.Application]::Run($mainForm)
+        [System.Windows.Forms.Application]::Run([System.Windows.Forms.Form]$mainForm)
         Write-EarlyLog "アプリケーション実行終了"
     } else {
         Write-Host "❌ フォーム作成エラー: 予期しない型 $($mainForm.GetType().Name)" -ForegroundColor Red

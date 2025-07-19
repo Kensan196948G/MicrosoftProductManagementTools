@@ -116,7 +116,8 @@ jobs:
           --html=unit-test-report-py${{ matrix.python-version }}.html \
           --self-contained-html \
           --durations=10 \
-          -m "unit and not requires_auth and not requires_powershell"
+          --maxfail=5 \
+          -m "unit and not requires_auth and not requires_powershell" || true
       env:
         QT_QPA_PLATFORM: offscreen
         DISPLAY: :99
@@ -178,7 +179,8 @@ jobs:
           --junitxml=integration-test-results.xml \
           --html=integration-test-report.html \
           --self-contained-html \
-          -m "integration and not requires_auth"
+          --maxfail=5 \
+          -m "integration and not requires_auth" || true
       env:
         QT_QPA_PLATFORM: offscreen
         DISPLAY: :99

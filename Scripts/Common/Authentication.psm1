@@ -19,20 +19,19 @@ function Import-EnvFile {
         # プロジェクトルートディレクトリを特定
         $projectRoot = $PSScriptRoot
         while ($projectRoot -and $projectRoot -ne (Split-Path $projectRoot -Parent)) {
-            if (Test-Path "$projectRoot\.env") {
+            if (Test-Path (Join-Path $projectRoot ".env")) {
                 break
             }
             $projectRoot = Split-Path $projectRoot -Parent
         }
         
         $candidatePaths = @(
-            "$projectRoot\.env",
-            "$PSScriptRoot\..\..\..\.env",
-            "$PSScriptRoot/../../.env",
-            "$PSScriptRoot\..\..\.env",
-            "$PSScriptRoot/../.env",
-            "$(Split-Path $PSScriptRoot -Parent)\.env",
-            "$PWD\.env"
+            (Join-Path $projectRoot ".env"),
+            (Join-Path $PSScriptRoot ".." ".." ".." ".env"),
+            (Join-Path $PSScriptRoot ".." ".." ".env"),
+            (Join-Path $PSScriptRoot ".." ".env"),
+            (Join-Path (Split-Path $PSScriptRoot -Parent) ".env"),
+            (Join-Path $PWD ".env")
         )
         
         foreach ($path in $candidatePaths) {

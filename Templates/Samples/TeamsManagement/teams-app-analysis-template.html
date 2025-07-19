@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teams アプリ分析レポート - Microsoft 365統合管理ツール</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
+    <script>
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+    
+    <style>
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header .meta-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .header .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* コンテナ */
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        /* アクションボタンセクション */
+        .action-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        /* ボタンスタイル */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-print:hover {
+            background: #218838;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        /* データテーブル */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+        
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e1e8ed;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 13px;
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* ステータスバッジ */
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-blocked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-installed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 1200px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .action-section {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .header .stats {
+                gap: 1rem;
+            }
+            
+            .action-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* 印刷・PDF専用スタイル */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 10pt !important;
+                background: white !important;
+                color: black !important;
+            }
+            
+            .action-section,
+            .filter-section {
+                display: none !important;
+            }
+            
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm !important;
+                margin: 0 !important;
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%) !important;
+                color: white !important;
+                padding: 10mm !important;
+                margin-bottom: 5mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .table-container {
+                background: white !important;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+            }
+            
+            table {
+                width: 100% !important;
+                font-size: 8pt !important;
+                page-break-inside: auto !important;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                padding: 2mm !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                font-size: 8pt !important;
+            }
+            
+            td {
+                padding: 1.5mm !important;
+                border: 1px solid #ddd !important;
+                page-break-inside: avoid !important;
+                font-size: 7pt !important;
+            }
+            
+            tbody tr {
+                page-break-inside: avoid !important;
+            }
+        }
+        
+        /* 通知スタイル */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        .notification.info {
+            background: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1>
+                <i class="fas fa-th"></i>
+                Teams アプリ分析レポート - Microsoft 365統合管理ツール
+            </h1>
+            <div class="meta-info">
+                <div class="stats">
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>レポート日: {{REPORT_DATE}}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-th"></i>
+                        <span>総アプリ数: <strong id="totalRecords">{{TOTAL_APPS}}</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>表示中: <strong id="visibleRecords">{{TOTAL_APPS}}</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>承認済み: <strong>{{APPROVED_APPS}}</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span>データソース: {{DATA_SOURCE}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- アクションボタンセクション -->
+        <section class="action-section">
+            <button class="btn btn-primary" onclick="downloadCSV()">
+                <i class="fas fa-file-csv"></i>
+                CSVファイルをダウンロード
+            </button>
+            <button class="btn btn-secondary" onclick="downloadPDF()">
+                <i class="fas fa-file-pdf"></i>
+                PDFファイルをダウンロード
+            </button>
+            <button class="btn btn-print" onclick="printHTML()">
+                <i class="fas fa-print"></i>
+                HTMLファイル印刷
+            </button>
+        </section>
+
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-row">
+                    <!-- 検索ボックス -->
+                    <div class="search-container">
+                        <label for="searchInput">検索</label>
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               class="search-box" 
+                               placeholder="アプリ名、パブリッシャーで検索..."
+                               autocomplete="off">
+                    </div>
+                    
+                    <!-- フィルタードロップダウン -->
+                    <div class="filter-dropdown">
+                        <label for="statusFilter">アプリステータス</label>
+                        <select id="statusFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="インストール済み">インストール済み</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <label for="permissionFilter">許可ステータス</label>
+                        <select id="permissionFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="承認済み">承認済み</option>
+                            <option value="レビュー中">レビュー中</option>
+                            <option value="ブロック済み">ブロック済み</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i>
+                            リセット
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- データテーブル -->
+        <section class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">
+                    <i class="fas fa-puzzle-piece"></i>
+                    Microsoft Teams アプリ分析詳細
+                </h2>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('アプリ名')">
+                                アプリ名 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('バージョン')">
+                                バージョン <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('パブリッシャー')">
+                                パブリッシャー <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('インストール数')">
+                                インストール数 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('アクティブユーザー数')">
+                                アクティブユーザー数 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('最終使用日')">
+                                最終使用日 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('アプリステータス')">
+                                アプリステータス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('許可ステータス')">
+                                許可ステータス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('セキュリティスコア')">
+                                セキュリティスコア <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        {{APPS_DATA}}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <p><strong>Microsoft 365統合管理ツール</strong> - Teams アプリ分析レポート</p>
+        <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on {{REPORT_DATE}}</p>
+        <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // グローバル変数
+        let tableData = [];
+        let filteredData = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Teams アプリ分析レポート初期化開始');
+            initializeTable();
+            setupEventListeners();
+            console.log('Teams アプリ分析レポート初期化完了');
+        });
+        
+        // テーブル初期化
+        function initializeTable() {
+            const table = document.getElementById('dataTable');
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            tableData = [];
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                const rowData = {
+                    'アプリ名': cells[0]?.textContent.trim() || '',
+                    'バージョン': cells[1]?.textContent.trim() || '',
+                    'パブリッシャー': cells[2]?.textContent.trim() || '',
+                    'インストール数': cells[3]?.textContent.trim() || '',
+                    'アクティブユーザー数': cells[4]?.textContent.trim() || '',
+                    '最終使用日': cells[5]?.textContent.trim() || '',
+                    'アプリステータス': cells[6]?.textContent.trim() || '',
+                    '許可ステータス': cells[7]?.textContent.trim() || '',
+                    'セキュリティスコア': cells[8]?.textContent.trim() || '',
+                    _element: row,
+                    _index: index
+                };
+                tableData.push(rowData);
+            });
+            
+            filteredData = [...tableData];
+            updateStats();
+        }
+        
+        // イベントリスナー設定
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const permissionFilter = document.getElementById('permissionFilter');
+            
+            searchInput.addEventListener('input', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+            permissionFilter.addEventListener('change', applyFilters);
+        }
+        
+        // フィルター適用
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const permissionFilter = document.getElementById('permissionFilter').value;
+            
+            filteredData = tableData.filter(row => {
+                // 検索フィルター
+                if (searchQuery) {
+                    const searchMatch = 
+                        row['アプリ名'].toLowerCase().includes(searchQuery) ||
+                        row['パブリッシャー'].toLowerCase().includes(searchQuery);
+                    if (!searchMatch) return false;
+                }
+                
+                // アプリステータスフィルター
+                if (statusFilter && row['アプリステータス'] !== statusFilter) {
+                    return false;
+                }
+                
+                // 許可ステータスフィルター
+                if (permissionFilter && row['許可ステータス'] !== permissionFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            updateTable();
+            updateStats();
+        }
+        
+        // テーブル表示更新
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            // 全行を非表示
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // フィルター済みデータのみ表示
+            filteredData.forEach(rowData => {
+                if (rowData._element) {
+                    rowData._element.style.display = '';
+                }
+            });
+        }
+        
+        // 統計更新
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = tableData.length;
+            document.getElementById('visibleRecords').textContent = filteredData.length;
+        }
+        
+        // テーブルソート
+        function sortTable(columnName) {
+            if (sortColumn === columnName) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnName;
+                sortDirection = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let valueA = a[columnName];
+                let valueB = b[columnName];
+                
+                // 数値の特別処理
+                if (columnName === 'インストール数' || columnName === 'アクティブユーザー数' || columnName === 'セキュリティスコア') {
+                    const numA = parseFloat(valueA.toString().replace(/[^0-9.]/g, '')) || 0;
+                    const numB = parseFloat(valueB.toString().replace(/[^0-9.]/g, '')) || 0;
+                    return sortDirection === 'asc' ? numA - numB : numB - numA;
+                }
+                
+                // 日時の特別処理
+                if (columnName === '最終使用日') {
+                    const dateA = new Date(valueA);
+                    const dateB = new Date(valueB);
+                    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                
+                // 文字列比較
+                valueA = valueA.toString().toLowerCase();
+                valueB = valueB.toString().toLowerCase();
+                
+                if (sortDirection === 'asc') {
+                    return valueA.localeCompare(valueB, 'ja');
+                } else {
+                    return valueB.localeCompare(valueA, 'ja');
+                }
+            });
+            
+            updateSortIcons();
+            updateTable();
+        }
+        
+        // ソートアイコン更新
+        function updateSortIcons() {
+            const headers = document.querySelectorAll('#dataTable th');
+            headers.forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (icon) {
+                    icon.className = 'fas fa-sort sort-icon';
+                    
+                    const headerText = header.textContent.trim().split(' ')[0];
+                    if (headerText === sortColumn) {
+                        if (sortDirection === 'asc') {
+                            header.classList.add('sorted-asc');
+                            icon.className = 'fas fa-sort-up sort-icon';
+                        } else {
+                            header.classList.add('sorted-desc');
+                            icon.className = 'fas fa-sort-down sort-icon';
+                        }
+                    }
+                }
+            });
+        }
+        
+        // フィルターリセット
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('permissionFilter').value = '';
+            
+            filteredData = [...tableData];
+            sortColumn = null;
+            sortDirection = 'asc';
+            
+            updateTable();
+            updateStats();
+            updateSortIcons();
+            showNotification('フィルターをリセットしました', 'info');
+        }
+        
+        // CSV ダウンロード
+        function downloadCSV() {
+            showNotification('📄 CSV生成中...', 'info');
+            
+            const headers = ['アプリ名', 'バージョン', 'パブリッシャー', 'インストール数', 'アクティブユーザー数', '最終使用日', 'アプリステータス', '許可ステータス', 'セキュリティスコア'];
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
+            
+            filteredData.forEach(row => {
+                const rowData = headers.map(header => {
+                    let value = row[header] || '';
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            const now = new Date();
+            const filename = `Teams_アプリ分析レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.csv`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            showNotification('✅ CSVダウンロード完了！', 'success');
+        }
+        
+        // PDF ダウンロード
+        function downloadPDF() {
+            showNotification('📄 PDF生成中...', 'info');
+            
+            const now = new Date();
+            const filename = `Teams_アプリ分析レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
+            
+            // html2pdfを使用
+            if (typeof html2pdf !== 'undefined') {
+                const element = document.body;
+                const options = {
+                    margin: [10, 10, 10, 10],
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2, 
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'landscape',
+                        compress: true
+                    },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+                
+                html2pdf().set(options).from(element).save().then(() => {
+                    showNotification('✅ PDFダウンロード完了！', 'success');
+                }).catch(error => {
+                    console.error('PDF生成エラー:', error);
+                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                });
+            } else {
+                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+            }
+        }
+        
+        // HTML 印刷
+        function printHTML() {
+            showNotification('🖨️ 印刷準備中...', 'info');
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+        
+        // 通知表示
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -3,41 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teams使用状況レポート - Microsoft 365統合管理ツール</title>
+    <title>Teams使用状況サンプルレポート - Microsoft 365統合管理ツール</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 日本語フォント読み込み -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
     <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            if (typeof window.jsPDF === 'undefined') {
-                if (typeof jsPDF !== 'undefined') {
-                    window.jsPDF = jsPDF;
-                }
-            }
-            initializeTable();
-        });
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
     </script>
     
     <style>
         /* 基本スタイル */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         
         body {
-            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'MS Gothic', sans-serif;
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'MS Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #f5f7fa;
             color: #333;
             line-height: 1.6;
             font-size: 14px;
         }
         
+        /* ヘッダー */
         .header {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a2b90 100%);
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
             color: white;
             padding: 2rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -69,6 +113,7 @@
             gap: 0.5rem;
         }
         
+        /* コンテナ */
         .container {
             width: 100%;
             max-width: 100%;
@@ -76,6 +121,67 @@
             padding: 1rem;
         }
         
+        /* アクションボタンセクション */
+        .action-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        /* ボタンスタイル */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-print:hover {
+            background: #218838;
+        }
+        
+        /* フィルターセクション */
         .filter-section {
             background: white;
             padding: 1.5rem;
@@ -84,13 +190,21 @@
             margin-bottom: 2rem;
         }
         
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
         .filter-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 1rem;
             align-items: end;
         }
         
+        /* 検索ボックス */
         .search-container {
             position: relative;
         }
@@ -113,8 +227,8 @@
         
         .search-box:focus {
             outline: none;
-            border-color: #6f42c1;
-            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
         }
         
         .search-icon {
@@ -124,37 +238,7 @@
             color: #999;
         }
         
-        .search-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #e1e8ed;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .search-suggestions.active { display: block; }
-        
-        .suggestion-item {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .suggestion-item:hover { background-color: #f5f7fa; }
-        .suggestion-item.selected { background-color: #e3f2fd; }
-        
-        .filter-dropdown {
-            position: relative;
-        }
-        
+        /* ドロップダウン */
         .filter-dropdown label {
             display: block;
             margin-bottom: 0.5rem;
@@ -175,78 +259,11 @@
         
         .dropdown-select:focus {
             outline: none;
-            border-color: #6f42c1;
-            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
         }
         
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            justify-content: center;
-            white-space: nowrap;
-        }
-        
-        .btn-primary {
-            background: #6f42c1;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #5a2b90;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #f5f7fa;
-            color: #555;
-            border: 1px solid #e1e8ed;
-        }
-        
-        .btn-secondary:hover { background: #e1e8ed; }
-        
-        .btn-print {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-print:hover { background: #218838; }
-        
-        .active-filters {
-            margin-top: 1rem;
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .filter-tag {
-            background: #e8d9f3;
-            color: #5a2b90;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .filter-tag .remove {
-            cursor: pointer;
-            font-size: 1.1rem;
-            line-height: 1;
-            opacity: 0.7;
-        }
-        
-        .filter-tag .remove:hover { opacity: 1; }
-        
+        /* データテーブル */
         .table-container {
             background: white;
             border-radius: 8px;
@@ -269,7 +286,9 @@
             color: #333;
         }
         
-        .table-wrapper { overflow-x: auto; }
+        .table-wrapper {
+            overflow-x: auto;
+        }
         
         table {
             width: 100%;
@@ -279,7 +298,7 @@
         
         th {
             background: #f8f9fa;
-            padding: 0.5rem;
+            padding: 0.75rem;
             text-align: left;
             font-weight: 600;
             color: #555;
@@ -290,11 +309,12 @@
             cursor: pointer;
             user-select: none;
             white-space: nowrap;
-            font-size: 12px;
-            max-width: 150px;
+            font-size: 13px;
         }
         
-        th:hover { background: #e9ecef; }
+        th:hover {
+            background: #e9ecef;
+        }
         
         th .sort-icon {
             float: right;
@@ -302,85 +322,57 @@
         }
         
         th.sorted-asc .sort-icon,
-        th.sorted-desc .sort-icon { opacity: 1; }
+        th.sorted-desc .sort-icon {
+            opacity: 1;
+        }
         
         td {
-            padding: 0.4rem 0.5rem;
+            padding: 0.75rem;
             border-bottom: 1px solid #e1e8ed;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 150px;
-            font-size: 12px;
+            font-size: 13px;
         }
         
-        td:hover {
-            white-space: normal;
-            word-wrap: break-word;
-            overflow: visible;
-            z-index: 1;
-            position: relative;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        tbody tr {
+            transition: background-color 0.2s;
         }
         
-        tbody tr { transition: background-color 0.2s; }
-        tbody tr:hover { background-color: #f8f9fa; }
-        tbody tr.filtered-out { display: none; }
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
         
+        /* ステータスバッジ */
         .badge {
-            padding: 0.2rem 0.5rem;
+            padding: 0.25rem 0.5rem;
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: 500;
             display: inline-block;
         }
         
-        .badge-success { background: #d4edda; color: #155724; }
-        .badge-warning { background: #fff3cd; color: #856404; }
-        .badge-danger { background: #f8d7da; color: #721c24; }
-        .badge-info { background: #d1ecf1; color: #0c5460; }
-        
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 1.5rem;
-            background: #f8f9fa;
-            border-top: 1px solid #e1e8ed;
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
         }
         
-        .pagination button {
-            padding: 0.5rem 1rem;
-            border: 1px solid #e1e8ed;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
         }
         
-        .pagination button:hover:not(:disabled) {
-            background: #e9ecef;
-            border-color: #6f42c1;
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
         }
         
-        .pagination button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
         }
         
-        .pagination button.active {
-            background: #6f42c1;
-            color: white;
-            border-color: #6f42c1;
-        }
-        
-        .page-info {
-            margin: 0 1rem;
-            color: #666;
-        }
-        
+        /* フッター */
         .footer {
             text-align: center;
             padding: 2rem;
@@ -388,6 +380,119 @@
             font-size: 0.9rem;
         }
         
+        /* レスポンシブ */
+        @media (max-width: 1200px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .action-section {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .header .stats {
+                gap: 1rem;
+            }
+            
+            .action-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* 印刷・PDF専用スタイル */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 10pt !important;
+                background: white !important;
+                color: black !important;
+            }
+            
+            .action-section,
+            .filter-section {
+                display: none !important;
+            }
+            
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm !important;
+                margin: 0 !important;
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%) !important;
+                color: white !important;
+                padding: 10mm !important;
+                margin-bottom: 5mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .table-container {
+                background: white !important;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+            }
+            
+            table {
+                width: 100% !important;
+                font-size: 8pt !important;
+                page-break-inside: auto !important;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                padding: 2mm !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                font-size: 8pt !important;
+            }
+            
+            td {
+                padding: 1.5mm !important;
+                border: 1px solid #ddd !important;
+                page-break-inside: avoid !important;
+                font-size: 7pt !important;
+            }
+            
+            tbody tr {
+                page-break-inside: avoid !important;
+            }
+        }
+        
+        /* 通知スタイル */
         .notification {
             position: fixed;
             top: 20px;
@@ -407,129 +512,149 @@
             transform: translateX(0);
         }
         
-        .notification.success { background: #28a745; }
-        .notification.error { background: #dc3545; }
-        .notification.info { background: #6f42c1; }
-        
-        @media (max-width: 1200px) {
-            .filter-row { grid-template-columns: 1fr; gap: 1rem; }
+        .notification.success {
+            background: #28a745;
         }
         
-        @media (max-width: 768px) {
-            .container { padding: 0.5rem; }
-            .header h1 { font-size: 1.5rem; }
-            .header .stats { gap: 1rem; }
-            table { font-size: 0.8rem; }
-            th, td { padding: 0.3rem; max-width: 100px; }
+        .notification.error {
+            background: #dc3545;
         }
         
-        @media print {
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { margin: 0 !important; padding: 0 !important; font-size: 10pt !important; background: white !important; color: black !important; }
-            .filter-section, .pagination, .search-suggestions, .active-filters { display: none !important; }
-            .container { width: 100% !important; padding: 5mm !important; margin: 0 !important; }
-            .header { background: linear-gradient(135deg, #6f42c1 0%, #5a2b90 100%) !important; color: white !important; padding: 10mm !important; }
-            .header h1 { font-size: 18pt !important; }
-            table { width: 100% !important; font-size: 8pt !important; }
-            th { background: #f0f0f0 !important; color: black !important; padding: 2mm !important; font-size: 8pt !important; }
-            td { padding: 1.5mm !important; font-size: 7pt !important; }
-            .badge { padding: 0.5mm 1mm !important; font-size: 6pt !important; }
+        .notification.info {
+            background: #17a2b8;
         }
-        
-        @media screen { .pdf-only { display: none !important; } }
-        @media print { .screen-only { display: none !important; } .pdf-only { display: block !important; } }
     </style>
 </head>
 <body>
+    <!-- ヘッダー -->
     <header class="header">
         <div class="container">
             <h1>
-                <i class="fab fa-microsoft"></i>
-                Teams使用状況レポート
+                <i class="fas fa-users"></i>
+                Teams使用状況サンプルレポート - Microsoft 365統合管理ツール
             </h1>
             <div class="meta-info">
                 <div class="stats">
                     <div class="stat-item">
                         <i class="fas fa-calendar"></i>
-                        <span>生成日時: 2025年7月16日 13:40</span>
+                        <span>レポート日: 2025年7月19日 17:30</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-users"></i>
+                        <span>総ユーザー数: <strong id="totalRecords">35</strong> 件</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>表示中: <strong id="visibleRecords">35</strong> 件</span>
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-database"></i>
-                        <span>データ件数: <strong id="totalRecords">35</strong> 件</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-filter"></i>
-                        <span>表示中: <strong id="visibleRecords">35</strong> 件</span>
+                        <span>データソース: Microsoft Graph API</span>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- メインコンテンツ -->
     <main class="container">
-        <section class="filter-section screen-only">
-            <div class="filter-row">
-                <div class="search-container">
-                    <label for="searchInput">検索</label>
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="searchInput" class="search-box" placeholder="検索キーワードを入力..." autocomplete="off">
-                    <div id="searchSuggestions" class="search-suggestions"></div>
-                </div>
-                
-                <div class="filter-dropdown">
-                    <label for="filter1">ユーザー名</label>
-                    <select id="filter1" class="dropdown-select">
-                        <option value="">すべて</option>
-                    </select>
-                </div>
-                
-                <div class="filter-dropdown">
-                    <label for="filter2">アクティビティレベル</label>
-                    <select id="filter2" class="dropdown-select">
-                        <option value="">すべて</option>
-                    </select>
-                </div>
-                
-                <div class="filter-dropdown">
-                    <label for="filter3">利用頻度</label>
-                    <select id="filter3" class="dropdown-select">
-                        <option value="">すべて</option>
-                    </select>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <button class="btn btn-secondary" onclick="resetFilters()">
-                        <i class="fas fa-undo"></i> リセット
-                    </button>
-                    <button class="btn btn-print" onclick="printPDF()">
-                        <i class="fas fa-print"></i> PDF印刷
-                    </button>
-                    <button class="btn btn-primary" onclick="downloadPDF()">
-                        <i class="fas fa-download"></i> PDFダウンロード
-                    </button>
-                </div>
-            </div>
-            
-            <div id="activeFilters" class="active-filters"></div>
+        <!-- アクションボタンセクション -->
+        <section class="action-section">
+            <button class="btn btn-primary" onclick="downloadCSV()">
+                <i class="fas fa-file-csv"></i>
+                CSVファイルをダウンロード
+            </button>
+            <button class="btn btn-secondary" onclick="downloadPDF()">
+                <i class="fas fa-file-pdf"></i>
+                PDFファイルをダウンロード
+            </button>
+            <button class="btn btn-print" onclick="printHTML()">
+                <i class="fas fa-print"></i>
+                HTMLファイル印刷
+            </button>
         </section>
 
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-row">
+                    <!-- 検索ボックス -->
+                    <div class="search-container">
+                        <label for="searchInput">検索</label>
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               class="search-box" 
+                               placeholder="ユーザー名、アクティビティレベルで検索..."
+                               autocomplete="off">
+                    </div>
+                    
+                    <!-- フィルタードロップダウン -->
+                    <div class="filter-dropdown">
+                        <label for="userFilter">ユーザー名</label>
+                        <select id="userFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <label for="activityFilter">アクティビティレベル</label>
+                        <select id="activityFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="✓ 高">高</option>
+                            <option value="○ 中">中</option>
+                            <option value="△ 低">低</option>
+                            <option value="✗ 非常に低">非常に低</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i>
+                            リセット
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- データテーブル -->
         <section class="table-container">
             <div class="table-header">
-                <h2 class="table-title">Teams ユーザー利用状況</h2>
+                <h2 class="table-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Microsoft Teams ユーザー利用状況詳細
+                </h2>
             </div>
             
             <div class="table-wrapper">
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>ユーザー名</th>
-                            <th>チーム数</th>
-                            <th>メッセージ送信</th>
-                            <th>通話時間(分)</th>
-                            <th>会議参加回数</th>
-                            <th>ファイル共有</th>
-                            <th>アクティビティレベル</th>
-                            <th>利用頻度</th>
+                            <th onclick="sortTable('ユーザー名')">
+                                ユーザー名 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('チーム数')">
+                                チーム数 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('メッセージ送信')">
+                                メッセージ送信 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('通話時間')">
+                                通話時間(分) <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('会議参加回数')">
+                                会議参加回数 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('ファイル共有')">
+                                ファイル共有 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('アクティビティレベル')">
+                                アクティビティレベル <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('利用頻度')">
+                                利用頻度 <i class="fas fa-sort sort-icon"></i>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -571,29 +696,34 @@
                     </tbody>
                 </table>
             </div>
-            
-            <div class="pagination screen-only" id="pagination"></div>
         </section>
     </main>
 
+    <!-- フッター -->
     <footer class="footer">
-        <p>Microsoft 365統合管理ツール - Teams使用状況レポート</p>
-        <p>PowerShell 7.5.1 | Generated on 2025-07-16 13:40</p>
+        <p><strong>Microsoft 365統合管理ツール</strong> - Teams使用状況サンプルレポート</p>
+        <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on 2025年7月19日 17:30</p>
+        <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
     </footer>
 
+    <!-- JavaScript -->
     <script>
+        // グローバル変数
         let tableData = [];
         let filteredData = [];
-        let currentPage = 1;
-        let itemsPerPage = 50;
         let sortColumn = null;
         let sortDirection = 'asc';
-        let activeFilters = {};
-        let currentSuggestionIndex = -1;
         
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Teams使用状況サンプルレポート初期化開始');
+            initializeTable();
+            setupEventListeners();
+            console.log('Teams使用状況サンプルレポート初期化完了');
+        });
+        
+        // テーブル初期化
         function initializeTable() {
-            console.log('テーブル初期化開始');
-            
             const table = document.getElementById('dataTable');
             const tbody = table.querySelector('tbody');
             const rows = tbody.querySelectorAll('tr');
@@ -601,50 +731,107 @@
             tableData = [];
             rows.forEach((row, index) => {
                 const cells = row.querySelectorAll('td');
-                const rowData = {};
-                cells.forEach((cell, cellIndex) => {
-                    const th = table.querySelector(`thead tr th:nth-child(${cellIndex + 1})`);
-                    const columnName = th ? th.textContent.trim() : `Column${cellIndex}`;
-                    
-                    const badge = cell.querySelector('.badge');
-                    let cellValue = cell.textContent.trim();
-                    if (badge) {
-                        cellValue = badge.textContent.trim();
-                    }
-                    
-                    rowData[columnName] = cellValue;
-                    rowData._element = row;
-                    rowData._index = index;
-                });
+                const rowData = {
+                    'ユーザー名': cells[0]?.textContent.trim() || '',
+                    'チーム数': cells[1]?.textContent.trim() || '',
+                    'メッセージ送信': cells[2]?.textContent.trim() || '',
+                    '通話時間': cells[3]?.textContent.trim() || '',
+                    '会議参加回数': cells[4]?.textContent.trim() || '',
+                    'ファイル共有': cells[5]?.textContent.trim() || '',
+                    'アクティビティレベル': cells[6]?.textContent.trim() || '',
+                    '利用頻度': cells[7]?.textContent.trim() || '',
+                    _element: row,
+                    _index: index
+                };
                 tableData.push(rowData);
             });
             
             filteredData = [...tableData];
-            
-            initializeSorting();
-            initializeFilters();
-            initializeSearch();
-            updatePagination();
-            updateTable();
             updateStats();
-            
-            console.log('テーブル初期化完了');
+            populateFilters();
         }
         
-        function initializeSorting() {
-            const headers = document.querySelectorAll('#dataTable th');
-            headers.forEach((header, index) => {
-                header.addEventListener('click', () => {
-                    const columnName = header.textContent.trim();
-                    sortTable(columnName);
-                });
-                
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-sort sort-icon';
-                header.appendChild(icon);
+        // フィルター選択肢を動的生成
+        function populateFilters() {
+            // ユーザー名フィルター
+            const userFilter = document.getElementById('userFilter');
+            const uniqueUsers = [...new Set(tableData.map(row => row['ユーザー名']))].sort();
+            userFilter.innerHTML = '<option value="">すべて</option>';
+            uniqueUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                userFilter.appendChild(option);
             });
         }
         
+        // イベントリスナー設定
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const userFilter = document.getElementById('userFilter');
+            const activityFilter = document.getElementById('activityFilter');
+            
+            searchInput.addEventListener('input', applyFilters);
+            userFilter.addEventListener('change', applyFilters);
+            activityFilter.addEventListener('change', applyFilters);
+        }
+        
+        // フィルター適用
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const userFilter = document.getElementById('userFilter').value;
+            const activityFilter = document.getElementById('activityFilter').value;
+            
+            filteredData = tableData.filter(row => {
+                // 検索フィルター
+                if (searchQuery) {
+                    const searchMatch = 
+                        row['ユーザー名'].toLowerCase().includes(searchQuery) ||
+                        row['アクティビティレベル'].toLowerCase().includes(searchQuery);
+                    if (!searchMatch) return false;
+                }
+                
+                // ユーザー名フィルター
+                if (userFilter && row['ユーザー名'] !== userFilter) {
+                    return false;
+                }
+                
+                // アクティビティレベルフィルター
+                if (activityFilter && row['アクティビティレベル'] !== activityFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            updateTable();
+            updateStats();
+        }
+        
+        // テーブル表示更新
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            // 全行を非表示
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // フィルター済みデータのみ表示
+            filteredData.forEach(rowData => {
+                if (rowData._element) {
+                    rowData._element.style.display = '';
+                }
+            });
+        }
+        
+        // 統計更新
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = tableData.length;
+            document.getElementById('visibleRecords').textContent = filteredData.length;
+        }
+        
+        // テーブルソート
         function sortTable(columnName) {
             if (sortColumn === columnName) {
                 sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -654,16 +841,17 @@
             }
             
             filteredData.sort((a, b) => {
-                let valueA = a[columnName] || '';
-                let valueB = b[columnName] || '';
+                let valueA = a[columnName];
+                let valueB = b[columnName];
                 
-                const numA = parseFloat(valueA.replace(/[^\d.-]/g, ''));
-                const numB = parseFloat(valueB.replace(/[^\d.-]/g, ''));
-                
-                if (!isNaN(numA) && !isNaN(numB)) {
+                // 数値の特別処理
+                if (['チーム数', 'メッセージ送信', '通話時間', '会議参加回数', 'ファイル共有'].includes(columnName)) {
+                    const numA = parseFloat(valueA.toString().replace(/[^0-9.]/g, '')) || 0;
+                    const numB = parseFloat(valueB.toString().replace(/[^0-9.]/g, '')) || 0;
                     return sortDirection === 'asc' ? numA - numB : numB - numA;
                 }
                 
+                // 文字列比較
                 valueA = valueA.toString().toLowerCase();
                 valueB = valueB.toString().toLowerCase();
                 
@@ -675,467 +863,127 @@
             });
             
             updateSortIcons();
-            currentPage = 1;
             updateTable();
-            updatePagination();
         }
         
+        // ソートアイコン更新
         function updateSortIcons() {
             const headers = document.querySelectorAll('#dataTable th');
             headers.forEach(header => {
                 const icon = header.querySelector('.sort-icon');
                 header.classList.remove('sorted-asc', 'sorted-desc');
-                icon.className = 'fas fa-sort sort-icon';
-                
-                if (header.textContent.trim() === sortColumn) {
-                    if (sortDirection === 'asc') {
-                        header.classList.add('sorted-asc');
-                        icon.className = 'fas fa-sort-up sort-icon';
-                    } else {
-                        header.classList.add('sorted-desc');
-                        icon.className = 'fas fa-sort-down sort-icon';
-                    }
-                }
-            });
-        }
-        
-        function initializeFilters() {
-            const filterColumns = ['ユーザー名', 'アクティビティレベル', '利用頻度'];
-            
-            for (let i = 0; i < 3; i++) {
-                const columnName = filterColumns[i];
-                const filterId = `filter${i + 1}`;
-                const filterElement = document.getElementById(filterId);
-                
-                if (filterElement) {
-                    const uniqueValues = [...new Set(tableData.map(row => row[columnName]))].filter(v => v);
-                    uniqueValues.sort();
+                if (icon) {
+                    icon.className = 'fas fa-sort sort-icon';
                     
-                    filterElement.innerHTML = '<option value="">すべて</option>';
-                    uniqueValues.forEach(value => {
-                        const option = document.createElement('option');
-                        option.value = value;
-                        option.textContent = value;
-                        filterElement.appendChild(option);
-                    });
-                    
-                    filterElement.addEventListener('change', () => {
-                        applyFilters();
-                    });
-                }
-            }
-        }
-        
-        function initializeSearch() {
-            const searchInput = document.getElementById('searchInput');
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            
-            searchInput.addEventListener('input', function() {
-                const query = this.value.toLowerCase();
-                
-                if (query.length > 0) {
-                    const suggestions = getSuggestions(query);
-                    showSuggestions(suggestions);
-                } else {
-                    hideSuggestions();
-                }
-                
-                applyFilters();
-            });
-            
-            searchInput.addEventListener('keydown', function(e) {
-                const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
-                
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
-                    updateSuggestionSelection(suggestions);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
-                    updateSuggestionSelection(suggestions);
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (currentSuggestionIndex >= 0 && suggestions[currentSuggestionIndex]) {
-                        this.value = suggestions[currentSuggestionIndex].textContent;
-                        hideSuggestions();
-                        applyFilters();
-                    }
-                } else if (e.key === 'Escape') {
-                    hideSuggestions();
-                }
-            });
-            
-            document.addEventListener('click', function(e) {
-                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                    hideSuggestions();
-                }
-            });
-        }
-        
-        function getSuggestions(query) {
-            const suggestions = new Set();
-            
-            tableData.forEach(row => {
-                Object.values(row).forEach(value => {
-                    if (typeof value === 'string' && value.toLowerCase().includes(query)) {
-                        const words = value.split(/\s+/);
-                        words.forEach(word => {
-                            if (word.toLowerCase().includes(query)) {
-                                suggestions.add(word);
-                            }
-                        });
-                        if (value.length < 50) {
-                            suggestions.add(value);
+                    const headerText = header.textContent.trim().split(' ')[0];
+                    if (headerText === sortColumn) {
+                        if (sortDirection === 'asc') {
+                            header.classList.add('sorted-asc');
+                            icon.className = 'fas fa-sort-up sort-icon';
+                        } else {
+                            header.classList.add('sorted-desc');
+                            icon.className = 'fas fa-sort-down sort-icon';
                         }
                     }
-                });
-            });
-            
-            return Array.from(suggestions).slice(0, 10);
-        }
-        
-        function showSuggestions(suggestions) {
-            const container = document.getElementById('searchSuggestions');
-            container.innerHTML = '';
-            
-            if (suggestions.length > 0) {
-                suggestions.forEach(suggestion => {
-                    const item = document.createElement('div');
-                    item.className = 'suggestion-item';
-                    item.textContent = suggestion;
-                    item.addEventListener('click', function() {
-                        document.getElementById('searchInput').value = suggestion;
-                        hideSuggestions();
-                        applyFilters();
-                    });
-                    container.appendChild(item);
-                });
-                
-                container.classList.add('active');
-                currentSuggestionIndex = -1;
-            } else {
-                hideSuggestions();
-            }
-        }
-        
-        function hideSuggestions() {
-            const container = document.getElementById('searchSuggestions');
-            container.classList.remove('active');
-            currentSuggestionIndex = -1;
-        }
-        
-        function updateSuggestionSelection(suggestions) {
-            suggestions.forEach((item, index) => {
-                item.classList.toggle('selected', index === currentSuggestionIndex);
+                }
             });
         }
         
-        function applyFilters() {
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-            
-            activeFilters = {};
-            const filterColumns = ['ユーザー名', 'アクティビティレベル', '利用頻度'];
-            for (let i = 1; i <= 3; i++) {
-                const filterElement = document.getElementById(`filter${i}`);
-                if (filterElement && filterElement.value) {
-                    const label = filterColumns[i - 1];
-                    activeFilters[label] = filterElement.value;
-                }
-            }
-            
-            filteredData = tableData.filter(row => {
-                if (searchQuery) {
-                    const searchMatch = Object.values(row).some(value => 
-                        typeof value === 'string' && value.toLowerCase().includes(searchQuery)
-                    );
-                    if (!searchMatch) return false;
-                }
-                
-                for (const [column, value] of Object.entries(activeFilters)) {
-                    if (row[column] !== value) return false;
-                }
-                
-                return true;
-            });
-            
-            if (sortColumn) {
-                sortTable(sortColumn);
-            } else {
-                currentPage = 1;
-                updateTable();
-                updatePagination();
-            }
-            
-            updateStats();
-            updateActiveFilters();
-        }
-        
-        function updateActiveFilters() {
-            const container = document.getElementById('activeFilters');
-            container.innerHTML = '';
-            
-            const searchQuery = document.getElementById('searchInput').value;
-            if (searchQuery) {
-                addFilterTag(container, '検索', searchQuery, 'search');
-            }
-            
-            for (const [column, value] of Object.entries(activeFilters)) {
-                addFilterTag(container, column, value, column);
-            }
-        }
-        
-        function addFilterTag(container, label, value, type) {
-            const tag = document.createElement('div');
-            tag.className = 'filter-tag';
-            tag.innerHTML = `
-                <span>${label}: ${value}</span>
-                <span class="remove" onclick="removeFilter('${type}')">&times;</span>
-            `;
-            container.appendChild(tag);
-        }
-        
-        function removeFilter(type) {
-            if (type === 'search') {
-                document.getElementById('searchInput').value = '';
-            } else {
-                const filterColumns = ['ユーザー名', 'アクティビティレベル', '利用頻度'];
-                const index = filterColumns.indexOf(type);
-                if (index >= 0) {
-                    const filterElement = document.getElementById(`filter${index + 1}`);
-                    if (filterElement) {
-                        filterElement.value = '';
-                    }
-                }
-            }
-            applyFilters();
-        }
-        
+        // フィルターリセット
         function resetFilters() {
             document.getElementById('searchInput').value = '';
-            for (let i = 1; i <= 3; i++) {
-                const filterElement = document.getElementById(`filter${i}`);
-                if (filterElement) {
-                    filterElement.value = '';
-                }
-            }
-            activeFilters = {};
+            document.getElementById('userFilter').value = '';
+            document.getElementById('activityFilter').value = '';
+            
             filteredData = [...tableData];
-            currentPage = 1;
             sortColumn = null;
             sortDirection = 'asc';
+            
             updateTable();
-            updatePagination();
             updateStats();
-            updateActiveFilters();
             updateSortIcons();
             showNotification('フィルターをリセットしました', 'info');
         }
         
-        function updateStats() {
-            document.getElementById('totalRecords').textContent = tableData.length;
-            document.getElementById('visibleRecords').textContent = filteredData.length;
-        }
-        
-        function updateTable() {
-            const tbody = document.getElementById('tableBody');
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageData = filteredData.slice(startIndex, endIndex);
+        // CSV ダウンロード
+        function downloadCSV() {
+            showNotification('📄 CSV生成中...', 'info');
             
-            tbody.querySelectorAll('tr').forEach(row => {
-                row.style.display = 'none';
-            });
+            const headers = ['ユーザー名', 'チーム数', 'メッセージ送信', '通話時間(分)', '会議参加回数', 'ファイル共有', 'アクティビティレベル', '利用頻度'];
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
             
-            pageData.forEach(rowData => {
-                if (rowData._element) {
-                    rowData._element.style.display = '';
-                }
-            });
-        }
-        
-        function updatePagination() {
-            const container = document.getElementById('pagination');
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            
-            if (totalPages <= 1) {
-                container.style.display = 'none';
-                return;
-            }
-            
-            container.style.display = 'flex';
-            container.innerHTML = '';
-            
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = '前へ';
-            prevBtn.disabled = currentPage === 1;
-            prevBtn.addEventListener('click', () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    updateTable();
-                    updatePagination();
-                }
-            });
-            container.appendChild(prevBtn);
-            
-            const startPage = Math.max(1, currentPage - 2);
-            const endPage = Math.min(totalPages, currentPage + 2);
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = document.createElement('button');
-                pageBtn.textContent = i;
-                pageBtn.className = i === currentPage ? 'active' : '';
-                pageBtn.addEventListener('click', () => {
-                    currentPage = i;
-                    updateTable();
-                    updatePagination();
-                });
-                container.appendChild(pageBtn);
-            }
-            
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = '次へ';
-            nextBtn.disabled = currentPage === totalPages;
-            nextBtn.addEventListener('click', () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    updateTable();
-                    updatePagination();
-                }
-            });
-            container.appendChild(nextBtn);
-            
-            const pageInfo = document.createElement('span');
-            pageInfo.className = 'page-info';
-            pageInfo.textContent = `${currentPage} / ${totalPages} ページ`;
-            container.appendChild(pageInfo);
-        }
-        
-        function printPDF() {
-            showNotification('PDF印刷を準備中...', 'info');
-            
-            const currentFilters = { ...activeFilters };
-            const currentSearch = document.getElementById('searchInput').value;
-            
-            resetFilters();
-            
-            setTimeout(() => {
-                window.print();
-                
-                setTimeout(() => {
-                    document.getElementById('searchInput').value = currentSearch;
-                    const filterColumns = ['ユーザー名', 'アクティビティレベル', '利用頻度'];
-                    for (let i = 1; i <= 3; i++) {
-                        const filterElement = document.getElementById(`filter${i}`);
-                        const label = filterColumns[i - 1];
-                        if (currentFilters[label]) {
-                            filterElement.value = currentFilters[label];
-                        }
+            filteredData.forEach(row => {
+                const rowData = headers.map(header => {
+                    let value = row[header.replace('(分)', '')] || '';
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
                     }
-                    applyFilters();
-                }, 100);
-            }, 500);
+                    return value;
+                });
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            const now = new Date();
+            const filename = `Teams_使用状況サンプルレポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.csv`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            showNotification('✅ CSVダウンロード完了！', 'success');
         }
         
+        // PDF ダウンロード
         function downloadPDF() {
-            console.log('PDFダウンロード開始...');
             showNotification('📄 PDF生成中...', 'info');
             
             const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const filename = `Teams使用状況レポート${year}${month}${day}${hour}${minute}.pdf`;
+            const filename = `Teams_使用状況サンプルレポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
             
+            // html2pdfを使用
             if (typeof html2pdf !== 'undefined') {
-                try {
-                    console.log('html2pdfを使用してPDF生成');
-                    executeHtml2PdfDownload(filename);
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
-                }
+                const element = document.body;
+                const options = {
+                    margin: [10, 10, 10, 10],
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2, 
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'landscape',
+                        compress: true
+                    },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+                
+                html2pdf().set(options).from(element).save().then(() => {
+                    showNotification('✅ PDFダウンロード完了！', 'success');
+                }).catch(error => {
+                    console.error('PDF生成エラー:', error);
+                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                });
+            } else {
+                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
             }
-            
-            if (typeof window.jsPDF !== 'undefined' && typeof html2canvas !== 'undefined') {
-                try {
-                    console.log('jsPDF + html2canvasを使用してPDF生成');
-                    executeJsPdfDownload(filename);
-                    return;
-                } catch (error) {
-                    console.error('jsPDF エラー:', error);
-                }
-            }
-            
-            console.log('PDFライブラリが利用不可。印刷にフォールバック');
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
         }
         
-        function executeHtml2PdfDownload(filename) {
-            const element = document.body;
-            const options = {
-                margin: [10, 10, 10, 10],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true,
-                    logging: false,
-                    allowTaint: true
-                },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: 'a4', 
-                    orientation: 'landscape',
-                    compress: true
-                },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-            };
-            
-            html2pdf().set(options).from(element).save().then(() => {
-                console.log('html2pdf PDF生成完了');
-                showNotification('✅ PDFダウンロード完了！', 'success');
-            }).catch(error => {
-                console.error('html2pdf エラー:', error);
-                showNotification('❌ PDFダウンロードに失敗しました', 'error');
-                executeJsPdfDownload(filename);
-            });
+        // HTML 印刷
+        function printHTML() {
+            showNotification('🖨️ 印刷準備中...', 'info');
+            setTimeout(() => {
+                window.print();
+            }, 500);
         }
         
-        function executeJsPdfDownload(filename) {
-            const { jsPDF } = window.jsPDF;
-            
-            html2canvas(document.body, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                allowTaint: true
-            }).then(canvas => {
-                const pdf = new jsPDF('l', 'mm', 'a4');
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                const imgX = (pdfWidth - imgWidth * ratio) / 2;
-                const imgY = 0;
-                
-                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-                pdf.save(filename);
-                
-                console.log('jsPDF PDF生成完了');
-                showNotification('✅ PDFダウンロード完了！', 'success');
-            }).catch(error => {
-                console.error('jsPDF + html2canvas エラー:', error);
-                showNotification('❌ PDFダウンロードに失敗しました', 'error');
-            });
-        }
-        
+        // 通知表示
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
@@ -1149,7 +997,9 @@
             setTimeout(() => {
                 notification.classList.remove('show');
                 setTimeout(() => {
-                    document.body.removeChild(notification);
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
                 }, 300);
             }, 3000);
         }

@@ -8,12 +8,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
+    <!-- PDF生成ライブラリ（CDNフォールバック対応） -->
     <script>
+        // Primary CDN for html2pdf.js
+        function loadScript(src, fallback) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => {
+                    console.warn(`Failed to load from ${src}, trying fallback...`);
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = fallback;
+                    fallbackScript.onload = resolve;
+                    fallbackScript.onerror = reject;
+                    document.head.appendChild(fallbackScript);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Load PDF libraries with fallbacks
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 
+                  'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                  'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                  'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js');
+                  
         window.addEventListener('DOMContentLoaded', function() {
             if (typeof window.jsPDF === 'undefined') {
                 if (typeof jsPDF !== 'undefined') {
@@ -37,7 +59,7 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a2b90 100%);
+            background: linear-gradient(135deg, #6264a7 0%, #464775 100%);
             color: white;
             padding: 2rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -113,8 +135,8 @@
         
         .search-box:focus {
             outline: none;
-            border-color: #6f42c1;
-            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
+            border-color: #6264a7;
+            box-shadow: 0 0 0 3px rgba(98, 100, 167, 0.1);
         }
         
         .search-icon {
@@ -175,8 +197,8 @@
         
         .dropdown-select:focus {
             outline: none;
-            border-color: #6f42c1;
-            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
+            border-color: #6264a7;
+            box-shadow: 0 0 0 3px rgba(98, 100, 167, 0.1);
         }
         
         .btn {
@@ -195,14 +217,14 @@
         }
         
         .btn-primary {
-            background: #6f42c1;
+            background: linear-gradient(135deg, #6264a7 0%, #464775 100%);
             color: white;
         }
         
         .btn-primary:hover {
-            background: #5a2b90;
+            background: linear-gradient(135deg, #464775 0%, #6264a7 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+            box-shadow: 0 4px 12px rgba(98, 100, 167, 0.3);
         }
         
         .btn-secondary {
@@ -228,8 +250,8 @@
         }
         
         .filter-tag {
-            background: #e8d9f3;
-            color: #5a2b90;
+            background: rgba(98, 100, 167, 0.15);
+            color: #464775;
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.85rem;
@@ -362,7 +384,7 @@
         
         .pagination button:hover:not(:disabled) {
             background: #e9ecef;
-            border-color: #6f42c1;
+            border-color: #6264a7;
         }
         
         .pagination button:disabled {
@@ -371,9 +393,9 @@
         }
         
         .pagination button.active {
-            background: #6f42c1;
+            background: #6264a7;
             color: white;
-            border-color: #6f42c1;
+            border-color: #6264a7;
         }
         
         .page-info {
@@ -409,7 +431,7 @@
         
         .notification.success { background: #28a745; }
         .notification.error { background: #dc3545; }
-        .notification.info { background: #6f42c1; }
+        .notification.info { background: #6264a7; }
         
         @media (max-width: 1200px) {
             .filter-row { grid-template-columns: 1fr; gap: 1rem; }
@@ -428,7 +450,7 @@
             body { margin: 0 !important; padding: 0 !important; font-size: 10pt !important; background: white !important; color: black !important; }
             .filter-section, .pagination, .search-suggestions, .active-filters { display: none !important; }
             .container { width: 100% !important; padding: 5mm !important; margin: 0 !important; }
-            .header { background: linear-gradient(135deg, #6f42c1 0%, #5a2b90 100%) !important; color: white !important; padding: 10mm !important; }
+            .header { background: linear-gradient(135deg, #6264a7 0%, #464775 100%) !important; color: white !important; padding: 10mm !important; }
             .header h1 { font-size: 18pt !important; }
             table { width: 100% !important; font-size: 8pt !important; }
             th { background: #f0f0f0 !important; color: black !important; padding: 2mm !important; font-size: 8pt !important; }
@@ -533,41 +555,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td>田中太郎</td><td>12</td><td>145</td><td>320</td><td>15</td><td>28</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>佐藤花子</td><td>8</td><td>89</td><td>280</td><td>12</td><td>22</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>鈴木一郎</td><td>15</td><td>67</td><td>450</td><td>18</td><td>35</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>高橋美咲</td><td>6</td><td>78</td><td>180</td><td>8</td><td>15</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週4-5回</span></td></tr>
-                        <tr><td>伊藤健太</td><td>20</td><td>234</td><td>520</td><td>25</td><td>45</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>渡辺麻衣</td><td>4</td><td>23</td><td>60</td><td>3</td><td>8</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週1-2回</span></td></tr>
-                        <tr><td>山田次郎</td><td>10</td><td>156</td><td>390</td><td>14</td><td>30</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>中村雅子</td><td>7</td><td>45</td><td>120</td><td>6</td><td>12</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週3-4回</span></td></tr>
-                        <tr><td>小林直樹</td><td>18</td><td>189</td><td>480</td><td>20</td><td>38</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>加藤恵子</td><td>5</td><td>34</td><td>90</td><td>4</td><td>9</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週2-3回</span></td></tr>
-                        <tr><td>吉田浩一</td><td>13</td><td>167</td><td>360</td><td>16</td><td>32</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>松本優子</td><td>9</td><td>98</td><td>220</td><td>11</td><td>19</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週4-5回</span></td></tr>
-                        <tr><td>井上貴志</td><td>22</td><td>278</td><td>600</td><td>28</td><td>52</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>木村彩香</td><td>3</td><td>18</td><td>45</td><td>2</td><td>5</td><td><span class="badge badge-danger">✗ 非常に低</span></td><td><span class="badge badge-danger">月数回</span></td></tr>
-                        <tr><td>林智也</td><td>11</td><td>123</td><td>280</td><td>13</td><td>25</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>清水真理</td><td>6</td><td>56</td><td>140</td><td>7</td><td>14</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週3-4回</span></td></tr>
-                        <tr><td>森田和彦</td><td>16</td><td>201</td><td>420</td><td>19</td><td>40</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>池田明美</td><td>4</td><td>29</td><td>75</td><td>3</td><td>7</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週1-2回</span></td></tr>
-                        <tr><td>橋本康夫</td><td>14</td><td>178</td><td>380</td><td>17</td><td>34</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>石川由美</td><td>7</td><td>67</td><td>160</td><td>8</td><td>16</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週4-5回</span></td></tr>
-                        <tr><td>村田隆司</td><td>25</td><td>312</td><td>720</td><td>32</td><td>58</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>前田里奈</td><td>5</td><td>41</td><td>100</td><td>5</td><td>10</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週2-3回</span></td></tr>
-                        <tr><td>藤田誠</td><td>8</td><td>87</td><td>200</td><td>9</td><td>18</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週4-5回</span></td></tr>
-                        <tr><td>長谷川舞</td><td>12</td><td>134</td><td>310</td><td>14</td><td>27</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>斎藤雄大</td><td>6</td><td>52</td><td>130</td><td>6</td><td>13</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週3-4回</span></td></tr>
-                        <tr><td>安田奈々</td><td>2</td><td>12</td><td>30</td><td>1</td><td>3</td><td><span class="badge badge-danger">✗ 非常に低</span></td><td><span class="badge badge-danger">月数回</span></td></tr>
-                        <tr><td>岡田雅人</td><td>17</td><td>198</td><td>450</td><td>21</td><td>42</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>松田美穂</td><td>9</td><td>76</td><td>190</td><td>10</td><td>20</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週4-5回</span></td></tr>
-                        <tr><td>山本健治</td><td>13</td><td>145</td><td>320</td><td>15</td><td>29</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>西村桜子</td><td>4</td><td>26</td><td>65</td><td>3</td><td>6</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週1-2回</span></td></tr>
-                        <tr><td>青木隆史</td><td>19</td><td>223</td><td>510</td><td>24</td><td>48</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>中島愛美</td><td>7</td><td>63</td><td>150</td><td>7</td><td>15</td><td><span class="badge badge-info">○ 中</span></td><td><span class="badge badge-info">週3-4回</span></td></tr>
-                        <tr><td>大野修平</td><td>21</td><td>267</td><td>580</td><td>26</td><td>51</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
-                        <tr><td>小川真由美</td><td>5</td><td>38</td><td>95</td><td>4</td><td>8</td><td><span class="badge badge-warning">△ 低</span></td><td><span class="badge badge-warning">週2-3回</span></td></tr>
-                        <tr><td>金子洋介</td><td>15</td><td>176</td><td>400</td><td>18</td><td>36</td><td><span class="badge badge-success">✓ 高</span></td><td><span class="badge badge-success">毎日</span></td></tr>
+                        {{TEAMS_USAGE_SAMPLE_DATA}}
                     </tbody>
                 </table>
             </div>

@@ -69,12 +69,25 @@ class TokenCache:
                 self._cache = {}
     
     def _save_cache(self):
-        """Save cache to file."""
+        """Save cache to file with secure permissions."""
         try:
-            self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+            import os
+            import stat
+            
+            self.cache_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            
+            # Create file with secure permissions (owner read/write only)
             with open(self.cache_file, 'w') as f:
                 json.dump(self._cache, f, indent=2, default=str)
-        except Exception:
+            
+            # Set secure file permissions (600 - owner read/write only)
+            os.chmod(self.cache_file, stat.S_IRUSR | stat.S_IWUSR)
+            
+        except Exception as e:
+            # Log security-relevant errors
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to save token cache securely: {e}")
             pass  # Cache is optional
     
     def get_token(self, key: str) -> Optional[AuthenticationResult]:

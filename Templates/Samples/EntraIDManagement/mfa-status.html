@@ -9,11 +9,58 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- PDF生成ライブラリ（複数のCDN対応） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    
+    <!-- バックアップCDN読み込み関数 -->
+    <script>
+        function loadJsPDFBackup() {
+            console.log('jsPDFバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            script.onerror = function() {
+                console.error('jsPDF全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadAutoTableBackup() {
+            console.log('AutoTableバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+            script.onerror = function() {
+                console.error('AutoTable全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2CanvasBackup() {
+            console.log('html2canvasバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onerror = function() {
+                console.error('html2canvas全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadHtml2PdfBackup() {
+            console.log('html2pdfバックアップCDNから読み込み中...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onerror = function() {
+                console.error('html2pdf全CDN読み込み失敗');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
     
     <style>
         * {
@@ -31,10 +78,10 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #0f1419 0%, #2c3e50 100%);
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
             color: white;
             padding: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .header h1 {
@@ -65,11 +112,154 @@
             font-weight: 500;
         }
         
+        /* コンテナ */
         .container {
             width: 100%;
             max-width: 100%;
             margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        /* アクションボタンセクション */
+        .action-section {
+            background: white;
             padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        /* ボタンスタイル */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f7fa;
+            color: #555;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #e1e8ed;
+        }
+        
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-print:hover {
+            background: #218838;
+        }
+        
+        /* フィルターセクション */
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        /* 検索ボックス */
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            bottom: 0.9rem;
+            color: #999;
+        }
+        
+        /* ドロップダウン */
+        .filter-dropdown label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .dropdown-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
         }
         
         .table-container {
@@ -106,23 +296,46 @@
         }
         
         th {
-            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-            color: white;
-            padding: 0.8rem 1rem;
+            background: #f8f9fa;
+            padding: 0.75rem;
             text-align: left;
             font-weight: 600;
-            border: none;
+            color: #555;
+            border-bottom: 2px solid #e1e8ed;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
             white-space: nowrap;
-            font-size: 0.9rem;
+            font-size: 13px;
+        }
+        
+        th:hover {
+            background: #e9ecef;
+        }
+        
+        th .sort-icon {
+            float: right;
+            opacity: 0.5;
+        }
+        
+        th.sorted-asc .sort-icon,
+        th.sorted-desc .sort-icon {
+            opacity: 1;
         }
         
         td {
-            padding: 0.8rem 1rem;
-            border-bottom: 1px solid #f1f3f4;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e1e8ed;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: 0.9rem;
+            font-size: 13px;
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s;
         }
         
         tbody tr:hover {
@@ -139,41 +352,176 @@
             letter-spacing: 0.5px;
         }
         
-        .badge-enabled {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        .badge-有効 {
+            background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
         }
         
-        .badge-disabled {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        .badge-無効 {
+            background: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
         }
         
-        .badge-enforced {
-            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        .badge-強制 {
+            background: #d1ecf1;
             color: #0c5460;
-            border: 1px solid #bee5eb;
         }
         
-        .badge-not-required {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        .badge-不要 {
+            background: #fff3cd;
             color: #856404;
-            border: 1px solid #ffeaa7;
         }
         
+        /* フッター */
         .footer {
             text-align: center;
-            padding: 2.5rem;
-            color: white;
+            padding: 2rem;
+            color: #666;
             font-size: 0.9rem;
-            background: #2c3e50;
-            margin-top: 2rem;
         }
         
-        .footer p {
-            margin-bottom: 0.5rem;
+        /* レスポンシブ */
+        @media (max-width: 1200px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .action-section {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .header .stats {
+                gap: 1rem;
+            }
+            
+            .action-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* 印刷・PDF専用スタイル */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 10pt !important;
+                background: white !important;
+                color: black !important;
+            }
+            
+            .action-section,
+            .filter-section {
+                display: none !important;
+            }
+            
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 5mm !important;
+                margin: 0 !important;
+            }
+            
+            .header {
+                background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%) !important;
+                color: white !important;
+                padding: 10mm !important;
+                margin-bottom: 5mm !important;
+                page-break-after: avoid !important;
+            }
+            
+            .table-container {
+                background: white !important;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+            }
+            
+            table {
+                width: 100% !important;
+                font-size: 8pt !important;
+                page-break-inside: auto !important;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                padding: 2mm !important;
+                border: 1px solid #ddd !important;
+                page-break-after: avoid !important;
+                font-size: 8pt !important;
+            }
+            
+            td {
+                padding: 1.5mm !important;
+                border: 1px solid #ddd !important;
+                page-break-inside: avoid !important;
+                font-size: 7pt !important;
+            }
+            
+            tbody tr {
+                page-break-inside: avoid !important;
+            }
+        }
+        
+        /* 通知スタイル */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        .notification.info {
+            background: #17a2b8;
         }
     </style>
 </head>
@@ -202,12 +550,80 @@
                         <i class="fas fa-percentage"></i>
                         <span>MFA有効率: <strong>{{MFA_ENABLED_RATE}}</strong>%</span>
                     </div>
+                    <div class="stat-item">
+                        <i class="fas fa-eye"></i>
+                        <span>表示中: <strong id="visibleRecords">{{TOTAL_USERS}}</strong> 人</span>
+                    </div>
                 </div>
             </div>
         </div>
     </header>
 
     <main class="container">
+        <!-- アクションボタンセクション -->
+        <section class="action-section">
+            <button class="btn btn-primary" onclick="downloadCSV()">
+                <i class="fas fa-file-csv"></i>
+                CSVファイルをダウンロード
+            </button>
+            <button class="btn btn-secondary" onclick="downloadPDF()">
+                <i class="fas fa-file-pdf"></i>
+                PDFファイルをダウンロード
+            </button>
+            <button class="btn btn-print" onclick="printHTML()">
+                <i class="fas fa-print"></i>
+                HTMLファイル印刷
+            </button>
+        </section>
+
+        <!-- フィルターセクション -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-row">
+                    <!-- 検索ボックス -->
+                    <div class="search-container">
+                        <label for="searchInput">検索</label>
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               class="search-box" 
+                               placeholder="ユーザー名、メールアドレス、部署で検索..."
+                               autocomplete="off">
+                    </div>
+                    
+                    <!-- フィルタードロップダウン -->
+                    <div class="filter-dropdown">
+                        <label for="mfaStatusFilter">MFAステータス</label>
+                        <select id="mfaStatusFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="有効">有効</option>
+                            <option value="無効">無効</option>
+                            <option value="強制">強制</option>
+                            <option value="不要">不要</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <label for="riskFilter">リスクレベル</label>
+                        <select id="riskFilter" class="dropdown-select">
+                            <option value="">すべて</option>
+                            <option value="高">高</option>
+                            <option value="中">中</option>
+                            <option value="低">低</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo"></i>
+                            リセット
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- データテーブル -->
         <section class="table-container">
             <div class="table-header">
                 <div class="table-title">
@@ -220,15 +636,33 @@
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>ユーザー名</th>
-                            <th>メールアドレス</th>
-                            <th>部署</th>
-                            <th>MFAステータス</th>
-                            <th>認証方法</th>
-                            <th>フォールバック方法</th>
-                            <th>最終MFA設定日</th>
-                            <th>コンプライアンス</th>
-                            <th>リスクレベル</th>
+                            <th onclick="sortTable('ユーザー名')">
+                                ユーザー名 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('メールアドレス')">
+                                メールアドレス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('部署')">
+                                部署 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('MFAステータス')">
+                                MFAステータス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('認証方法')">
+                                認証方法 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('フォールバック方法')">
+                                フォールバック方法 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('最終MFA設定日')">
+                                最終MFA設定日 <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('コンプライアンス')">
+                                コンプライアンス <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th onclick="sortTable('リスクレベル')">
+                                リスクレベル <i class="fas fa-sort sort-icon"></i>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -244,5 +678,284 @@
         <p>PowerShell 7.5.1 | Microsoft Graph API v1.0 | Generated on {{REPORT_DATE}}</p>
         <p>© 2025 Microsoft 365統合管理システム - すべての権利を保有</p>
     </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // グローバル変数
+        let tableData = [];
+        let filteredData = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+        
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('MFA状態レポート初期化開始');
+            initializeTable();
+            setupEventListeners();
+            console.log('MFA状態レポート初期化完了');
+        });
+        
+        // テーブル初期化
+        function initializeTable() {
+            const table = document.getElementById('dataTable');
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            tableData = [];
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                const rowData = {
+                    'ユーザー名': cells[0]?.textContent.trim() || '',
+                    'メールアドレス': cells[1]?.textContent.trim() || '',
+                    '部署': cells[2]?.textContent.trim() || '',
+                    'MFAステータス': cells[3]?.textContent.trim() || '',
+                    '認証方法': cells[4]?.textContent.trim() || '',
+                    'フォールバック方法': cells[5]?.textContent.trim() || '',
+                    '最終MFA設定日': cells[6]?.textContent.trim() || '',
+                    'コンプライアンス': cells[7]?.textContent.trim() || '',
+                    'リスクレベル': cells[8]?.textContent.trim() || '',
+                    _element: row,
+                    _index: index
+                };
+                tableData.push(rowData);
+            });
+            
+            filteredData = [...tableData];
+            updateStats();
+        }
+        
+        // イベントリスナー設定
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const mfaStatusFilter = document.getElementById('mfaStatusFilter');
+            const riskFilter = document.getElementById('riskFilter');
+            
+            searchInput.addEventListener('input', applyFilters);
+            mfaStatusFilter.addEventListener('change', applyFilters);
+            riskFilter.addEventListener('change', applyFilters);
+        }
+        
+        // フィルター適用
+        function applyFilters() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const mfaStatusFilter = document.getElementById('mfaStatusFilter').value;
+            const riskFilter = document.getElementById('riskFilter').value;
+            
+            filteredData = tableData.filter(row => {
+                // 検索フィルター
+                if (searchQuery) {
+                    const searchMatch = 
+                        row['ユーザー名'].toLowerCase().includes(searchQuery) ||
+                        row['メールアドレス'].toLowerCase().includes(searchQuery) ||
+                        row['部署'].toLowerCase().includes(searchQuery);
+                    if (!searchMatch) return false;
+                }
+                
+                // MFAステータスフィルター
+                if (mfaStatusFilter && row['MFAステータス'] !== mfaStatusFilter) {
+                    return false;
+                }
+                
+                // リスクレベルフィルター
+                if (riskFilter && row['リスクレベル'] !== riskFilter) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            updateTable();
+            updateStats();
+        }
+        
+        // テーブル表示更新
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            // 全行を非表示
+            tbody.querySelectorAll('tr').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // フィルター済みデータのみ表示
+            filteredData.forEach(rowData => {
+                if (rowData._element) {
+                    rowData._element.style.display = '';
+                }
+            });
+        }
+        
+        // 統計更新
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = tableData.length;
+            document.getElementById('visibleRecords').textContent = filteredData.length;
+        }
+        
+        // テーブルソート
+        function sortTable(columnName) {
+            if (sortColumn === columnName) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnName;
+                sortDirection = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let valueA = a[columnName];
+                let valueB = b[columnName];
+                
+                // 文字列比較
+                valueA = valueA.toString().toLowerCase();
+                valueB = valueB.toString().toLowerCase();
+                
+                if (sortDirection === 'asc') {
+                    return valueA.localeCompare(valueB, 'ja');
+                } else {
+                    return valueB.localeCompare(valueA, 'ja');
+                }
+            });
+            
+            updateSortIcons();
+            updateTable();
+        }
+        
+        // ソートアイコン更新
+        function updateSortIcons() {
+            const headers = document.querySelectorAll('#dataTable th');
+            headers.forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (icon) {
+                    icon.className = 'fas fa-sort sort-icon';
+                    
+                    const headerText = header.textContent.trim().split(' ')[0];
+                    if (headerText === sortColumn) {
+                        if (sortDirection === 'asc') {
+                            header.classList.add('sorted-asc');
+                            icon.className = 'fas fa-sort-up sort-icon';
+                        } else {
+                            header.classList.add('sorted-desc');
+                            icon.className = 'fas fa-sort-down sort-icon';
+                        }
+                    }
+                }
+            });
+        }
+        
+        // フィルターリセット
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('mfaStatusFilter').value = '';
+            document.getElementById('riskFilter').value = '';
+            
+            filteredData = [...tableData];
+            sortColumn = null;
+            sortDirection = 'asc';
+            
+            updateTable();
+            updateStats();
+            updateSortIcons();
+            showNotification('フィルターをリセットしました', 'info');
+        }
+        
+        // CSV ダウンロード
+        function downloadCSV() {
+            showNotification('📄 CSV生成中...', 'info');
+            
+            const headers = ['ユーザー名', 'メールアドレス', '部署', 'MFAステータス', '認証方法', 'フォールバック方法', '最終MFA設定日', 'コンプライアンス', 'リスクレベル'];
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
+            
+            filteredData.forEach(row => {
+                const rowData = headers.map(header => {
+                    let value = row[header] || '';
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            const now = new Date();
+            const filename = `MFA状態レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.csv`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            showNotification('✅ CSVダウンロード完了！', 'success');
+        }
+        
+        // PDF ダウンロード
+        function downloadPDF() {
+            showNotification('📄 PDF生成中...', 'info');
+            
+            const now = new Date();
+            const filename = `MFA状態レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
+            
+            // html2pdfを使用
+            if (typeof html2pdf !== 'undefined') {
+                const element = document.body;
+                const options = {
+                    margin: [10, 10, 10, 10],
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2, 
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'landscape',
+                        compress: true
+                    },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+                
+                html2pdf().set(options).from(element).save().then(() => {
+                    showNotification('✅ PDFダウンロード完了！', 'success');
+                }).catch(error => {
+                    console.error('PDF生成エラー:', error);
+                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                });
+            } else {
+                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+            }
+        }
+        
+        // HTML 印刷
+        function printHTML() {
+            showNotification('🖨️ 印刷準備中...', 'info');
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+        
+        // 通知表示
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>

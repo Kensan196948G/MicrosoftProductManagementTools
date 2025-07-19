@@ -17,6 +17,8 @@ from urllib3.util.retry import Retry
 
 from src.core.config import Config
 from src.core.auth.retry_handler import RetryHandler
+from src.security.security_manager import get_security_manager
+from src.security.data_sanitizer import sanitize_for_logging
 
 
 @dataclass
@@ -65,6 +67,7 @@ class GraphClient:
         self.app = None
         self.session = self._create_session()
         self.retry_handler = RetryHandler()
+        self.security_manager = get_security_manager()
         
         # Initialize caching system (matches PowerShell implementation)
         self.data_cache: Dict[str, CacheEntry] = {
@@ -249,17 +252,20 @@ class GraphClient:
                 self.logger.info("アクセストークンを正常に取得しました")
                 return self.access_token
             else:
+                # Import sanitizer for secure error handling
+                from src.security.data_sanitizer import sanitize_error
+                
                 error = result.get('error', 'Unknown error') if result else 'No result returned'
                 error_desc = result.get('error_description', '') if result else ''
-                correlation_id = result.get('correlation_id', '') if result else ''
                 
+                # Build sanitized error message (excluding correlation_id for security)
                 error_msg = f"トークン取得に失敗: {error}"
                 if error_desc:
                     error_msg += f" - {error_desc}"
-                if correlation_id:
-                    error_msg += f" (Correlation ID: {correlation_id})"
                 
-                self.logger.error(error_msg)
+                # Sanitize error message before logging
+                sanitized_error_msg = sanitize_error(error_msg)
+                self.logger.error(sanitized_error_msg)
                 raise Exception(error_msg)
                 
         except Exception as e:

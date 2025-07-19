@@ -4,14 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日次レポート - Microsoft 365統合管理ツール</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Enhanced CDN Links with Fallbacks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';" crossorigin="anonymous">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" 
+          rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
+    
+    <!-- Enhanced PDF Generation Libraries with Fallbacks -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    
+    <!-- Enhanced Chart.js Integration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';" crossorigin="anonymous"></script>
     
     <script>
         window.addEventListener('DOMContentLoaded', function() {
@@ -477,16 +491,25 @@
                 </div>
                 
                 <div class="filter-dropdown">
-                    <label for="filter1">ユーザー名</label>
+                    <label for="filter1">日付範囲</label>
                     <select id="filter1" class="dropdown-select">
                         <option value="">すべて</option>
+                        <option value="today">今日</option>
+                        <option value="yesterday">昨日</option>
+                        <option value="week">過去7日</option>
+                        <option value="month">過去30日</option>
                     </select>
                 </div>
                 
                 <div class="filter-dropdown">
-                    <label for="filter2">ログイン状態</label>
+                    <label for="filter2">アクティビティタイプ</label>
                     <select id="filter2" class="dropdown-select">
                         <option value="">すべて</option>
+                        <option value="login">ログイン</option>
+                        <option value="email">メール</option>
+                        <option value="teams">Teams</option>
+                        <option value="onedrive">OneDrive</option>
+                        <option value="sharepoint">SharePoint</option>
                     </select>
                 </div>
                 
@@ -494,12 +517,22 @@
                     <label for="filter3">リスクレベル</label>
                     <select id="filter3" class="dropdown-select">
                         <option value="">すべて</option>
+                        <option value="low">低リスク</option>
+                        <option value="medium">中リスク</option>
+                        <option value="high">高リスク</option>
+                        <option value="critical">重大</option>
                     </select>
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                     <button class="btn btn-secondary" onclick="resetFilters()">
                         <i class="fas fa-undo"></i> リセット
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportCSV()">
+                        <i class="fas fa-file-csv"></i> CSV出力
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <i class="fas fa-refresh"></i> データ更新
                     </button>
                     <button class="btn btn-print" onclick="printPDF()">
                         <i class="fas fa-print"></i> PDF印刷
@@ -533,31 +566,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td>田中太郎</td><td>2025-07-16 09:15</td><td>3</td><td><span class="badge badge-success">✓ 正常</span></td><td>東京都</td><td>Windows PC</td><td><span class="badge badge-success">低</span></td><td>メール・Teams使用</td></tr>
-                        <tr><td>佐藤花子</td><td>2025-07-16 08:45</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>大阪府</td><td>iPhone</td><td><span class="badge badge-success">低</span></td><td>モバイル利用</td></tr>
-                        <tr><td>鈴木一郎</td><td>2025-07-16 07:30</td><td>5</td><td><span class="badge badge-warning">△ 注意</span></td><td>不明</td><td>Android</td><td><span class="badge badge-warning">中</span></td><td>場所不明でのアクセス</td></tr>
-                        <tr><td>高橋美咲</td><td>2025-07-16 10:00</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>愛知県</td><td>MacBook</td><td><span class="badge badge-success">低</span></td><td>通常業務</td></tr>
-                        <tr><td>伊藤健太</td><td>2025-07-15 23:45</td><td>7</td><td><span class="badge badge-danger">✗ 異常</span></td><td>海外</td><td>Linux PC</td><td><span class="badge badge-danger">高</span></td><td>深夜・海外アクセス</td></tr>
-                        <tr><td>渡辺麻衣</td><td>2025-07-16 09:20</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>神奈川県</td><td>iPad</td><td><span class="badge badge-success">低</span></td><td>タブレット利用</td></tr>
-                        <tr><td>山田次郎</td><td>2025-07-16 08:00</td><td>4</td><td><span class="badge badge-warning">△ 注意</span></td><td>福岡県</td><td>Windows PC</td><td><span class="badge badge-info">中</span></td><td>複数回ログイン</td></tr>
-                        <tr><td>中村雅子</td><td>2025-07-16 11:30</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>京都府</td><td>MacBook Air</td><td><span class="badge badge-success">低</span></td><td>定時内利用</td></tr>
-                        <tr><td>小林直樹</td><td>2025-07-16 06:45</td><td>6</td><td><span class="badge badge-warning">△ 注意</span></td><td>北海道</td><td>Android</td><td><span class="badge badge-warning">中</span></td><td>早朝多重アクセス</td></tr>
-                        <tr><td>加藤恵子</td><td>2025-07-16 10:15</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>千葉県</td><td>Surface Pro</td><td><span class="badge badge-success">低</span></td><td>標準利用</td></tr>
-                        <tr><td>吉田浩一</td><td>2025-07-16 09:00</td><td>3</td><td><span class="badge badge-success">✓ 正常</span></td><td>埼玉県</td><td>iPhone</td><td><span class="badge badge-success">低</span></td><td>モバイル業務</td></tr>
-                        <tr><td>松本優子</td><td>2025-07-16 08:30</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>静岡県</td><td>Windows PC</td><td><span class="badge badge-success">低</span></td><td>朝の定期アクセス</td></tr>
-                        <tr><td>井上貴志</td><td>2025-07-15 22:15</td><td>8</td><td><span class="badge badge-danger">✗ 異常</span></td><td>不明</td><td>Linux PC</td><td><span class="badge badge-danger">高</span></td><td>深夜・異常頻度</td></tr>
-                        <tr><td>木村彩香</td><td>2025-07-16 09:45</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>兵庫県</td><td>iPad Pro</td><td><span class="badge badge-success">低</span></td><td>タブレット業務</td></tr>
-                        <tr><td>林智也</td><td>2025-07-16 07:15</td><td>4</td><td><span class="badge badge-info">○ 通常</span></td><td>広島県</td><td>MacBook Pro</td><td><span class="badge badge-info">中</span></td><td>早朝開始</td></tr>
-                        <tr><td>清水真理</td><td>2025-07-16 10:30</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>茨城県</td><td>Surface Laptop</td><td><span class="badge badge-success">低</span></td><td>午前中利用</td></tr>
-                        <tr><td>森田和彦</td><td>2025-07-16 08:15</td><td>3</td><td><span class="badge badge-success">✓ 正常</span></td><td>宮城県</td><td>Android</td><td><span class="badge badge-success">低</span></td><td>通勤中アクセス</td></tr>
-                        <tr><td>池田明美</td><td>2025-07-16 11:00</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>新潟県</td><td>iPhone</td><td><span class="badge badge-success">低</span></td><td>午前業務</td></tr>
-                        <tr><td>橋本康夫</td><td>2025-07-16 06:30</td><td>5</td><td><span class="badge badge-warning">△ 注意</span></td><td>沖縄県</td><td>Windows PC</td><td><span class="badge badge-warning">中</span></td><td>早朝多頻度</td></tr>
-                        <tr><td>石川由美</td><td>2025-07-16 09:30</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>群馬県</td><td>MacBook</td><td><span class="badge badge-success">低</span></td><td>定時アクセス</td></tr>
-                        <tr><td>村田隆司</td><td>2025-07-15 21:45</td><td>9</td><td><span class="badge badge-danger">✗ 異常</span></td><td>海外</td><td>Unknown</td><td><span class="badge badge-danger">高</span></td><td>夜間・海外・不明デバイス</td></tr>
-                        <tr><td>前田里奈</td><td>2025-07-16 08:50</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>栃木県</td><td>iPad</td><td><span class="badge badge-success">低</span></td><td>朝の業務開始</td></tr>
-                        <tr><td>藤田誠</td><td>2025-07-16 10:45</td><td>1</td><td><span class="badge badge-success">✓ 正常</span></td><td>岡山県</td><td>Surface Go</td><td><span class="badge badge-success">低</span></td><td>コンパクトPC利用</td></tr>
-                        <tr><td>長谷川舞</td><td>2025-07-16 07:45</td><td>3</td><td><span class="badge badge-success">✓ 正常</span></td><td>長野県</td><td>iPhone</td><td><span class="badge badge-success">低</span></td><td>朝の確認作業</td></tr>
-                        <tr><td>斎藤雄大</td><td>2025-07-16 11:15</td><td>2</td><td><span class="badge badge-success">✓ 正常</span></td><td>山梨県</td><td>Windows Tablet</td><td><span class="badge badge-success">低</span></td><td>タブレットPC業務</td></tr>
+                        {{DAILY_REPORT_DATA}}
                     </tbody>
                 </table>
             </div>
@@ -1142,6 +1151,67 @@
                     document.body.removeChild(notification);
                 }, 300);
             }, 3000);
+        }
+        
+        // Enhanced Action Functions
+        function exportCSV() {
+            showNotification('📊 CSV出力を準備中...', 'info');
+            
+            const headers = Array.from(document.querySelectorAll('#dataTable thead th')).map(th => th.textContent.trim());
+            const rows = filteredData.map(row => 
+                headers.map(header => {
+                    const value = row[header] || '';
+                    return `"${value.toString().replace(/"/g, '""')}"`;
+                }).join(',')
+            );
+            
+            const csvContent = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
+            
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/[:-]/g, '');
+            link.setAttribute('download', `日次レポート_${timestamp}.csv`);
+            
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('✅ CSV出力完了！', 'success');
+        }
+        
+        function refreshData() {
+            showNotification('🔄 データを更新中...', 'info');
+            
+            // Simulate data refresh
+            setTimeout(() => {
+                // Here you would typically fetch new data from the server
+                // For now, we'll just show a success message
+                showNotification('✅ データ更新完了！', 'success');
+                
+                // Re-initialize table if needed
+                initializeTable();
+            }, 1500);
+        }
+        
+        function exportToExcel() {
+            showNotification('📈 Excel形式で出力中...', 'info');
+            // This would integrate with a library like SheetJS for Excel export
+            setTimeout(() => {
+                showNotification('Excel出力機能は開発中です', 'info');
+            }, 1000);
+        }
+        
+        function scheduleReport() {
+            showNotification('⏰ レポート定期実行設定...', 'info');
+            // This would open a modal for scheduling options
+            setTimeout(() => {
+                showNotification('定期実行設定は管理者機能です', 'info');
+            }, 1000);
         }
     </script>
 </body>
