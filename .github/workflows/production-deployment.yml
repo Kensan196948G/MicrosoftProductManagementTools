@@ -382,36 +382,36 @@ jobs:
         echo "Testing against: ${BASE_URL}"
         
         # Basic API tests
-        python3 -c "
+        python3 -c '
 import requests
 import sys
 
-base_url = '${BASE_URL}'
+base_url = "'"${BASE_URL}"'"
 
 try:
     # Health check
-    response = requests.get(f'{base_url}/health', timeout=10)
+    response = requests.get(f"{base_url}/health", timeout=10)
     assert response.status_code == 200
     health_data = response.json()
-    assert health_data['status'] in ['healthy', 'degraded']
-    print('✅ Health check passed')
+    assert health_data["status"] in ["healthy", "degraded"]
+    print("✅ Health check passed")
     
     # API docs
-    response = requests.get(f'{base_url}/docs', timeout=10)
+    response = requests.get(f"{base_url}/docs", timeout=10)
     assert response.status_code == 200
-    print('✅ API documentation accessible')
+    print("✅ API documentation accessible")
     
     # Metrics endpoint
-    response = requests.get(f'{base_url}/metrics', timeout=10)
+    response = requests.get(f"{base_url}/metrics", timeout=10)
     assert response.status_code == 200
-    print('✅ Metrics endpoint accessible')
+    print("✅ Metrics endpoint accessible")
     
-    print('🎉 All API integration tests passed')
+    print("🎉 All API integration tests passed")
     
 except Exception as e:
-    print(f'❌ API integration test failed: {e}')
+    print(f"❌ API integration test failed: {e}")
     sys.exit(1)
-"
+'
 
   # Notification
   notify-deployment:
