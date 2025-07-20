@@ -1,0 +1,498 @@
+name: Production Deployment Pipeline
+# Microsoft 365管理ツール - 本番環境自動デプロイ
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip test suite (emergency deployment only)'
+        required: false
+        default: false
+        type: boolean
+      force_deploy:
+        description: 'Force deployment (bypass safety checks)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # Pre-deployment validation
+  pre-deployment-checks:
+    name: 🔍 Pre-deployment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      deploy_environment: ${{ steps.env-check.outputs.environment }}
+      deploy_version: ${{ steps.version.outputs.version }}
+      docker_tag: ${{ steps.version.outputs.docker_tag }}
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🏷️ Determine version and environment
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "release" ]]; then
+          VERSION="${{ github.event.release.tag_name }}"
+          ENVIRONMENT="production"
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          VERSION="latest"
+          ENVIRONMENT="staging"
+        elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION="${GITHUB_REF#refs/tags/}"
+          ENVIRONMENT="production"
+        else
+          VERSION="dev-${GITHUB_SHA::8}"
+          ENVIRONMENT="development"
+        fi
+        
+        # Override with manual input if provided
+        if [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+        fi
+        
+        DOCKER_TAG="${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+        
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+        echo "docker_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
+        
+        echo "🏷️ Version: ${VERSION}"
+        echo "🌍 Environment: ${ENVIRONMENT}"
+        echo "🐳 Docker Tag: ${DOCKER_TAG}"
+    
+    - name: 🔍 Environment validation
+      id: env-check
+      run: |
+        ENVIRONMENT="${{ steps.version.outputs.environment }}"
+        
+        echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+        
+        # Production deployment requires specific conditions
+        if [[ "${ENVIRONMENT}" == "production" ]]; then
+          if [[ "${{ github.event_name }}" != "release" && "${{ github.event.inputs.force_deploy }}" != "true" ]]; then
+            echo "❌ Production deployment requires release or force_deploy=true"
+            exit 1
+          fi
+          
+          # Check for required secrets
+          required_secrets=("PRODUCTION_DOCKER_PASSWORD" "PRODUCTION_KUBE_CONFIG" "AZURE_CREDENTIALS")
+          for secret in "${required_secrets[@]}"; do
+            if [[ -z "${{ secrets[secret] }}" ]]; then
+              echo "❌ Required secret missing: ${secret}"
+              exit 1
+            fi
+          done
+        fi
+        
+        echo "✅ Environment validation passed for: ${ENVIRONMENT}"
+
+  # Security and quality gates
+  security-quality-gates:
+    name: 🛡️ Security & Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install bandit safety semgrep
+    
+    - name: 🔒 Security scan with Bandit
+      run: |
+        bandit -r src/ -f json -o security-report.json || true
+        bandit -r src/ --severity-level medium
+    
+    - name: 🔍 Dependency vulnerability scan
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --short-report
+    
+    - name: 📊 Code quality with SemGrep
+      run: |
+        semgrep --config=auto src/ --json --output=semgrep-report.json || true
+        semgrep --config=auto src/ --error
+    
+    - name: 🧪 Critical test execution
+      run: |
+        python -m pytest Tests/unit Tests/security -v \
+          --tb=short \
+          --maxfail=1 \
+          -m "not slow and not requires_auth"
+    
+    - name: 📈 Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          security-report.json
+          safety-report.json
+          semgrep-report.json
+
+  # Docker image build and push
+  build-and-push:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [pre-deployment-checks, security-quality-gates]
+    if: always() && (needs.security-quality-gates.result == 'success' || needs.security-quality-gates.result == 'skipped')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: 🔨 Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.production
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BUILD_DATE=${{ steps.meta.outputs.labels['org.opencontainers.image.created'] }}
+          VERSION=${{ needs.pre-deployment-checks.outputs.deploy_version }}
+          VCS_REF=${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: 🔍 Image vulnerability scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ needs.pre-deployment-checks.outputs.docker_tag }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: 📊 Upload vulnerability scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Staging deployment
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [pre-deployment-checks, build-and-push]
+    if: needs.pre-deployment-checks.outputs.deploy_environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.microsoft365tools.company.com
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Configure staging environment
+      run: |
+        echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+        echo "DOCKER_TAG=${{ needs.pre-deployment-checks.outputs.docker_tag }}" >> $GITHUB_ENV
+    
+    - name: 🐳 Deploy with Docker Compose
+      run: |
+        # Create staging-specific docker-compose override
+        cat > docker-compose.staging.yml << 'EOF'
+        version: '3.8'
+        services:
+          api:
+            image: ${{ needs.pre-deployment-checks.outputs.docker_tag }}
+            environment:
+              - ENVIRONMENT=staging
+              - LOG_LEVEL=debug
+              - ENABLE_DEBUG_ENDPOINTS=true
+            ports:
+              - "8080:8000"
+        EOF
+        
+        # Deploy to staging
+        docker-compose -f docker-compose.production.yml -f docker-compose.staging.yml up -d
+    
+    - name: 🏥 Health check
+      run: |
+        echo "Waiting for application to start..."
+        sleep 30
+        
+        # Health check with retry
+        for i in {1..5}; do
+          if curl -f http://localhost:8080/health; then
+            echo "✅ Staging deployment successful"
+            exit 0
+          fi
+          echo "⏳ Attempt $i failed, retrying in 10 seconds..."
+          sleep 10
+        done
+        
+        echo "❌ Staging deployment health check failed"
+        docker-compose logs api
+        exit 1
+
+  # Production deployment
+  deploy-production:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [pre-deployment-checks, build-and-push]
+    if: needs.pre-deployment-checks.outputs.deploy_environment == 'production'
+    environment:
+      name: production
+      url: https://microsoft365tools.company.com
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.PRODUCTION_KUBE_CONFIG }}
+    
+    - name: 🔄 Update Kubernetes deployment
+      run: |
+        # Update deployment image
+        kubectl set image deployment/m365-tools-deployment \
+          m365-tools=${{ needs.pre-deployment-checks.outputs.docker_tag }} \
+          -n microsoft-365-tools
+        
+        # Wait for rollout
+        kubectl rollout status deployment/m365-tools-deployment -n microsoft-365-tools --timeout=600s
+    
+    - name: 🏥 Production health check
+      run: |
+        echo "Waiting for deployment to stabilize..."
+        sleep 60
+        
+        # Get service endpoint
+        ENDPOINT=$(kubectl get ingress m365-tools-ingress -n microsoft-365-tools -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        # Health check with retry
+        for i in {1..10}; do
+          if curl -f "https://${ENDPOINT}/health"; then
+            echo "✅ Production deployment successful"
+            exit 0
+          fi
+          echo "⏳ Attempt $i failed, retrying in 15 seconds..."
+          sleep 15
+        done
+        
+        echo "❌ Production deployment health check failed"
+        kubectl describe deployment m365-tools-deployment -n microsoft-365-tools
+        kubectl logs -l app=m365-tools -n microsoft-365-tools --tail=100
+        exit 1
+    
+    - name: 📊 Update deployment metrics
+      run: |
+        # Record deployment metrics
+        kubectl patch deployment m365-tools-deployment -n microsoft-365-tools \
+          -p '{"metadata":{"annotations":{"deployment.kubernetes.io/revision":"'$(date +%s)'","github.com/sha":"'${{ github.sha }}'","github.com/version":"'${{ needs.pre-deployment-checks.outputs.deploy_version }}'"}}}'
+
+  # Post-deployment verification
+  post-deployment-tests:
+    name: 🧪 Post-deployment Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install test dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pytest
+    
+    - name: 🌐 API integration tests
+      run: |
+        # Determine target URL
+        if [[ "${{ needs.deploy-production.result }}" == "success" ]]; then
+          BASE_URL="https://microsoft365tools.company.com"
+        else
+          BASE_URL="http://localhost:8080"
+        fi
+        
+        echo "Testing against: ${BASE_URL}"
+        
+        # Basic API tests
+        python3 -c "
+import requests
+import sys
+
+base_url = '${BASE_URL}'
+
+try:
+    # Health check
+    response = requests.get(f'{base_url}/health', timeout=10)
+    assert response.status_code == 200
+    health_data = response.json()
+    assert health_data['status'] in ['healthy', 'degraded']
+    print('✅ Health check passed')
+    
+    # API docs
+    response = requests.get(f'{base_url}/docs', timeout=10)
+    assert response.status_code == 200
+    print('✅ API documentation accessible')
+    
+    # Metrics endpoint
+    response = requests.get(f'{base_url}/metrics', timeout=10)
+    assert response.status_code == 200
+    print('✅ Metrics endpoint accessible')
+    
+    print('🎉 All API integration tests passed')
+    
+except Exception as e:
+    print(f'❌ API integration test failed: {e}')
+    sys.exit(1)
+"
+
+  # Notification
+  notify-deployment:
+    name: 📢 Deployment Notification
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [pre-deployment-checks, deploy-staging, deploy-production, post-deployment-tests]
+    
+    steps:
+    - name: 📊 Determine deployment status
+      id: status
+      run: |
+        if [[ "${{ needs.deploy-production.result }}" == "success" ]]; then
+          STATUS="🎉 PRODUCTION DEPLOYMENT SUCCESSFUL"
+          COLOR="good"
+          ENVIRONMENT="production"
+          URL="https://microsoft365tools.company.com"
+        elif [[ "${{ needs.deploy-staging.result }}" == "success" ]]; then
+          STATUS="✅ STAGING DEPLOYMENT SUCCESSFUL"
+          COLOR="good" 
+          ENVIRONMENT="staging"
+          URL="https://staging.microsoft365tools.company.com"
+        else
+          STATUS="❌ DEPLOYMENT FAILED"
+          COLOR="danger"
+          ENVIRONMENT="${{ needs.pre-deployment-checks.outputs.deploy_environment }}"
+          URL="N/A"
+        fi
+        
+        echo "status=${STATUS}" >> $GITHUB_OUTPUT
+        echo "color=${COLOR}" >> $GITHUB_OUTPUT
+        echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+        echo "url=${URL}" >> $GITHUB_OUTPUT
+    
+    - name: 📨 Send Teams notification
+      if: always()
+      run: |
+        if [[ "${{ secrets.TEAMS_WEBHOOK_URL }}" != "" ]]; then
+          curl -X POST "${{ secrets.TEAMS_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "@type": "MessageCard",
+              "@context": "https://schema.org/extensions",
+              "summary": "Microsoft 365 Tools Deployment",
+              "themeColor": "${{ steps.status.outputs.color == 'good' && '00FF00' || 'FF0000' }}",
+              "sections": [{
+                "activityTitle": "${{ steps.status.outputs.status }}",
+                "activitySubtitle": "Environment: ${{ steps.status.outputs.environment }}",
+                "facts": [
+                  {"name": "Version", "value": "${{ needs.pre-deployment-checks.outputs.deploy_version }}"},
+                  {"name": "Commit", "value": "${{ github.sha }}"},
+                  {"name": "Actor", "value": "${{ github.actor }}"},
+                  {"name": "URL", "value": "${{ steps.status.outputs.url }}"}
+                ]
+              }]
+            }'
+        fi
+    
+    - name: 📝 Create deployment summary
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        # 🚀 Microsoft 365 Tools Deployment Summary
+        
+        ## 📊 Deployment Details
+        - **Status**: ${{ steps.status.outputs.status }}
+        - **Environment**: ${{ steps.status.outputs.environment }}
+        - **Version**: ${{ needs.pre-deployment-checks.outputs.deploy_version }}
+        - **Docker Image**: ${{ needs.pre-deployment-checks.outputs.docker_tag }}
+        - **Commit**: ${{ github.sha }}
+        - **URL**: ${{ steps.status.outputs.url }}
+        
+        ## 🔄 Job Results
+        - Pre-deployment Checks: ${{ needs.pre-deployment-checks.result }}
+        - Security Quality Gates: ${{ needs.security-quality-gates.result || 'skipped' }}
+        - Docker Build: ${{ needs.build-and-push.result }}
+        - Staging Deployment: ${{ needs.deploy-staging.result || 'skipped' }}
+        - Production Deployment: ${{ needs.deploy-production.result || 'skipped' }}
+        - Post-deployment Tests: ${{ needs.post-deployment-tests.result }}
+        
+        ## 📋 Next Steps
+        - Monitor application metrics and logs
+        - Verify all Microsoft 365 integrations
+        - Update documentation if needed
+        EOF
