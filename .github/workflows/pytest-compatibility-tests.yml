@@ -154,13 +154,13 @@ jobs:
 
       - name: テスト環境準備
         run: |
-          mkdir -p TestScripts/TestReports
-          mkdir -p tests/logs
-          mkdir -p tests/temp
+          if (-not (Test-Path "TestScripts/TestReports")) { New-Item -ItemType Directory -Path "TestScripts/TestReports" -Force }
+          if (-not (Test-Path "tests/logs")) { New-Item -ItemType Directory -Path "tests/logs" -Force }
+          if (-not (Test-Path "tests/temp")) { New-Item -ItemType Directory -Path "tests/temp" -Force }
 
       - name: ユニットテスト実行
         run: |
-          python Tests/run_test_suite.py --category unit --verbose=${{ needs.setup.outputs.verbose }}
+          python Tests/run_test_suite.py --category unit ${{ needs.setup.outputs.verbose == 'true' && '--verbose' || '' }}
         env:
           PYTHONPATH: ${{ github.workspace }}
 
@@ -217,14 +217,14 @@ jobs:
 
       - name: テスト環境準備
         run: |
-          mkdir -p TestScripts/TestReports
-          mkdir -p tests/logs
-          mkdir -p tests/temp
+          if (-not (Test-Path "TestScripts/TestReports")) { New-Item -ItemType Directory -Path "TestScripts/TestReports" -Force }
+          if (-not (Test-Path "tests/logs")) { New-Item -ItemType Directory -Path "tests/logs" -Force }
+          if (-not (Test-Path "tests/temp")) { New-Item -ItemType Directory -Path "tests/temp" -Force }
 
       - name: 統合テスト実行
         timeout-minutes: 30
         run: |
-          python Tests/run_test_suite.py --category integration --verbose=${{ needs.setup.outputs.verbose }}
+          python Tests/run_test_suite.py --category integration ${{ needs.setup.outputs.verbose == 'true' && '--verbose' || '' }}
         env:
           PYTHONPATH: ${{ github.workspace }}
 
@@ -279,16 +279,16 @@ jobs:
 
       - name: テスト環境準備
         run: |
-          mkdir -p TestScripts/TestReports
-          mkdir -p tests/logs
-          mkdir -p tests/temp
+          if (-not (Test-Path "TestScripts/TestReports")) { New-Item -ItemType Directory -Path "TestScripts/TestReports" -Force }
+          if (-not (Test-Path "tests/logs")) { New-Item -ItemType Directory -Path "tests/logs" -Force }
+          if (-not (Test-Path "tests/temp")) { New-Item -ItemType Directory -Path "tests/temp" -Force }
 
       - name: 互換性テスト実行
         timeout-minutes: 45
         run: |
           python Tests/run_test_suite.py --category compatibility \
             --skip-powershell=${{ needs.setup.outputs.skip-powershell }} \
-            --verbose=${{ needs.setup.outputs.verbose }}
+            ${{ needs.setup.outputs.verbose == 'true' && '--verbose' || '' }}
         env:
           PYTHONPATH: ${{ github.workspace }}
           TEST_TYPE: ${{ matrix.test-type }}
@@ -346,7 +346,7 @@ jobs:
       - name: GUIテスト実行
         timeout-minutes: 20
         run: |
-          python Tests/run_test_suite.py --category gui --verbose=${{ needs.setup.outputs.verbose }}
+          python Tests/run_test_suite.py --category gui ${{ needs.setup.outputs.verbose == 'true' && '--verbose' || '' }}
         env:
           PYTHONPATH: ${{ github.workspace }}
           QT_QPA_PLATFORM: offscreen
@@ -398,9 +398,9 @@ jobs:
 
       - name: テスト環境準備
         run: |
-          mkdir -p TestScripts/TestReports
-          mkdir -p tests/logs
-          mkdir -p tests/temp
+          if (-not (Test-Path "TestScripts/TestReports")) { New-Item -ItemType Directory -Path "TestScripts/TestReports" -Force }
+          if (-not (Test-Path "tests/logs")) { New-Item -ItemType Directory -Path "tests/logs" -Force }
+          if (-not (Test-Path "tests/temp")) { New-Item -ItemType Directory -Path "tests/temp" -Force }
 
       - name: 包括的テスト実行
         timeout-minutes: 60
@@ -408,7 +408,7 @@ jobs:
           python Tests/run_test_suite.py --category all \
             --skip-powershell=${{ needs.setup.outputs.skip-powershell }} \
             --skip-gui=true \
-            --verbose=${{ needs.setup.outputs.verbose }}
+            ${{ needs.setup.outputs.verbose == 'true' && '--verbose' || '' }}
         env:
           PYTHONPATH: ${{ github.workspace }}
 
@@ -460,7 +460,7 @@ jobs:
 
       - name: 依存関係脆弱性スキャン
         run: |
-          safety check --json --output safety-report.json || true
+          safety check --output json > safety-report.json || true
           cat safety-report.json
 
       - name: コードセキュリティスキャン
@@ -496,8 +496,9 @@ jobs:
       - name: レポート統合
         run: |
           mkdir -p public/reports
-          find test-results -name "*.html" -exec cp {} public/reports/ \;
-          find test-results -name "*.json" -exec cp {} public/reports/ \;
+          mkdir -p test-results
+          find test-results -name "*.html" -exec cp {} public/reports/ \; 2>/dev/null || echo "No HTML reports found"
+          find test-results -name "*.json" -exec cp {} public/reports/ \; 2>/dev/null || echo "No JSON reports found"
           
           # インデックスページ生成
           echo "<!DOCTYPE html><html><head><title>Microsoft 365管理ツール テストレポート</title></head><body>" > public/index.html

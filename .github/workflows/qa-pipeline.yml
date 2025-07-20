@@ -18,7 +18,7 @@ jobs:
     
     strategy:
       matrix:
-        python-version: [3.9, 3.11, 3.12]
+        python-version: ['3.9', '3.11', '3.12']
         
     steps:
     - name: 📥 コードチェックアウト
@@ -31,6 +31,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
+        check-latest: true
     
     - name: 📦 依存関係インストール
       run: |
@@ -56,55 +57,103 @@ jobs:
     - name: 🛡️ セキュリティスキャン
       run: |
         echo "::group::Bandit セキュリティスキャン"
-        bandit -r src/ -f json -o bandit-report.json || echo "Bandit スキャン完了"
+        if [ -d "src/" ]; then
+          if ! bandit -r src/ -f json -o bandit-report.json; then
+            echo "::warning::Banditスキャンで問題が検出されました"
+            echo "BANDIT_ISSUES=true" >> $GITHUB_ENV
+          else
+            echo "✅ Banditスキャン完了（問題なし）"
+          fi
+        else
+          echo "::warning::src/ディレクトリが見つかりません - Banditスキャンをスキップ"
+        fi
         echo "::endgroup::"
         
         echo "::group::Safety 脆弱性チェック"
-        safety check --json --output safety-report.json || echo "Safety チェック完了"
+        if ! safety check --output json > safety-report.json; then
+          echo "::warning::Safety脆弱性チェックで問題が検出されました"
+          echo "SAFETY_ISSUES=true" >> $GITHUB_ENV
+        else
+          echo "✅ Safety脆弱性チェック完了（問題なし）"
+        fi
         echo "::endgroup::"
     
     - name: 🧪 テスト実行
       run: |
         echo "::group::スタンドアロンテスト"
-        cd Tests && python standalone_tests.py || echo "スタンドアロンテスト完了"
+        if [ -d "Tests" ] && [ -f "Tests/standalone_tests.py" ]; then
+          cd Tests
+          if ! python standalone_tests.py; then
+            echo "::warning::スタンドアロンテストで失敗が発生しました"
+            echo "STANDALONE_TESTS_FAILED=true" >> $GITHUB_ENV
+          else
+            echo "✅ スタンドアロンテスト成功"
+          fi
+          cd ..
+        else
+          echo "::notice::スタンドアロンテストファイルが見つかりません"
+        fi
         echo "::endgroup::"
         
         echo "::group::基本テストランナー"
-        cd Tests && python run_basic_tests.py || echo "基本テスト完了"
+        if [ -d "Tests" ] && [ -f "Tests/run_basic_tests.py" ]; then
+          cd Tests
+          if ! python run_basic_tests.py; then
+            echo "::warning::基本テストで失敗が発生しました"
+            echo "BASIC_TESTS_FAILED=true" >> $GITHUB_ENV
+          else
+            echo "✅ 基本テスト成功"
+          fi
+          cd ..
+        else
+          echo "::notice::基本テストランナーが見つかりません"
+        fi
         echo "::endgroup::"
         
         echo "::group::カバレッジ測定"
-        cd Tests && python coverage_85_achievement.py || echo "カバレッジ測定完了"
+        if [ -d "Tests" ] && [ -f "Tests/coverage_85_achievement.py" ]; then
+          cd Tests
+          if ! python coverage_85_achievement.py; then
+            echo "::warning::カバレッジ測定で問題が発生しました"
+            echo "COVERAGE_MEASUREMENT_FAILED=true" >> $GITHUB_ENV
+          else
+            echo "✅ カバレッジ測定成功"
+          fi
+          cd ..
+        else
+          echo "::notice::カバレッジ測定ファイルが見つかりません"
+        fi
         echo "::endgroup::"
     
     - name: 📊 品質メトリクス収集
       run: |
         echo "::group::品質メトリクス"
-        python3 -c "
-import json
-import os
-from datetime import datetime
-
-metrics = {
-    'timestamp': datetime.now().isoformat(),
-    'python_version': '${{ matrix.python-version }}',
-    'branch': '${{ github.ref_name }}',
-    'commit': '${{ github.sha }}',
-    'workflow_run_id': '${{ github.run_id }}',
-    'quality_checks': {
-        'black': os.path.exists('black-report.json'),
-        'flake8': True,
-        'mypy': True,
-        'bandit': os.path.exists('bandit-report.json'),
-        'safety': os.path.exists('safety-report.json')
-    }
-}
-
-with open('qa-metrics.json', 'w') as f:
-    json.dump(metrics, f, indent=2)
-    
-print('QA メトリクス収集完了')
-"
+        cat > qa_metrics.py << 'EOF'
+        import json
+        import os
+        from datetime import datetime
+        
+        metrics = {
+            'timestamp': datetime.now().isoformat(),
+            'python_version': '${{ matrix.python-version }}',
+            'branch': '${{ github.ref_name }}',
+            'commit': '${{ github.sha }}',
+            'workflow_run_id': '${{ github.run_id }}',
+            'quality_checks': {
+                'black': os.path.exists('black-report.json'),
+                'flake8': True,
+                'mypy': True,
+                'bandit': os.path.exists('bandit-report.json'),
+                'safety': os.path.exists('safety-report.json')
+            }
+        }
+        
+        with open('qa-metrics.json', 'w') as f:
+            json.dump(metrics, f, indent=2)
+            
+        print('QA メトリクス収集完了')
+        EOF
+        python3 qa_metrics.py
         echo "::endgroup::"
     
     - name: 📈 品質レポート生成
@@ -185,7 +234,7 @@ print('QA メトリクス収集完了')
         echo "::endgroup::"
         
         echo "::group::Safety 詳細チェック"
-        safety check --json --output detailed-safety-report.json || echo "Safety チェック完了"
+        safety check --output json > detailed-safety-report.json || echo "Safety チェック完了"
         echo "::endgroup::"
         
         echo "::group::Semgrep スキャン"
@@ -194,29 +243,30 @@ print('QA メトリクス収集完了')
     
     - name: 📊 セキュリティメトリクス
       run: |
-        python3 -c "
-import json
-from datetime import datetime
-
-metrics = {
-    'timestamp': datetime.now().isoformat(),
-    'security_scan': {
-        'bandit_completed': True,
-        'safety_completed': True,
-        'semgrep_completed': True
-    },
-    'scan_results': {
-        'high_severity_issues': 0,
-        'medium_severity_issues': 0,
-        'low_severity_issues': 0
-    }
-}
-
-with open('security-metrics.json', 'w') as f:
-    json.dump(metrics, f, indent=2)
-    
-print('セキュリティメトリクス収集完了')
-"
+        cat > security_metrics.py << 'EOF'
+        import json
+        from datetime import datetime
+        
+        metrics = {
+            'timestamp': datetime.now().isoformat(),
+            'security_scan': {
+                'bandit_completed': True,
+                'safety_completed': True,
+                'semgrep_completed': True
+            },
+            'scan_results': {
+                'high_severity_issues': 0,
+                'medium_severity_issues': 0,
+                'low_severity_issues': 0
+            }
+        }
+        
+        with open('security-metrics.json', 'w') as f:
+            json.dump(metrics, f, indent=2)
+            
+        print('セキュリティメトリクス収集完了')
+        EOF
+        python3 security_metrics.py
     
     - name: 📄 セキュリティレポート保存
       uses: actions/upload-artifact@v4
@@ -249,31 +299,32 @@ print('セキュリティメトリクス収集完了')
     - name: 🏃 パフォーマンステスト実行
       run: |
         echo "::group::パフォーマンステスト"
-        python3 -c "
-import time
-import json
-from datetime import datetime
-
-start_time = time.time()
-
-# 簡易パフォーマンステスト
-test_results = {
-    'timestamp': datetime.now().isoformat(),
-    'test_execution_time': 0,
-    'memory_usage': 'N/A',
-    'performance_score': 8.5
-}
-
-# 実行時間測定
-time.sleep(1)  # 実際のテスト処理をシミュレート
-end_time = time.time()
-test_results['test_execution_time'] = end_time - start_time
-
-with open('performance-metrics.json', 'w') as f:
-    json.dump(test_results, f, indent=2)
-    
-print('パフォーマンステスト完了')
-"
+        cat > performance_test.py << 'EOF'
+        import time
+        import json
+        from datetime import datetime
+        
+        start_time = time.time()
+        
+        # 簡易パフォーマンステスト
+        test_results = {
+            'timestamp': datetime.now().isoformat(),
+            'test_execution_time': 0,
+            'memory_usage': 'N/A',
+            'performance_score': 8.5
+        }
+        
+        # 実行時間測定
+        time.sleep(1)  # 実際のテスト処理をシミュレート
+        end_time = time.time()
+        test_results['test_execution_time'] = end_time - start_time
+        
+        with open('performance-metrics.json', 'w') as f:
+            json.dump(test_results, f, indent=2)
+            
+        print('パフォーマンステスト完了')
+        EOF
+        python3 performance_test.py
         echo "::endgroup::"
     
     - name: 📄 パフォーマンスレポート保存
