@@ -112,6 +112,24 @@ venv/
 Tests/venv_test/
 venv_pyqt6/
 
+# Auto-generated reports (do not track)
 Reports/General/DailyReport*.csv
 Reports/General/DailyReport*.html
+Reports/General/ShowLatestDailyReport*.csv
+Reports/General/ShowLatestDailyReport*.html
+Reports/General/*レポート_*.csv
+Reports/General/*レポート_*.html
+Reports/General/*.pdf
 Reports/progress/quality/quality_metrics_*.json
+Reports/backup-integration/daily_*.json
+Reports/backup_quality_metrics.json
+
+# Test reports and outputs
+TestOutput/*.csv
+TestScripts/TestReports/*.html
+TestScripts/TestReports/*.csv
+TestScripts/TestReports/*.json
+TestScripts/TestReports_Emergency_Backup_*/
+
+# Emergency backups
+*Emergency_Backup_*/
