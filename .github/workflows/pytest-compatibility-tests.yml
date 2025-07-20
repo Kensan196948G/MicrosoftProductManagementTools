@@ -340,8 +340,8 @@ jobs:
 
       - name: テスト環境準備
         run: |
-          mkdir -p TestScripts/TestReports
-          mkdir -p tests/logs
+          if (-not (Test-Path "TestScripts/TestReports")) { New-Item -ItemType Directory -Path "TestScripts/TestReports" -Force }
+          if (-not (Test-Path "tests/logs")) { New-Item -ItemType Directory -Path "tests/logs" -Force }
 
       - name: GUIテスト実行
         timeout-minutes: 20
