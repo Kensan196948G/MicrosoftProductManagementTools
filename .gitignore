@@ -112,3 +112,6 @@ venv/
 Tests/venv_test/
 venv_pyqt6/
 
+Reports/General/DailyReport*.csv
+Reports/General/DailyReport*.html
+Reports/progress/quality/quality_metrics_*.json
