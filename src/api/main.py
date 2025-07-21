@@ -19,11 +19,22 @@ from datetime import datetime
 import json
 
 # Core imports
-from .core.config import Settings, get_settings
-from .core.database import DatabaseManager
-from .core.auth import AuthManager
-from .core.logging_config import setup_logging
+from .core.database import DatabaseManager, get_db_manager
+from .core.auth import AuthManager, get_auth_manager
 from .core.exceptions import M365Exception, AuthenticationError, APIError
+
+# Simplified settings
+class Settings:
+    HOST = "0.0.0.0"
+    PORT = 8000
+    DEBUG = True
+    CORS_ORIGINS = ["*"]
+
+def get_settings():
+    return Settings()
+
+def setup_logging(settings):
+    logging.basicConfig(level=logging.INFO)
 
 # API routes
 from .routes import (
@@ -62,11 +73,11 @@ async def lifespan(app: FastAPI):
         settings = get_settings()
         
         # Initialize database
-        db_manager = DatabaseManager(settings)
+        db_manager = get_db_manager()
         await db_manager.initialize()
         
         # Initialize authentication
-        auth_manager = AuthManager(settings)
+        auth_manager = get_auth_manager()
         await auth_manager.initialize()
         
         # Test Microsoft Graph connectivity
@@ -266,24 +277,7 @@ def create_app() -> FastAPI:
 
 
 # Dependency injection
-def get_auth_manager() -> AuthManager:
-    """Get the global authentication manager."""
-    if auth_manager is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Authentication manager not initialized"
-        )
-    return auth_manager
-
-
-def get_db_manager() -> DatabaseManager:
-    """Get the global database manager."""
-    if db_manager is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Database manager not initialized"
-        )
-    return db_manager
+# Remove these as they're now in core modules
 
 
 # Create the application instance

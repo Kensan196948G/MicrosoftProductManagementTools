@@ -114,7 +114,7 @@ class Context7APIOptimizer:
         """キャッシュキー生成"""
         cache_data = {"url": url, "params": params or {}}
         cache_str = json.dumps(cache_data, sort_keys=True)
-        return hashlib.md5(cache_str.encode()).hexdigest()
+        return hashlib.md5(cache_str.encode(), usedforsecurity=False).hexdigest()
     
     def _is_cache_valid(self, cache_file: Path) -> bool:
         """キャッシュ有効性確認"""

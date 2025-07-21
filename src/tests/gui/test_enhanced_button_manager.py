@@ -28,8 +28,8 @@ try:
     from PyQt6.QtTest import QTest
     import pytest_qt
 except ImportError as e:
-    print(f"❌ PyQt6 or pytest-qt not available: {e}")
-    sys.exit(1)
+    print(f"⚠️ PyQt6 or pytest-qt not available: {e}")
+    pytest.skip(f"GUI packages not available: {e}")
 
 # Import components to test
 sys.path.append('/mnt/e/MicrosoftProductManagementTools/src')

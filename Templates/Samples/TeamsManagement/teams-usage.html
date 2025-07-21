@@ -10,58 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ（複数のCDN対応） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    <!-- PDF生成ライブラリ（jsPDF最新版） -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
-    <!-- バックアップCDN読み込み関数 -->
-    <script>
-        function loadJsPDFBackup() {
-            console.log('jsPDFバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
-            script.onerror = function() {
-                console.error('jsPDF全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadAutoTableBackup() {
-            console.log('AutoTableバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-            script.onerror = function() {
-                console.error('AutoTable全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2CanvasBackup() {
-            console.log('html2canvasバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
-            script.onerror = function() {
-                console.error('html2canvas全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2PdfBackup() {
-            console.log('html2pdfバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-            script.onerror = function() {
-                console.error('html2pdf全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-    </script>
     
     <style>
         /* 基本スタイル */
@@ -959,39 +912,99 @@
         function downloadPDF() {
             showNotification('📄 PDF生成中...', 'info');
             
-            const now = new Date();
-            const filename = `Teams_使用状況レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
-            
-            // html2pdfを使用
-            if (typeof html2pdf !== 'undefined') {
-                const element = document.body;
-                const options = {
-                    margin: [10, 10, 10, 10],
-                    filename: filename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { 
-                        scale: 2, 
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    },
-                    jsPDF: { 
-                        unit: 'mm', 
-                        format: 'a4', 
-                        orientation: 'landscape',
-                        compress: true
-                    },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                };
-                
-                html2pdf().set(options).from(element).save().then(() => {
-                    showNotification('✅ PDFダウンロード完了！', 'success');
-                }).catch(error => {
-                    console.error('PDF生成エラー:', error);
-                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
                 });
-            } else {
-                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+                
+                // ヘッダー情報を追加
+                doc.setFontSize(16);
+                doc.setTextColor(0, 120, 212);
+                doc.text('Microsoft 365 Teams Usage Report', 14, 20);
+                doc.text('Microsoft 365 Teams使用状況レポート', 14, 28);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Microsoft 365統合管理ツール', 14, 35);
+                doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 14, 40);
+                
+                // テーブルヘッダー
+                const japaneseHeaders = ['ユーザー名', '部署', '最終アクセス', '月間会議参加数', '月間チャット数', 'ストレージ使用量(MB)', 'アプリ使用数', '利用レベル', 'ステータス'];
+                const englishHeaders = japaneseHeaders.map(header => {
+                    const mapping = {
+                        'ユーザー名': 'User Name',
+                        '部署': 'Department',
+                        '最終アクセス': 'Last Access',
+                        '月間会議参加数': 'Monthly Meetings',
+                        '月間チャット数': 'Monthly Chats', 
+                        'ストレージ使用量(MB)': 'Storage Usage (MB)',
+                        'アプリ使用数': 'Apps Used',
+                        '利用レベル': 'Usage Level',
+                        'ステータス': 'Status'
+                    };
+                    return mapping[header] || header;
+                });
+                const headers = [englishHeaders];
+                
+                // テーブルデータ
+                const data = filteredData.map(row => {
+                    return japaneseHeaders.map(header => {
+                        let value = row[header] || '';
+                        // Convert status values to English
+                        if (header === '利用レベル') {
+                            const levelMapping = {
+                                '高': 'High',
+                                '中': 'Medium',
+                                '低': 'Low',
+                                'なし': 'None'
+                            };
+                            value = levelMapping[value] || value;
+                        }
+                        if (header === 'ステータス') {
+                            const statusMapping = {
+                                'アクティブ': 'Active',
+                                '非アクティブ': 'Inactive',
+                                '一時停止': 'Suspended'
+                            };
+                            value = statusMapping[value] || value;
+                        }
+                        return value;
+                    });
+                });
+                
+                // AutoTableを使用してテーブルを生成
+                doc.autoTable({
+                    head: headers,
+                    body: data,
+                    startY: 50,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [0, 120, 212],
+                        textColor: 255
+                    },
+                    alternateRowStyles: {
+                        fillColor: [245, 247, 250]
+                    }
+                });
+                
+                // ファイル名を生成
+                const now = new Date();
+                const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                const filename = `Teams使用状況_${timestamp}.pdf`;
+                
+                // PDFを保存
+                doc.save(filename);
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification('❌ PDFの生成に失敗しました。ブラウザの印刷機能をご利用ください。', 'error');
             }
         }
         

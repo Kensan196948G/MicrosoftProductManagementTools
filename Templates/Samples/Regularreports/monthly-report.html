@@ -12,15 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" 
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
-    <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <!-- PDF Generation Libraries - Simplified and Reliable -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -585,7 +580,11 @@
         }
         
         function downloadPDF() {
+            console.log('PDFダウンロード開始');
             showNotification('📄 PDF生成中...', 'info');
+            
+            // ライブラリの存在チェック
+            console.log('jsPDFチェック:', typeof window.jspdf, typeof jsPDF);
             
             const now = new Date();
             const year = now.getFullYear();
@@ -595,43 +594,174 @@
             const minute = String(now.getMinutes()).padStart(2, '0');
             const filename = `月次レポート_${year}${month}${day}${hour}${minute}.pdf`;
             
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    const element = document.body;
-                    const options = {
-                        margin: [10, 10, 10, 10],
-                        filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true,
-                            logging: false,
-                            allowTaint: true
-                        },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'landscape',
-                            compress: true
-                        },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                    };
-                    
-                    html2pdf().set(options).from(element).save().then(() => {
-                        showNotification('✅ PDFダウンロード完了！', 'success');
-                    }).catch(error => {
-                        console.error('PDF生成エラー:', error);
-                        showNotification('❌ PDFダウンロードに失敗しました', 'error');
-                    });
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
+            // jsPDFで直接PDF生成
+            try {
+                let jsPDFInstance;
+                
+                // jsPDFインスタンスを取得
+                if (typeof window.jspdf !== 'undefined') {
+                    jsPDFInstance = window.jspdf.jsPDF;
+                } else if (typeof jsPDF !== 'undefined') {
+                    jsPDFInstance = jsPDF;
+                } else {
+                    throw new Error('jsPDFライブラリが読み込まれていません');
                 }
+                
+                console.log('jsPDFインスタンス:', jsPDFInstance);
+                
+                const doc = new jsPDFInstance({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                console.log('PDFドキュメント作成成功');
+                
+                // Add bilingual headers (English + Japanese) to avoid encoding issues
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 Monthly Report', 20, 20);
+                doc.text('Microsoft 365 月次レポート', 20, 30);
+                
+                doc.setFontSize(12);
+                doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 20, 40);
+                
+                // テーブルデータを取得してPDFに追加
+                const table = document.querySelector('#dataTable');
+                if (table) {
+                    console.log('テーブル見つかりました');
+                    
+                    const rows = [];
+                    const headers = [];
+                    
+                    // Convert Japanese headers to English
+                    const headerCells = table.querySelectorAll('thead th');
+                    headerCells.forEach(cell => {
+                        const originalHeader = cell.textContent.trim();
+                        const mapping = {
+                            'ユーザー名': 'User Name',
+                            'ライセンス種別': 'License Type',
+                            '利用状況': 'Usage Status',
+                            '月間利用時間': 'Monthly Usage Hours',
+                            'メール送信数': 'Emails Sent',
+                            'Teams会議参加': 'Teams Meetings Joined',
+                            'OneDrive使用量': 'OneDrive Usage',
+                            'SharePoint活動': 'SharePoint Activity',
+                            'セキュリティ違反': 'Security Violations',
+                            'コンプライアンス': 'Compliance',
+                            'ステータス': 'Status',
+                            'リスクレベル': 'Risk Level',
+                            '前月比': 'Month over Month'
+                        };
+                        headers.push(mapping[originalHeader] || originalHeader);
+                    });
+                    console.log('ヘッダー:', headers);
+                    
+                    // Convert Japanese data values to English
+                    const dataRows = table.querySelectorAll('tbody tr');
+                    dataRows.forEach((row, index) => {
+                        const rowData = [];
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            const originalValue = cell.textContent.trim();
+                            const mapping = {
+                                '高': 'High',
+                                '中': 'Medium', 
+                                '低': 'Low',
+                                'なし': 'None',
+                                'アクティブ': 'Active',
+                                '非アクティブ': 'Inactive',
+                                '成功': 'Success',
+                                '失敗': 'Failed',
+                                '警告': 'Warning',
+                                '正常': 'Normal',
+                                '異常': 'Abnormal',
+                                '増加': 'Increased',
+                                '減少': 'Decreased',
+                                '維持': 'Maintained',
+                                '有効': 'Enabled',
+                                '無効': 'Disabled'
+                            };
+                            rowData.push(mapping[originalValue] || originalValue);
+                        });
+                        if (rowData.length > 0) {
+                            rows.push(rowData);
+                        }
+                    });
+                    console.log('データ行数:', rows.length);
+                    
+                    // autoTableが利用可能かチェック
+                    if (typeof doc.autoTable === 'function') {
+                        console.log('autoTableを使用してテーブルを追加');
+                        doc.autoTable({
+                            head: [headers],
+                            body: rows,
+                            startY: 50,
+                            styles: {
+                                fontSize: 8,
+                                cellPadding: 2
+                            },
+                            headStyles: {
+                                fillColor: [0, 120, 212],
+                                textColor: 255
+                            },
+                            columnStyles: {
+                                0: {cellWidth: 30},
+                                1: {cellWidth: 25},
+                                2: {cellWidth: 20},
+                                3: {cellWidth: 25},
+                                4: {cellWidth: 25},
+                                5: {cellWidth: 25},
+                                6: {cellWidth: 20},
+                                7: {cellWidth: 25},
+                                8: {cellWidth: 20}
+                            }
+                        });
+                    } else {
+                        console.log('autoTableが利用できません。簡易テーブルを作成');
+                        // 簡易テーブルを手動で作成
+                        let yPos = 50;
+                        doc.setFontSize(10);
+                        
+                        // ヘッダーを描画
+                        headers.forEach((header, index) => {
+                            doc.text(header, 20 + (index * 30), yPos);
+                        });
+                        yPos += 10;
+                        
+                        // データを描画（最初の5行だけ）
+                        rows.slice(0, 5).forEach(row => {
+                            row.forEach((cell, index) => {
+                                doc.text(String(cell).substring(0, 12), 20 + (index * 30), yPos);
+                            });
+                            yPos += 8;
+                        });
+                        
+                        if (rows.length > 5) {
+                            doc.text(`... その他 ${rows.length - 5} 行`, 20, yPos + 10);
+                        }
+                    }
+                } else {
+                    console.log('テーブルが見つかりません');
+                    doc.setFontSize(12);
+                    doc.text('データが見つかりませんでした。', 20, 50);
+                }
+                
+                console.log('PDF保存開始:', filename);
+                doc.save(filename);
+                
+                console.log('PDF保存完了');
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification(`❌ PDF生成エラー: ${error.message}`, 'error');
+                
+                // 最終フォールバック: 印刷機能
+                setTimeout(() => {
+                    showNotification('印刷機能を使用してください', 'info');
+                    window.print();
+                }, 1000);
             }
-            
-            // Fallback to print
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
         }
         
         function initializeChart() {

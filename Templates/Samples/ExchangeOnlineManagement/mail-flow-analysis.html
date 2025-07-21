@@ -10,58 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ（複数のCDN対応） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    <!-- PDF生成ライブラリ -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
-    <!-- バックアップCDN読み込み関数 -->
-    <script>
-        function loadJsPDFBackup() {
-            console.log('jsPDFバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
-            script.onerror = function() {
-                console.error('jsPDF全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadAutoTableBackup() {
-            console.log('AutoTableバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-            script.onerror = function() {
-                console.error('AutoTable全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2CanvasBackup() {
-            console.log('html2canvasバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
-            script.onerror = function() {
-                console.error('html2canvas全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2PdfBackup() {
-            console.log('html2pdfバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-            script.onerror = function() {
-                console.error('html2pdf全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-    </script>
     
     <style>
         /* 基本スタイル */
@@ -920,39 +873,116 @@
         function downloadPDF() {
             showNotification('📄 PDF生成中...', 'info');
             
-            const now = new Date();
-            const filename = `メールフロー分析レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
-            
-            // html2pdfを使用
-            if (typeof html2pdf !== 'undefined') {
-                const element = document.body;
-                const options = {
-                    margin: [10, 10, 10, 10],
-                    filename: filename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { 
-                        scale: 2, 
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    },
-                    jsPDF: { 
-                        unit: 'mm', 
-                        format: 'a4', 
-                        orientation: 'landscape',
-                        compress: true
-                    },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                };
+            try {
+                const now = new Date();
+                const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                const filename = `メールフロー分析_${timestamp}.pdf`;
                 
-                html2pdf().set(options).from(element).save().then(() => {
-                    showNotification('✅ PDFダウンロード完了！', 'success');
-                }).catch(error => {
-                    console.error('PDF生成エラー:', error);
-                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                // jsPDFインスタンス作成
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
                 });
-            } else {
-                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+                
+                // フォント設定（日本語対応）
+                doc.setFont('helvetica');
+                
+                // ヘッダー情報
+                const reportTitle = 'Microsoft 365 Mail Flow Analysis Report';
+                const reportTitleJP = 'Microsoft 365 メールフロー分析レポート';
+                const reportDate = new Date().toLocaleDateString('en-US');
+                
+                // タイトル追加
+                doc.setFontSize(16);
+                doc.text(reportTitle, 20, 20);
+                doc.text(reportTitleJP, 20, 30);
+                
+                // レポート情報
+                doc.setFontSize(10);
+                doc.text(`Generated: ${reportDate}`, 20, 40);
+                doc.text(`Total Records: ${filteredData.length}`, 20, 45);
+                
+                // テーブルデータ準備
+                const headers = ['日時', '送信者', '受信者', '件名', 'メッセージサイズ', 'ステータス', 'コネクタ', 'イベントタイプ', '詳細'];
+                const englishHeaders = headers.map(header => {
+                    const mapping = {
+                        '日時': 'DateTime',
+                        '送信者': 'Sender',
+                        '受信者': 'Recipient', 
+                        '件名': 'Subject',
+                        'メッセージサイズ': 'Message Size',
+                        'ステータス': 'Status',
+                        'コネクタ': 'Connector',
+                        'イベントタイプ': 'Event Type',
+                        '詳細': 'Details'
+                    };
+                    return mapping[header] || header;
+                });
+                
+                const tableData = filteredData.map(row => {
+                    return headers.map(header => {
+                        let value = row[header] || '';
+                        // Convert status values to English
+                        if (header === 'ステータス') {
+                            const statusMapping = {
+                                '配信済み': 'Delivered',
+                                'ブロック': 'Blocked', 
+                                '隔離': 'Quarantined',
+                                'フィルター': 'Filtered'
+                            };
+                            value = statusMapping[value] || value;
+                        }
+                        return value;
+                    });
+                });
+                
+                // AutoTableでテーブル生成
+                doc.autoTable({
+                    head: [englishHeaders],
+                    body: tableData,
+                    startY: 55,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        overflow: 'linebreak',
+                        halign: 'left'
+                    },
+                    headStyles: {
+                        fillColor: [0, 120, 212],
+                        textColor: 255,
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 45 }, // 送信者
+                        1: { cellWidth: 45 }, // 受信者
+                        2: { cellWidth: 25 }, // サイズ
+                        3: { cellWidth: 25 }, // ステータス
+                        4: { cellWidth: 35 }, // 送信日時
+                        5: { cellWidth: 50 }  // 件名
+                    },
+                    margin: { left: 20, right: 20 },
+                    didDrawPage: function(data) {
+                        // フッター追加
+                        const pageCount = doc.internal.getNumberOfPages();
+                        const pageSize = doc.internal.pageSize;
+                        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+                        
+                        doc.setFontSize(8);
+                        doc.text(`ページ ${data.pageNumber} / ${pageCount}`, data.settings.margin.left, pageHeight - 10);
+                        doc.text('Microsoft 365統合管理ツール', pageSize.width - 80, pageHeight - 10);
+                    }
+                });
+                
+                // PDFダウンロード
+                doc.save(filename);
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification('❌ PDFダウンロードに失敗しました: ' + error.message, 'error');
             }
         }
         

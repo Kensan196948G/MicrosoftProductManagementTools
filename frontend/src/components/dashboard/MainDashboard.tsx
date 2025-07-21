@@ -10,6 +10,7 @@ import { ProgressModal } from '../shared/ProgressModal';
 import { TabCategory, ExecutionResult, ProgressState } from '../../types/features';
 import { FEATURE_TABS } from '../../config/features';
 import { useAppStore } from '../../store/appStore';
+import { useApiService } from '../../services/api';
 
 interface MainDashboardProps {
   className?: string;
@@ -27,10 +28,30 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
     stage: 'connecting'
   });
 
-  const { auth, theme } = useAppStore();
+  const { auth, theme, settings } = useAppStore();
+  const { executeFeature, getExecutionStatus, checkAuthStatus, healthCheck } = useApiService();
 
   // アクティブタブの設定
   const activeTabConfig = FEATURE_TABS.find(tab => tab.id === activeTab);
+
+  // 接続状態チェック
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const isHealthy = await healthCheck();
+        if (isHealthy) {
+          const authStatus = await checkAuthStatus();
+          // 認証状態をストアに反映
+        }
+      } catch (error) {
+        console.error('Connection check failed:', error);
+      }
+    };
+
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000); // 30秒ごと
+    return () => clearInterval(interval);
+  }, [healthCheck, checkAuthStatus]);
 
   // 機能実行のハンドラー
   const handleFeatureClick = useCallback(async (action: string) => {

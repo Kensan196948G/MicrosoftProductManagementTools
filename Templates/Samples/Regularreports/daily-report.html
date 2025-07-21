@@ -12,15 +12,142 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" 
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
-    <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <!-- PDF Generation Libraries with Japanese Font Support -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
+    
+    <!-- 2025年最新 - 複数の日本語フォント読み込み戦略 -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-font-noto@1.0.3/dist/NotoSansJP-Light-normal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-font-noto@1.0.3/dist/NotoSansJP-Regular-normal.js"></script>
+    <script>
+        // ブラウザネイティブ日本語フォント取得の試行
+        async function loadNativeJapaneseFont() {
+            try {
+                // Google Fonts APIからNoto Sans JPを直接取得
+                const response = await fetch('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400&display=swap');
+                if (response.ok) {
+                    const cssText = await response.text();
+                    console.log('Google Fonts CSS読み込み成功');
+                    return true;
+                }
+            } catch (error) {
+                console.log('Google Fonts読み込み失敗:', error);
+            }
+            return false;
+        }
+        
+        // ページ読み込み時にフォント準備
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadNativeJapaneseFont();
+        });
+    </script>
+    
+    <!-- Multiple Japanese Font Sources for Fallback -->
+    <script>
+        // Base64エンコードされた日本語フォントデータ（簡易版）
+        window.jpFontData = ""; // プレースホルダー
+        
+        // 2025年最新版 - 日本語フォント読み込み関数
+        function loadJapaneseFont(doc) {
+            try {
+                console.log('日本語フォント設定を試行中...');
+                
+                // 戦略1: NotoSansJP-Regularフォント（最新CDN）
+                if (typeof window.NotoSansJPRegular !== 'undefined') {
+                    doc.addFileToVFS('NotoSansJP-Regular.ttf', window.NotoSansJPRegular);
+                    doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
+                    doc.setFont('NotoSansJP', 'normal');
+                    console.log('NotoSansJP-Regular フォントを使用');
+                    return 'NotoSansJP';
+                }
+                
+                // 戦略2: Lightバージョンフォント
+                if (typeof window.NotoSansJP !== 'undefined') {
+                    doc.addFileToVFS('NotoSansJP-Light.ttf', window.NotoSansJP);
+                    doc.addFont('NotoSansJP-Light.ttf', 'NotoSansJP', 'normal');
+                    doc.setFont('NotoSansJP', 'normal');
+                    console.log('NotoSansJP-Light フォントを使用');
+                    return 'NotoSansJP';
+                }
+                
+                // 戦略3: システムフォント模倣（MS Gothic代替）
+                try {
+                    // Unicode対応フォントとしてcourierを強制設定
+                    doc.setFont('courier', 'normal');
+                    doc.setFontSize(10); // 小さめサイズで視認性改善
+                    console.log('Courier フォント（Unicode対応）を使用');
+                    return 'courier';
+                } catch (courierError) {
+                    console.log('Courier設定失敗:', courierError);
+                }
+                
+                // 最終フォールバック
+                doc.setFont('helvetica', 'normal');
+                console.log('Helvetica フォントにフォールバック');
+                return 'helvetica';
+            } catch (error) {
+                console.log('日本語フォント読み込み失敗:', error);
+                doc.setFont('helvetica', 'normal');
+                return 'helvetica';
+            }
+        }
+        
+        // 2025年最新版 - 日本語テキストを安全な形式に変換
+        function safeJapaneseText(text) {
+            try {
+                if (!text) return '';
+                
+                // 基本文字列変換
+                let cleanText = text.toString();
+                
+                // 文字コード正規化（NFCフォーム）
+                if (typeof cleanText.normalize === 'function') {
+                    cleanText = cleanText.normalize('NFC');
+                }
+                
+                // 特殊文字の除去と置換
+                cleanText = cleanText
+                    .replace(/\uFEFF/g, '')                     // BOM除去
+                    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // 制御文字除去
+                    .replace(/\u00A0/g, ' ')                   // non-breaking spaceを通常スペースに
+                    .replace(/[\u2000-\u200F]/g, ' ')          // 各種スペース文字を通常スペースに
+                    .replace(/[\u2028\u2029]/g, '\n');         // line/paragraph separatorを改行に
+                
+                // 日本語特有の文字化け対策
+                // 半角カタカナを全角に変換（文字化け防止）
+                cleanText = cleanText.replace(/[ｦ-ﾟ]/g, function(s) {
+                    return String.fromCharCode(s.charCodeAt(0) - 0xFEC0 + 0x3040);
+                });
+                
+                console.log('テキスト変換完了:', cleanText.substring(0, 50) + (cleanText.length > 50 ? '...' : ''));
+                return cleanText;
+            } catch (error) {
+                console.log('テキスト変換エラー:', error);
+                return text ? text.toString() : '';
+            }
+        }
+        
+        // フォント毎の最適化設定
+        function optimizeTextForFont(text, fontName) {
+            const safeText = safeJapaneseText(text);
+            
+            // フォント別最適化
+            switch(fontName) {
+                case 'NotoSansJP':
+                    return safeText; // そのまま使用
+                case 'courier':
+                    // Courierフォントの場合、文字間隔調整
+                    return safeText.replace(/([あ-ん])/g, '$1 '); // ひらがなの後にスペース
+                default:
+                    // その他フォントの場合、ASCII変換を試行
+                    return safeText.replace(/[^\x00-\x7F]/g, function(char) {
+                        // Unicode文字をエスケープして表示
+                        return '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0');
+                    });
+            }
+        }
+    </script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -355,7 +482,51 @@
         }
         
         @media screen { .pdf-only { display: none !important; } }
-        @media print { .screen-only { display: none !important; } .pdf-only { display: block !important; } }
+        /* PDF専用スタイル */
+        @media print {
+            .screen-only, .action-buttons { 
+                display: none !important; 
+            }
+            .pdf-only { 
+                display: block !important; 
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 12px !important;
+            }
+            .container {
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 10px !important;
+                box-shadow: none !important;
+            }
+            .header {
+                background: #0078d4 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10px !important;
+            }
+            th, td {
+                border: 1px solid #ddd !important;
+                padding: 5px !important;
+                text-align: left !important;
+            }
+            th {
+                background-color: #0078d4 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .page-break {
+                page-break-before: always !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -563,7 +734,11 @@
         }
         
         function downloadPDF() {
+            console.log('PDFダウンロード開始');
             showNotification('📄 PDF生成中...', 'info');
+            
+            // ライブラリの存在チェック
+            console.log('jsPDFチェック:', typeof window.jspdf, typeof jsPDF);
             
             const now = new Date();
             const year = now.getFullYear();
@@ -573,38 +748,257 @@
             const minute = String(now.getMinutes()).padStart(2, '0');
             const filename = `日次アクティビティレポート_${year}${month}${day}${hour}${minute}.pdf`;
             
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    const element = document.body;
-                    const options = {
-                        margin: [10, 10, 10, 10],
-                        filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true,
-                            logging: false,
-                            allowTaint: true
-                        },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'landscape',
-                            compress: true
-                        },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                    };
-                    
-                    html2pdf().set(options).from(element).save().then(() => {
-                        showNotification('✅ PDFダウンロード完了！', 'success');
-                    }).catch(error => {
-                        console.error('PDF生成エラー:', error);
-                        showNotification('❌ PDFダウンロードに失敗しました', 'error');
-                    });
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
+            // jsPDFで直接PDF生成
+            try {
+                let jsPDFInstance;
+                
+                // jsPDFインスタンスを取得
+                if (typeof window.jspdf !== 'undefined') {
+                    jsPDFInstance = window.jspdf.jsPDF;
+                } else if (typeof jsPDF !== 'undefined') {
+                    jsPDFInstance = jsPDF;
+                } else {
+                    throw new Error('jsPDFライブラリが読み込まれていません');
                 }
+                
+                console.log('jsPDFインスタンス:', jsPDFInstance);
+                
+                const doc = new jsPDFInstance({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                console.log('PDFドキュメント作成成功');
+                
+                // 日本語フォント設定
+                let fontName = 'helvetica';
+                try {
+                    fontName = loadJapaneseFont(doc);
+                    console.log('使用フォント:', fontName);
+                    doc.setFont(fontName);
+                } catch (error) {
+                    console.log('フォント設定エラー:', error);
+                    doc.setFont('helvetica');
+                    fontName = 'helvetica';
+                }
+                
+                // ヘッダー情報を追加（最適化適用）
+                doc.setFontSize(16);
+                const titleText = optimizeTextForFont('Microsoft 365 日次アクティビティレポート', fontName);
+                doc.text(titleText, 20, 20);
+                
+                doc.setFontSize(12);
+                const dateText = optimizeTextForFont(`生成日時: ${new Date().toLocaleString('ja-JP')}`, fontName);
+                doc.text(dateText, 20, 30);
+                
+                // 英語版は常に表示（フォントが日本語対応していない場合の保険）
+                doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 20, 40);
+                
+                // テーブルデータを取得してPDFに追加
+                const table = document.querySelector('#dataTable');
+                if (table) {
+                    console.log('テーブル見つかりました');
+                    
+                    const rows = [];
+                    const headers = [];
+                    
+                    // ヘッダーを取得
+                    const headerCells = table.querySelectorAll('thead th');
+                    headerCells.forEach(cell => {
+                        headers.push(cell.textContent.trim());
+                    });
+                    console.log('ヘッダー:', headers);
+                    
+                    // データ行を取得
+                    const dataRows = table.querySelectorAll('tbody tr');
+                    dataRows.forEach((row, index) => {
+                        const rowData = [];
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            rowData.push(cell.textContent.trim());
+                        });
+                        if (rowData.length > 0) {
+                            rows.push(rowData);
+                        }
+                    });
+                    console.log('データ行数:', rows.length);
+                    
+                    // autoTableが利用可能かチェック
+                    if (typeof doc.autoTable === 'function') {
+                        console.log('autoTableを使用してテーブルを追加');
+                        
+                        // 2025年最新版 - フォント最適化でのテキスト処理
+                        const optimizedHeaders = headers.map(h => optimizeTextForFont(h, fontName));
+                        const optimizedRows = rows.map(row => row.map(cell => optimizeTextForFont(cell, fontName)));
+                        
+                        console.log('最適化されたヘッダー:', optimizedHeaders.slice(0, 2));
+                        console.log('最適化されたデータ例:', optimizedRows.slice(0, 2));
+                        
+                        doc.autoTable({
+                            head: [optimizedHeaders],
+                            body: optimizedRows,
+                            startY: 50,
+                            styles: {
+                                fontSize: fontName === 'NotoSansJP' ? 9 : 8,
+                                cellPadding: 3,
+                                font: fontName,
+                                textColor: [0, 0, 0], // 黒色を明示
+                                fontStyle: 'normal'
+                            },
+                            headStyles: {
+                                fillColor: [0, 120, 212],
+                                textColor: [255, 255, 255], // 白色を明示
+                                font: fontName,
+                                fontStyle: 'normal',
+                                fontSize: fontName === 'NotoSansJP' ? 10 : 9
+                            },
+                            bodyStyles: {
+                                font: fontName,
+                                textColor: [0, 0, 0], // 黒色を明示
+                                fontStyle: 'normal'
+                            },
+                            columnStyles: {
+                                0: {cellWidth: 35},
+                                1: {cellWidth: 50},
+                                2: {cellWidth: 25},
+                                3: {cellWidth: 25},
+                                4: {cellWidth: 25},
+                                5: {cellWidth: 25},
+                                6: {cellWidth: 30}
+                            },
+                            didDrawPage: function (data) {
+                                // ページ番号（フォント最適化適用）
+                                doc.setFontSize(8);
+                                doc.setFont(fontName);
+                                const pageText = optimizeTextForFont('ページ ' + doc.internal.getNumberOfPages(), fontName);
+                                doc.text(pageText, data.settings.margin.left, doc.internal.pageSize.height - 10);
+                            }
+                        });
+                    } else {
+                        console.log('autoTableが利用できません。簡易テーブルを作成');
+                        // 簡易テーブルを手動で作成（日本語版）
+                        let yPos = 60;
+                        doc.setFontSize(10);
+                        doc.setFont(fontName);
+                        
+                        // 日本語ヘッダーを描画（最適化適用）
+                        headers.forEach((header, index) => {
+                            const optimizedHeader = optimizeTextForFont(header, fontName);
+                            doc.text(optimizedHeader, 20 + (index * 30), yPos);
+                        });
+                        yPos += 10;
+                        
+                        // データを描画（最初の5行だけ、最適化適用）
+                        rows.slice(0, 5).forEach(row => {
+                            row.forEach((cell, index) => {
+                                const optimizedCell = optimizeTextForFont(String(cell), fontName).substring(0, 12);
+                                doc.text(optimizedCell, 20 + (index * 30), yPos);
+                            });
+                            yPos += 8;
+                        });
+                        
+                        if (rows.length > 5) {
+                            const moreRowsText = optimizeTextForFont(`... その他 ${rows.length - 5} 行`, fontName);
+                            doc.text(moreRowsText, 20, yPos + 10);
+                        }
+                    }
+                } else {
+                    console.log('テーブルが見つかりません');
+                    doc.setFontSize(12);
+                    doc.setFont(fontName);
+                    doc.text(safeJapaneseText('データが見つかりませんでした'), 20, 60);
+                }
+                
+                console.log('PDF保存開始:', filename);
+                doc.save(filename);
+                
+                console.log('PDF保存完了');
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification(`❌ PDF生成エラー: ${error.message}`, 'error');
+                
+                // 最終フォールバック: 印刷機能
+                setTimeout(() => {
+                    showNotification('印刷機能を使用してください', 'info');
+                    window.print();
+                }, 1000);
+            }
+        }
+        
+        function fallbackPDFGeneration(filename) {
+            if (typeof jsPDF !== 'undefined') {
+                try {
+                    showNotification('🔄 代替PDF生成方法を試行中...', 'info');
+                    
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+                    
+                    // ヘッダー情報
+                    doc.setFontSize(16);
+                    doc.text('Microsoft 365 日次アクティビティレポート', 20, 20);
+                    
+                    const reportDate = document.querySelector('.report-date')?.textContent || '未設定';
+                    doc.setFontSize(10);
+                    doc.text(`生成日時: ${reportDate}`, 20, 30);
+                    
+                    // テーブルデータを取得
+                    const table = document.querySelector('#dataTable');
+                    if (table && typeof doc.autoTable !== 'undefined') {
+                        const rows = [];
+                        const headers = [];
+                        
+                        // ヘッダーを取得
+                        const headerCells = table.querySelectorAll('thead th');
+                        headerCells.forEach(cell => {
+                            headers.push(cell.textContent.trim());
+                        });
+                        
+                        // データ行を取得
+                        const dataRows = table.querySelectorAll('tbody tr');
+                        dataRows.forEach(row => {
+                            const rowData = [];
+                            const cells = row.querySelectorAll('td');
+                            cells.forEach(cell => {
+                                rowData.push(cell.textContent.trim());
+                            });
+                            if (rowData.length > 0) {
+                                rows.push(rowData);
+                            }
+                        });
+                        
+                        // テーブルをPDFに追加
+                        doc.autoTable({
+                            head: [headers],
+                            body: rows,
+                            startY: 40,
+                            styles: {
+                                fontSize: 8,
+                                cellPadding: 2
+                            },
+                            headStyles: {
+                                fillColor: [0, 120, 212],
+                                textColor: 255
+                            }
+                        });
+                    }
+                    
+                    doc.save(filename);
+                    showNotification('✅ 代替PDF生成完了！', 'success');
+                } catch (error) {
+                    console.error('jsPDF エラー:', error);
+                    showNotification('❌ PDF生成に失敗しました。印刷機能を使用してください。', 'error');
+                    printPDF();
+                }
+            } else {
+                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+                printPDF();
             }
             
             // Fallback to print
@@ -612,8 +1006,115 @@
             printPDF();
         }
         
+        // PDFライブラリの状態チェック
+        function checkPDFLibraries() {
+            const status = {
+                html2pdf: typeof html2pdf !== 'undefined',
+                jsPDF: typeof jsPDF !== 'undefined' || (typeof window.jspdf !== 'undefined'),
+                html2canvas: typeof html2canvas !== 'undefined'
+            };
+            
+            console.log('PDFライブラリ状態:', status);
+            
+            if (!status.html2pdf && !status.jsPDF) {
+                showNotification('⚠️ PDFライブラリが読み込まれていません。印刷機能をご利用ください。', 'warning');
+            }
+            
+            return status;
+        }
+        
+        // フィルタリング機能
+        function applyFilters() {
+            const searchValue = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const filter1Value = document.getElementById('filter1')?.value || '';
+            const filter2Value = document.getElementById('filter2')?.value || '';
+            const filter3Value = document.getElementById('filter3')?.value || '';
+            
+            const table = document.getElementById('dataTable');
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length === 0) return;
+                
+                let showRow = true;
+                
+                // 検索フィルター
+                if (searchValue) {
+                    const rowText = Array.from(cells).map(cell => cell.textContent.toLowerCase()).join(' ');
+                    if (!rowText.includes(searchValue)) {
+                        showRow = false;
+                    }
+                }
+                
+                // プルダウンフィルター
+                if (showRow && filter1Value && cells[2]) {
+                    const cellValue = cells[2].textContent.trim();
+                    if (cellValue !== filter1Value) {
+                        showRow = false;
+                    }
+                }
+                
+                if (showRow && filter2Value && cells[3]) {
+                    const cellValue = cells[3].textContent.trim();
+                    if (cellValue !== filter2Value) {
+                        showRow = false;
+                    }
+                }
+                
+                if (showRow && filter3Value && cells[4]) {
+                    const scoreText = cells[4].textContent.trim();
+                    const score = parseInt(scoreText.replace(/[^0-9]/g, ''));
+                    
+                    if (filter3Value === '高スコア' && score < 80) showRow = false;
+                    else if (filter3Value === '中スコア' && (score < 50 || score >= 80)) showRow = false;
+                    else if (filter3Value === '低スコア' && (score < 1 || score >= 50)) showRow = false;
+                    else if (filter3Value === 'スコアなし' && score !== 0) showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) visibleCount++;
+            });
+            
+            // 結果カウント表示
+            const statusElement = document.querySelector('.filter-status');
+            if (statusElement) {
+                statusElement.textContent = `${visibleCount}件が表示されています`;
+            }
+        }
+        
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            for (let i = 1; i <= 3; i++) {
+                const filterElement = document.getElementById(`filter${i}`);
+                if (filterElement) {
+                    filterElement.value = '';
+                }
+            }
+            applyFilters();
+            showNotification('フィルターをリセットしました', 'info');
+        }
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            checkPDFLibraries();
+            
+            // イベントリスナーの設定
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFilters);
+            }
+            
+            for (let i = 1; i <= 3; i++) {
+                const filterSelect = document.getElementById(`filter${i}`);
+                if (filterSelect) {
+                    filterSelect.addEventListener('change', applyFilters);
+                }
+            }
+            
             showNotification('日次レポートが読み込まれました', 'success');
         });
     </script>

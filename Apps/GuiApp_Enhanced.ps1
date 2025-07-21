@@ -1995,8 +1995,7 @@ function Add-RegularReportsButtons {
         @{ Text = "📊 週次レポート"; Action = "WeeklyReport"; X = 215; Y = 15 },
         @{ Text = "📈 月次レポート"; Action = "MonthlyReport"; X = 415; Y = 15 },
         @{ Text = "📆 年次レポート"; Action = "YearlyReport"; X = 15; Y = 75 },
-        @{ Text = "🧪 テスト実行"; Action = "TestExecution"; X = 215; Y = 75 },
-        @{ Text = "📋 最新日次レポート表示"; Action = "ShowLatestDailyReport"; X = 415; Y = 75 }
+        @{ Text = "🧪 テスト実行"; Action = "TestExecution"; X = 215; Y = 75 }
     )
     
     foreach ($buttonInfo in $buttons) {
@@ -2150,7 +2149,6 @@ function Create-ActionButton {
         "MonthlyReport" = "monthly-report.html"
         "YearlyReport" = "yearly-report.html"
         "TestExecution" = "test-execution.html"
-        "ShowLatestDailyReport" = "user-daily-activity.html"
         
         # 分析レポート (Analyticreport)
         "LicenseAnalysis" = "LicenseAnalysis.html"
@@ -2187,7 +2185,7 @@ function Create-ActionButton {
     # テンプレートサブフォルダマッピング
     $folderMapping = @{
         "DailyReport" = "Regularreports"; "WeeklyReport" = "Regularreports"; "MonthlyReport" = "Regularreports"
-        "YearlyReport" = "Regularreports"; "TestExecution" = "Regularreports"; "ShowLatestDailyReport" = "Regularreports"
+        "YearlyReport" = "Regularreports"; "TestExecution" = "Regularreports"
         "LicenseAnalysis" = "Analyticreport"; "UsageAnalysis" = "Analyticreport"; "PerformanceAnalysis" = "Analyticreport"
         "SecurityAnalysis" = "Analyticreport"; "PermissionAudit" = "Analyticreport"
         "UserList" = "EntraIDManagement"; "MFAStatus" = "EntraIDManagement"; "ConditionalAccess" = "EntraIDManagement"; "SignInLogs" = "EntraIDManagement"
@@ -2213,10 +2211,85 @@ function Create-ActionButton {
                 # データ取得
                 $data = switch ($actionRef) {
                     "DailyReport" { 
-                        Get-RealM365Data -DataType "DailyActivity" -MaxUsers 999999
+                        Get-M365DailyReport -MaxUsers 999999
+                    }
+                    "WeeklyReport" {
+                        Get-M365WeeklyReport -MaxUsers 999999
+                    }
+                    "MonthlyReport" {
+                        Get-M365MonthlyReport -MaxUsers 999999
+                    }
+                    "YearlyReport" {
+                        Get-M365YearlyReport -MaxUsers 999999
+                    }
+                    "TestExecution" {
+                        Get-M365TestExecution -MaxUsers 999999
+                    }
+                    "LicenseAnalysis" {
+                        Get-M365LicenseAnalysis -MaxUsers 999999
+                    }
+                    "UsageAnalysis" {
+                        Get-M365UsageAnalysisData -MaxUsers 999999
+                    }
+                    "PerformanceAnalysis" {
+                        Get-M365PerformanceAnalysis -MaxUsers 999999
+                    }
+                    "SecurityAnalysis" {
+                        Get-M365SecurityAnalysis -MaxUsers 999999
+                    }
+                    "PermissionAudit" {
+                        Get-M365PermissionAudit -MaxUsers 999999
+                    }
+                    "UserList" {
+                        Get-M365AllUsers -MaxUsers 999999
+                    }
+                    "MFAStatus" {
+                        Get-M365MFAStatus -MaxUsers 999999
+                    }
+                    "ConditionalAccess" {
+                        Get-M365ConditionalAccess -MaxUsers 999999
+                    }
+                    "SignInLogs" {
+                        Get-M365SignInLogs -MaxUsers 999999
+                    }
+                    "MailboxManagement" {
+                        Get-M365MailboxAnalysis -MaxUsers 999999
+                    }
+                    "MailFlowAnalysis" {
+                        Get-M365MailFlowAnalysis -MaxUsers 999999
+                    }
+                    "SpamProtectionAnalysis" {
+                        Get-M365SpamProtectionAnalysis -MaxUsers 999999
+                    }
+                    "MailDeliveryAnalysis" {
+                        Get-M365MailDeliveryAnalysis -MaxUsers 999999
+                    }
+                    "TeamsUsage" {
+                        Get-M365TeamsUsage -MaxUsers 999999
+                    }
+                    "TeamsSettingsAnalysis" {
+                        Get-M365TeamsSettings -MaxUsers 999999
+                    }
+                    "MeetingQualityAnalysis" {
+                        Get-M365MeetingQuality -MaxUsers 999999
+                    }
+                    "TeamsAppAnalysis" {
+                        Get-M365TeamsAppAnalysis -MaxUsers 999999
+                    }
+                    "StorageAnalysis" {
+                        Get-M365OneDriveAnalysis -MaxUsers 999999
+                    }
+                    "SharingAnalysis" {
+                        Get-M365SharingAnalysis -MaxUsers 999999
+                    }
+                    "SyncErrorAnalysis" {
+                        Get-M365SyncErrorAnalysis -MaxUsers 999999
+                    }
+                    "ExternalSharingAnalysis" {
+                        Get-M365ExternalSharingAnalysis -MaxUsers 999999
                     }
                     default {
-                        Get-RealM365Data -DataType "DailyActivity" -MaxUsers 999999
+                        Get-M365DailyReport -MaxUsers 999999
                     }
                 }
                 
@@ -2318,472 +2391,6 @@ function Create-ActionButton {
     }.GetNewClosure())
     
     return $button
-    
-    $button = New-Object System.Windows.Forms.Button
-    $button.Text = $Text
-    $button.Location = New-Object System.Drawing.Point($X, $Y)
-    $button.Size = New-Object System.Drawing.Size(190, 50)  # 幅を10px拡張してテキストの読みやすさ向上
-    $button.Font = New-Object System.Drawing.Font("Yu Gothic UI", 10, [System.Drawing.FontStyle]::Bold)
-    # モダンなボタンスタイリング
-    $button.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)  # わずかに明るい青
-    $button.ForeColor = [System.Drawing.Color]::White
-    $button.FlatStyle = "Flat"
-    $button.FlatAppearance.BorderSize = 1
-    $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
-    $button.Cursor = "Hand"
-    
-    # ホバー効果の追加
-    $originalColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-    $hoverColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
-    $clickColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
-    
-    $button.Add_MouseEnter({
-        try {
-            $this.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
-        } catch {
-            # エラーを無視して継続
-        }
-    })
-    
-    $button.Add_MouseLeave({
-        try {
-            if ($this.Enabled) {
-                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-            }
-        } catch {
-            # エラーを無視して継続
-        }
-    })
-    
-    $button.Add_MouseDown({
-        try {
-            $this.BackColor = [System.Drawing.Color]::FromArgb(0, 90, 180)
-        } catch {
-            # エラーを無視して継続
-        }
-    })
-    
-    $button.Add_MouseUp({
-        try {
-            if ($this.ClientRectangle.Contains($this.PointToClient([System.Windows.Forms.Cursor]::Position))) {
-                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 240)
-            } else {
-                $this.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-            }
-        } catch {
-            # エラーを無視して継続
-        }
-    })
-    
-    # スコープ問題を解決するため、インライン処理を実装
-    $btnRef = $button
-    $actionRef = $Action
-    
-    $button.Add_Click({
-        param($sender, $e)
-        
-        # ボタンの安全な操作
-        if ($sender -and $sender.GetType().Name -eq 'Button') {
-            $originalText = $sender.Text
-            Write-GuiLog "🔽 ボタンクリック開始: $originalText" "INFO"
-            $sender.Text = "🔄 処理中..."
-            $sender.Enabled = $false
-            try { Write-GuiLog "レポート生成を開始: $originalText" "INFO" } catch { }
-            
-            # プログレスバー表示
-            Set-GuiProgress -Value 0 -Status "データ取得中..."
-            
-            # ファイル出力の準備を確認
-            try {
-                Write-GuiLog "📁 ファイル出力処理の準備が完了しました" "INFO"
-            } catch { }
-            
-            # 同期実行に変更（デバッグしやすくするため）
-            try {
-                # データを取得
-                Set-GuiProgress -Value 20 -Status "データ処理中..."
-                # HTMLテンプレートマッピング辞書
-                $templateMapping = @{
-                    # 定期レポート (Regularreports)
-                    "DailyReport" = "daily-report.html"
-                    "WeeklyReport" = "weekly-report.html"
-                    "MonthlyReport" = "monthly-report.html"
-                    "YearlyReport" = "yearly-report.html"
-                    "TestExecution" = "test-execution.html"
-                    "ShowLatestDailyReport" = "user-daily-activity.html"
-                    
-                    # 分析レポート (Analyticreport)
-                    "LicenseAnalysis" = "LicenseAnalysis.html"
-                    "UsageAnalysis" = "usage-analysis.html"
-                    "PerformanceAnalysis" = "performance-analysis.html"
-                    "SecurityAnalysis" = "security-analysis.html"
-                    "PermissionAudit" = "permission-audit.html"
-                    
-                    # Entra ID管理 (EntraIDManagement)
-                    "UserList" = "user-list.html"
-                    "MFAStatus" = "mfa-status.html"
-                    "ConditionalAccess" = "conditional-access.html"
-                    "SignInLogs" = "signin-logs.html"
-                    
-                    # Exchange Online管理 (ExchangeOnlineManagement)
-                    "MailboxManagement" = "mailbox-management.html"
-                    "MailFlowAnalysis" = "mail-flow-analysis.html"
-                    "SpamProtectionAnalysis" = "spam-protection-analysis.html"
-                    "MailDeliveryAnalysis" = "mail-delivery-analysis.html"
-                    
-                    # Teams管理 (TeamsManagement)
-                    "TeamsUsage" = "teams-usage.html"
-                    "TeamsSettingsAnalysis" = "teams-settings-analysis.html"
-                    "MeetingQualityAnalysis" = "meeting-quality-analysis.html"
-                    "TeamsAppAnalysis" = "teams-app-analysis.html"
-                    
-                    # OneDrive管理 (OneDriveManagement)
-                    "StorageAnalysis" = "storage-analysis.html"
-                    "SharingAnalysis" = "sharing-analysis.html"
-                    "SyncErrorAnalysis" = "sync-error-analysis.html"
-                    "ExternalSharingAnalysis" = "external-sharing-analysis.html"
-                }
-                
-                # テンプレートサブフォルダマッピング
-                $folderMapping = @{
-                    "DailyReport" = "Regularreports"; "WeeklyReport" = "Regularreports"; "MonthlyReport" = "Regularreports"
-                    "YearlyReport" = "Regularreports"; "TestExecution" = "Regularreports"; "ShowLatestDailyReport" = "Regularreports"
-                    "LicenseAnalysis" = "Analyticreport"; "UsageAnalysis" = "Analyticreport"; "PerformanceAnalysis" = "Analyticreport"
-                    "SecurityAnalysis" = "Analyticreport"; "PermissionAudit" = "Analyticreport"
-                    "UserList" = "EntraIDManagement"; "MFAStatus" = "EntraIDManagement"; "ConditionalAccess" = "EntraIDManagement"; "SignInLogs" = "EntraIDManagement"
-                    "MailboxManagement" = "ExchangeOnlineManagement"; "MailFlowAnalysis" = "ExchangeOnlineManagement"; "SpamProtectionAnalysis" = "ExchangeOnlineManagement"; "MailDeliveryAnalysis" = "ExchangeOnlineManagement"
-                    "TeamsUsage" = "TeamsManagement"; "TeamsSettingsAnalysis" = "TeamsManagement"; "MeetingQualityAnalysis" = "TeamsManagement"; "TeamsAppAnalysis" = "TeamsManagement"
-                    "StorageAnalysis" = "OneDriveManagement"; "SharingAnalysis" = "OneDriveManagement"; "SyncErrorAnalysis" = "OneDriveManagement"; "ExternalSharingAnalysis" = "OneDriveManagement"
-                }
-                
-                $data = switch ($actionRef) {
-                    # 定期レポート
-                    "DailyReport" { 
-                        try { Write-GuiLog "日次レポートデータ取得開始" "INFO" } catch { }
-                        Get-M365DailyReport
-                    }
-                    "WeeklyReport" { 
-                        try { Write-GuiLog "週次レポートデータ取得開始" "INFO" } catch { }
-                        Get-M365WeeklyReport
-                    }
-                    "MonthlyReport" { 
-                        try { Write-GuiLog "月次レポートデータ取得開始" "INFO" } catch { }
-                        Get-M365MonthlyReport
-                    }
-                    "YearlyReport" { 
-                        try { Write-GuiLog "年次レポートデータ取得開始" "INFO" } catch { }
-                        Get-M365YearlyReport
-                    }
-                    "TestExecution" { 
-                        try { Write-GuiLog "テスト実行開始" "INFO" } catch { }
-                        # インタラクティブなテストメニューを表示
-                        Show-TestExecutionMenu
-                        # 従来のレポート生成も実行
-                        Get-M365TestExecution
-                    }
-                    "ShowLatestDailyReport" { 
-                        try { Write-GuiLog "最新日次レポート表示開始" "INFO" } catch { }
-                        Get-M365DailyReport
-                    }
-                    
-                    # 分析レポート
-                    "LicenseAnalysis" { 
-                        try { Write-GuiLog "ライセンス分析データ取得開始" "INFO" } catch { }
-                        Get-M365LicenseAnalysis
-                    }
-                    "UsageAnalysis" { 
-                        try { Write-GuiLog "使用状況分析データ取得開始" "INFO" } catch { }
-                        Get-M365UsageAnalysis
-                    }
-                    "PerformanceAnalysis" { 
-                        try { Write-GuiLog "パフォーマンス分析データ取得開始" "INFO" } catch { }
-                        Get-M365PerformanceAnalysis
-                    }
-                    "SecurityAnalysis" { 
-                        try { Write-GuiLog "セキュリティ分析データ取得開始" "INFO" } catch { }
-                        Get-M365SecurityAnalysis
-                    }
-                    "PermissionAudit" { 
-                        try { Write-GuiLog "権限監査データ取得開始" "INFO" } catch { }
-                        Get-M365PermissionAudit
-                    }
-                    
-                    # Entra ID管理
-                    "UserList" { 
-                        try { Write-GuiLog "ユーザー一覧データ取得開始" "INFO" } catch { }
-                        Get-M365AllUsers
-                    }
-                    "MFAStatus" { 
-                        try { Write-GuiLog "MFA状況データ取得開始" "INFO" } catch { }
-                        Get-M365MFAStatus
-                    }
-                    "ConditionalAccess" { 
-                        try { Write-GuiLog "条件付きアクセスデータ取得開始" "INFO" } catch { }
-                        Get-M365ConditionalAccess
-                    }
-                    "SignInLogs" { 
-                        try { Write-GuiLog "サインインログデータ取得開始" "INFO" } catch { }
-                        Get-M365SignInLogs
-                    }
-                    
-                    # Exchange Online管理
-                    "MailboxManagement" { 
-                        try { Write-GuiLog "メールボックス管理データ取得開始" "INFO" } catch { }
-                        Get-M365MailboxAnalysis
-                    }
-                    "MailFlowAnalysis" { 
-                        try { Write-GuiLog "メールフロー分析データ取得開始" "INFO" } catch { }
-                        Get-M365MailFlowAnalysis
-                    }
-                    "SpamProtectionAnalysis" { 
-                        try { Write-GuiLog "スパム対策分析データ取得開始" "INFO" } catch { }
-                        Get-M365SpamProtectionAnalysis
-                    }
-                    "MailDeliveryAnalysis" { 
-                        try { Write-GuiLog "配信分析データ取得開始" "INFO" } catch { }
-                        Get-M365MailDeliveryAnalysis
-                    }
-                    
-                    # Teams管理
-                    "TeamsUsage" { 
-                        try { Write-GuiLog "Teams使用状況データ取得開始" "INFO" } catch { }
-                        Get-M365TeamsUsage
-                    }
-                    "TeamsSettingsAnalysis" { 
-                        try { Write-GuiLog "Teams設定分析データ取得開始" "INFO" } catch { }
-                        Get-M365TeamsSettings
-                    }
-                    "MeetingQualityAnalysis" { 
-                        try { Write-GuiLog "会議品質分析データ取得開始" "INFO" } catch { }
-                        Get-M365MeetingQuality
-                    }
-                    "TeamsAppAnalysis" { 
-                        try { Write-GuiLog "Teamsアプリ分析データ取得開始" "INFO" } catch { }
-                        Get-M365TeamsAppAnalysis
-                    }
-                    
-                    # OneDrive管理
-                    "StorageAnalysis" { 
-                        try { Write-GuiLog "ストレージ分析データ取得開始" "INFO" } catch { }
-                        Get-M365OneDriveAnalysis
-                    }
-                    "SharingAnalysis" { 
-                        try { Write-GuiLog "共有分析データ取得開始" "INFO" } catch { }
-                        Get-M365SharingAnalysis
-                    }
-                    "SyncErrorAnalysis" { 
-                        try { Write-GuiLog "同期エラー分析データ取得開始" "INFO" } catch { }
-                        Get-M365SyncErrorAnalysis
-                    }
-                    "ExternalSharingAnalysis" { 
-                        try { Write-GuiLog "外部共有分析データ取得開始" "INFO" } catch { }
-                        Get-M365ExternalSharingAnalysis
-                    }
-                    
-                    default { 
-                        try { Write-GuiLog "未対応のアクション: $actionRef - サンプルデータを生成" "WARNING" } catch { }
-                        @([PSCustomObject]@{ 
-                            Message = "サンプルデータ（未対応アクション: $actionRef）"
-                            Type = $actionRef
-                            GeneratedAt = Get-Date
-                            Status = "Fallback"
-                        })
-                    }
-                }
-                
-                # 処理完了時の処理を直接実行
-                if ($data -and $data.Count -gt 0) {
-                    $reportName = "$actionRef日次レポート"
-                    try { Write-GuiLog "データ取得完了: $($data.Count) 件のレコード" "SUCCESS" } catch { }
-                    
-                    # データをファイルにエクスポート
-                    Set-GuiProgress -Value 60 -Status "レポート生成中..."
-                    try {
-                        # 関数チェックをスキップして、直接実装を使用
-                        Write-GuiLog "ファイル出力処理を直接実行します" "INFO"
-                        
-                        # 直接実装でファイル出力（確実動作版）
-                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                        $safeReportName = if ($reportName) { $reportName -replace '[^\w\-_]', '_' } else { "レポート" }
-                        $reportsDir = Join-Path $PSScriptRoot "..\Reports\General"
-                        
-                        if (-not (Test-Path $reportsDir)) {
-                            New-Item -ItemType Directory -Path $reportsDir -Force | Out-Null
-                        }
-                        
-                        $csvPath = Join-Path $reportsDir "${safeReportName}_${timestamp}.csv"
-                        $htmlPath = Join-Path $reportsDir "${safeReportName}_${timestamp}.html"
-                        
-                        # CSV出力（BOM付きUTF8で文字化け対策）
-                        Write-GuiLog "📊 CSVファイル出力中..." "INFO"
-                        $data | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8BOM
-                        Write-GuiLog "✅ CSVファイル出力完了: $csvPath" "SUCCESS"
-                        
-                        # HTML出力
-                        Write-GuiLog "📄 HTMLファイル出力中..." "INFO"
-                        
-                        # HTMLテンプレートロード関数（アクション別）
-                        function Load-HTMLTemplate {
-                            param(
-                                [string]$Action,
-                                [array]$Data,
-                                [hashtable]$TemplateMapping,
-                                [hashtable]$FolderMapping
-                            )
-                            
-                            $templateFile = $TemplateMapping[$Action]
-                            $templateFolder = $FolderMapping[$Action]
-                            
-                            if (-not $templateFile -or -not $templateFolder) {
-                                Write-GuiLog "⚠️ テンプレートマッピングが見つかりません: $Action" "WARNING"
-                                return $null
-                            }
-                            
-                            $templatePath = Join-Path $PSScriptRoot "..\Templates\Samples\$templateFolder\$templateFile"
-                            
-                            if (-not (Test-Path $templatePath)) {
-                                Write-GuiLog "⚠️ テンプレートファイルが見つかりません: $templatePath" "WARNING"
-                                return $null
-                            }
-                            
-                            try {
-                                $htmlContent = Get-Content $templatePath -Raw -Encoding UTF8
-                                
-                                # 共通プレースホルダーの置換
-                                $reportDate = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
-                                $dataSource = if ($Data -and $Data.Count -gt 0) { "実データ（Microsoft 365）" } else { "ダミーデータ" }
-                                $totalRecords = if ($Data) { $Data.Count } else { 0 }
-                                
-                                $htmlContent = $htmlContent -replace "{{REPORT_DATE}}", $reportDate
-                                $htmlContent = $htmlContent -replace "{{TOTAL_USERS}}", $totalRecords
-                                $htmlContent = $htmlContent -replace "{{TOTAL_RECORDS}}", $totalRecords
-                                $htmlContent = $htmlContent -replace "{{DATA_SOURCE}}", $dataSource
-                                $htmlContent = $htmlContent -replace "{{REPORT_TYPE}}", $Action
-                                
-                                # データテーブル生成（アクション別カスタマイズ）
-                                $tableData = Generate-TableData -Action $Action -Data $Data
-                                $htmlContent = $htmlContent -replace "{{TABLE_DATA}}", $tableData
-                                $htmlContent = $htmlContent -replace "{{DAILY_ACTIVITY_DATA}}", $tableData
-                                $htmlContent = $htmlContent -replace "{{USER_DATA}}", $tableData
-                                $htmlContent = $htmlContent -replace "{{REPORT_DATA}}", $tableData
-                                
-                                Write-GuiLog "✅ HTMLテンプレート読み込み成功: $templateFile" "SUCCESS"
-                                return $htmlContent
-                                
-                            } catch {
-                                Write-GuiLog "❌ HTMLテンプレート読み込みエラー: $($_.Exception.Message)" "ERROR"
-                                return $null
-                            }
-                        }
-                        
-                        # テーブルデータ生成関数（アクション別カスタマイズ）
-                        function Generate-TableData {
-                            param(
-                                [string]$Action,
-                                [array]$Data
-                            )
-                            
-                            if (-not $Data -or $Data.Count -eq 0) {
-                                return "<tr><td colspan='7' style='text-align: center; padding: 2rem; color: #666;'>📋 データがありません</td></tr>"
-                            }
-                            
-                            $tableDataHtml = ""
-                            
-                            switch ($Action) {
-                                { $_ -in @("DailyReport", "WeeklyReport", "MonthlyReport", "YearlyReport", "ShowLatestDailyReport") } {
-                                    # 定期レポート用テーブル
-                                    foreach ($row in $Data) {
-                                        $tableDataHtml += "<tr>"
-                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザー名' ?? ''))</td>"
-                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'ユーザープリンシパル名' ?? ''))</td>"
-                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'Teams活動' ?? '0'))</td>"
-                                        $tableDataHtml += "<td><span class='badge badge-info'>$([System.Web.HttpUtility]::HtmlEncode($row.'活動レベル' ?? '低'))</span></td>"
-                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'活動スコア' ?? '0'))</td>"
-                                        $tableDataHtml += "<td><span class='badge badge-success'>$([System.Web.HttpUtility]::HtmlEncode($row.'ステータス' ?? 'アクティブ'))</span></td>"
-                                        $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($row.'レポート日' ?? (Get-Date -Format 'yyyy-MM-dd')))</td>"
-                                        $tableDataHtml += "</tr>"
-                                    }
-                                }
-                                default {
-                                    # 汎用テーブル（他の全機能用）
-                                    if ($Data -and $Data.Count -gt 0) {
-                                        $firstRow = $Data[0]
-                                        $properties = $firstRow.PSObject.Properties.Name
-                                        
-                                        foreach ($row in $Data) {
-                                            $tableDataHtml += "<tr>"
-                                            foreach ($prop in $properties) {
-                                                $value = $row.$prop ?? ''
-                                                $tableDataHtml += "<td>$([System.Web.HttpUtility]::HtmlEncode($value))</td>"
-                                            }
-                                            $tableDataHtml += "</tr>"
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            return $tableDataHtml
-                        }
-                        
-                        # 新しいHTMLテンプレートシステムを使用
-                        $htmlContent = Load-HTMLTemplate -Action $actionRef -Data $data -TemplateMapping $templateMapping -FolderMapping $folderMapping
-                        
-                        if ($htmlContent) {
-                            # HTMLファイル出力
-                            $htmlContent | Out-File -FilePath $htmlPath -Encoding UTF8 -Force
-                            Write-GuiLog "✅ HTMLファイル出力完了: $htmlPath" "SUCCESS"
-                            
-                            # HTMLファイルのみを自動表示
-                            try {
-                                Start-Process $htmlPath -ErrorAction Stop
-                                Write-GuiLog "✅ レポートを開きました（HTML専用）" "SUCCESS"
-                            } catch {
-                                Write-GuiLog "⚠️ ファイルを開けませんでした: $($_.Exception.Message)" "WARNING"
-                            }
-                            
-                            # 成功メッセージをログとプロンプトタブに表示
-                            Set-GuiProgress -Value 100 -Status "完了"
-                            $displayReportName = if ([string]::IsNullOrEmpty($reportName)) { "日次レポート" } else { $reportName }
-                            try { Write-GuiLog "$displayReportName が正常に生成されました（HTML専用）" "SUCCESS" -ShowNotification } catch { }
-                            if ($Script:PromptOutputTextBox -ne $null) {
-                                $Script:PromptOutputTextBox.AppendText("✅ $displayReportName が正常に生成されました（HTML専用）`r`n")
-                                $Script:PromptOutputTextBox.AppendText("📁 HTMLファイルが自動的に開かれます`r`n`r`n")
-                                $Script:PromptOutputTextBox.ScrollToCaret()
-                            }
-                            
-                            # プログレスバーを非表示（2秒後）
-                            Start-Sleep -Milliseconds 2000
-                            Set-GuiProgress -Hide
-                        } else {
-                            # フォールバック: シンプルなHTMLレポート生成
-                            Write-GuiLog "⚠️ テンプレートが見つかりません。基本レポートを生成します。" "WARNING"
-                            
-                            # 基本レポート内容を生成
-                            $basicReportContent = "<h1>$reportName</h1><p>データ件数: $($data.Count)</p><p>生成日時: $(Get-Date)</p>"
-                            $basicReportContent | Out-File -FilePath $htmlPath -Encoding UTF8
-                            
-                            Write-GuiLog "✅ 基本レポート生成完了" "SUCCESS"
-                        }
-                    } else {
-                        Write-GuiLog "⚠️ テンプレートマッピングが見つかりません: $actionRef" "WARNING"
-                    }
-                } else {
-                    Write-GuiLog "⚠️ データの取得に失敗しました" "WARNING"
-                }
-                
-            } catch {
-                Write-GuiLog "❌ レポート生成エラー: $($_.Exception.Message)" "ERROR" -ShowNotification
-            } finally {
-                $sender.Text = $originalText
-                $sender.Enabled = $true
-                $sender.BackColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
-                Set-GuiProgress -Hide
-                Write-GuiLog "🔼 ボタンクリック完了: $originalText" "INFO"
-            }
-        }
-    }.GetNewClosure())
-    
-    return $button
 }
 
 function Execute-ReportAction {
@@ -2840,64 +2447,6 @@ function Execute-ReportAction {
                         最終実行日時 = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
                     })
                     $reportName = "テスト実行結果（エラー）"
-                }
-            }
-            "ShowLatestDailyReport" {
-                # 最新の日次レポートHTMLファイルを検索して表示
-                $reportsPath = Join-Path $PSScriptRoot "..\Reports\Daily"
-                if (Test-Path $reportsPath) {
-                    $latestReport = Get-ChildItem -Path $reportsPath -Filter "*.html" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-                    if ($latestReport) {
-                        # ポップアップの代わりにプロンプトタブに表示
-                        if ($Script:PromptOutputTextBox -ne $null) {
-                            $Script:PromptOutputTextBox.AppendText("📋 最新の日次レポートを表示します`r`n")
-                            $Script:PromptOutputTextBox.AppendText("📁 ファイル: $($latestReport.FullName)`r`n`r`n")
-                            $Script:PromptOutputTextBox.ScrollToCaret()
-                        }
-                        
-                        # プラットフォーム別でHTMLファイルを開く
-                        if ($IsLinux) {
-                            $browserOpened = $false
-                            $browsers = @('google-chrome', 'firefox', 'chromium-browser', 'xdg-open')
-                            foreach ($browser in $browsers) {
-                                if (Get-Command $browser -ErrorAction SilentlyContinue) {
-                                    & $browser $latestReport.FullName
-                                    $browserOpened = $true
-                                    break
-                                }
-                            }
-                            if (-not $browserOpened) {
-                                # ポップアップの代わりにエラーログとプロンプトタブに表示
-                                try { Write-GuiErrorLog "ブラウザが見つかりません: $($latestReport.FullName)" "WARNING" } catch { }
-                                if ($Script:PromptOutputTextBox -ne $null) {
-                                    $Script:PromptOutputTextBox.AppendText("⚠️ ブラウザが見つかりません`r`n")
-                                    $Script:PromptOutputTextBox.AppendText("💻 手動でファイルを開いてください: $($latestReport.FullName)`r`n`r`n")
-                                    $Script:PromptOutputTextBox.ScrollToCaret()
-                                }
-                            }
-                        } else {
-                            Start-Process $latestReport.FullName
-                        }
-                        return
-                    } else {
-                        # ポップアップの代わりにエラーログとプロンプトタブに表示
-                        try { Write-GuiErrorLog "日次レポートが見つかりません" "WARNING" } catch { }
-                        if ($Script:PromptOutputTextBox -ne $null) {
-                            $Script:PromptOutputTextBox.AppendText("⚠️ 日次レポートが見つかりません`r`n")
-                            $Script:PromptOutputTextBox.AppendText("💡 先に日次レポートを生成してください`r`n`r`n")
-                            $Script:PromptOutputTextBox.ScrollToCaret()
-                        }
-                        return
-                    }
-                } else {
-                    # ポップアップの代わりにエラーログとプロンプトタブに表示
-                    try { Write-GuiErrorLog "日次レポートフォルダが見つかりません: $reportsPath" "ERROR" } catch { }
-                    if ($Script:PromptOutputTextBox -ne $null) {
-                        $Script:PromptOutputTextBox.AppendText("❌ 日次レポートフォルダが見つかりません`r`n")
-                        $Script:PromptOutputTextBox.AppendText("📁 パス: $reportsPath`r`n`r`n")
-                        $Script:PromptOutputTextBox.ScrollToCaret()
-                    }
-                    return
                 }
             }
             "LicenseAnalysis" {

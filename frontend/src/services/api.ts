@@ -3,10 +3,13 @@
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { ExecutionResult, AuthState } from '../types/features';
+import { toast } from 'react-hot-toast';
 
 // API設定
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const API_TIMEOUT = 30000; // 30秒
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 1000; // 1秒
 
 // API応答型定義
 export interface ApiResponse<T = any> {
@@ -103,7 +106,7 @@ class ApiClient {
 
   // エラーハンドリング
   private handleError(error: AxiosError): Promise<never> {
-    const errorMessage = error.response?.data?.message || error.message;
+    const errorMessage = this.getErrorMessage(error);
     const statusCode = error.response?.status;
 
     console.error('API Error:', {
@@ -113,10 +116,15 @@ class ApiClient {
       method: error.config?.method,
     });
 
+    // ユーザーフレンドリーなエラートースト
+    if (statusCode !== 401) { // 401は別途処理
+      toast.error(errorMessage);
+    }
+
     // 認証エラー
     if (statusCode === 401) {
       this.authToken = null;
-      // 認証状態をリセット
+      toast.error('認証が切れました。再ログインしてください。');
       window.dispatchEvent(new CustomEvent('auth-expired'));
     }
 
@@ -125,6 +133,24 @@ class ApiClient {
       status: statusCode,
       originalError: error,
     });
+  }
+
+  // エラーメッセージ取得
+  private getErrorMessage(error: AxiosError): string {
+    if (error.response?.data) {
+      const data = error.response.data as any;
+      return data.message || data.error || 'APIエラーが発生しました';
+    }
+    
+    if (error.code === 'ECONNABORTED') {
+      return 'リクエストがタイムアウトしました';
+    }
+    
+    if (error.code === 'ERR_NETWORK') {
+      return 'ネットワークエラーが発生しました';
+    }
+    
+    return error.message || '不明なエラーが発生しました';
   }
 
   // リクエストID生成
@@ -174,22 +200,49 @@ class ApiClient {
     }
   }
 
-  // 機能実行
+  // 機能実行（リトライ機能付き）
   async executeFeature(request: FeatureExecutionRequest): Promise<FeatureExecutionResponse> {
-    try {
+    return this.retryRequest(async () => {
       const response = await this.client.post<ApiResponse<FeatureExecutionResponse>>(
         '/api/features/execute',
         request
       );
 
       if (response.data.success && response.data.data) {
+        toast.success(`${request.action} を実行開始しました`);
         return response.data.data;
       }
 
       throw new Error(response.data.message || 'Feature execution failed');
+    });
+  }
+
+  // リトライ機能付きリクエスト
+  private async retryRequest<T>(
+    requestFn: () => Promise<T>,
+    attempts: number = RETRY_ATTEMPTS
+  ): Promise<T> {
+    try {
+      return await requestFn();
     } catch (error) {
+      if (attempts > 1 && this.shouldRetry(error as AxiosError)) {
+        console.log(`リトライ中... 残り${attempts - 1}回`);
+        await this.delay(RETRY_DELAY);
+        return this.retryRequest(requestFn, attempts - 1);
+      }
       throw error;
     }
+  }
+
+  // リトライ判定
+  private shouldRetry(error: AxiosError): boolean {
+    const retryableStatuses = [408, 429, 500, 502, 503, 504];
+    return retryableStatuses.includes(error.response?.status || 0);
+  }
+
+  // 遅延
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // 実行状況確認
@@ -316,11 +369,81 @@ class ApiClient {
   // 認証トークンリセット
   resetAuth(): void {
     this.authToken = null;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_info');
+  }
+
+  // Microsoft Graph API統合
+  async getMicrosoft365Users(params?: {
+    top?: number;
+    filter?: string;
+    select?: string;
+  }): Promise<any[]> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get<ApiResponse<any[]>>('/api/graph/users', {
+        params
+      });
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+
+      throw new Error(response.data.message || 'Failed to get Microsoft 365 users');
+    });
+  }
+
+  // Exchange Online統合
+  async getExchangeMailboxes(params?: {
+    resultSize?: number;
+    filter?: string;
+  }): Promise<any[]> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get<ApiResponse<any[]>>('/api/exchange/mailboxes', {
+        params
+      });
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+
+      throw new Error(response.data.message || 'Failed to get Exchange mailboxes');
+    });
+  }
+
+  // 認証状態確認
+  isAuthenticated(): boolean {
+    return !!this.authToken;
+  }
+
+  // 現在のユーザー情報取得
+  getCurrentUser(): any {
+    try {
+      const userInfo = localStorage.getItem('user_info');
+      return userInfo ? JSON.parse(userInfo) : null;
+    } catch {
+      return null;
+    }
   }
 }
 
 // シングルトンインスタンス
 export const apiClient = new ApiClient();
+
+// React Hook用のAPIサービス
+export const useApiService = () => {
+  return {
+    executeFeature: apiClient.executeFeature.bind(apiClient),
+    getExecutionStatus: apiClient.getExecutionStatus.bind(apiClient),
+    cancelExecution: apiClient.cancelExecution.bind(apiClient),
+    authenticate: apiClient.authenticate.bind(apiClient),
+    checkAuthStatus: apiClient.checkAuthStatus.bind(apiClient),
+    getSystemStatus: apiClient.getSystemStatus.bind(apiClient),
+    isAuthenticated: apiClient.isAuthenticated.bind(apiClient),
+    getCurrentUser: apiClient.getCurrentUser.bind(apiClient),
+    resetAuth: apiClient.resetAuth.bind(apiClient),
+    healthCheck: apiClient.healthCheck.bind(apiClient),
+  };
+};
 
 // エラー型定義
 export interface ApiError {

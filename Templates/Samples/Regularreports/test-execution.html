@@ -13,14 +13,9 @@
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
     <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -657,43 +652,93 @@
             const minute = String(now.getMinutes()).padStart(2, '0');
             const filename = `テスト実行レポート_${year}${month}${day}${hour}${minute}.pdf`;
             
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    const element = document.body;
-                    const options = {
-                        margin: [10, 10, 10, 10],
-                        filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true,
-                            logging: false,
-                            allowTaint: true
-                        },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'landscape',
-                            compress: true
-                        },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                    };
-                    
-                    html2pdf().set(options).from(element).save().then(() => {
-                        showNotification('✅ PDFダウンロード完了！', 'success');
-                    }).catch(error => {
-                        console.error('PDF生成エラー:', error);
-                        showNotification('❌ PDFダウンロードに失敗しました', 'error');
+            try {
+                console.log('PDF生成開始: jsPDF使用');
+                
+                // jsPDF instance
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // Title
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 テスト実行レポート', 20, 20);
+                
+                // Date
+                doc.setFontSize(10);
+                doc.text(`生成日時: ${now.toLocaleString('ja-JP')}`, 20, 30);
+                
+                // Table data
+                const table = document.getElementById('dataTable');
+                const headers = [];
+                const rows = [];
+                
+                // Get headers
+                const headerCells = table.querySelectorAll('thead th');
+                headerCells.forEach(cell => {
+                    headers.push(cell.textContent.trim());
+                });
+                
+                // Get data rows
+                const bodyRows = table.querySelectorAll('tbody tr');
+                bodyRows.forEach(row => {
+                    const rowData = [];
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach(cell => {
+                        let text = cell.textContent.trim();
+                        // Remove badge styling for PDF
+                        if (cell.querySelector('.badge')) {
+                            text = cell.querySelector('.badge').textContent.trim();
+                        }
+                        rowData.push(text);
                     });
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
-                }
+                    if (rowData.length > 0) {
+                        rows.push(rowData);
+                    }
+                });
+                
+                console.log('テーブルデータ準備完了:', { headers: headers.length, rows: rows.length });
+                
+                // Generate table using autoTable
+                doc.autoTable({
+                    head: [headers],
+                    body: rows,
+                    startY: 50,
+                    theme: 'striped',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [52, 73, 94],
+                        textColor: 255,
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 249, 250]
+                    },
+                    margin: { top: 40, right: 10, bottom: 10, left: 10 },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' },
+                        1: { cellWidth: 'auto' },
+                        2: { cellWidth: 'auto' }
+                    }
+                });
+                
+                console.log('PDF生成完了、ダウンロード開始');
+                doc.save(filename);
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification('❌ PDF生成に失敗しました。印刷機能をお試しください。', 'error');
+                // Fallback to print
+                printPDF();
             }
-            
-            // Fallback to print
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
         }
         
         function initializeChart() {

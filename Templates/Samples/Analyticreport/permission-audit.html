@@ -10,58 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     
-    <!-- PDF生成ライブラリ（複数のCDN対応） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    <!-- PDF生成ライブラリ（jsPDF） -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
-    <!-- バックアップCDN読み込み関数 -->
-    <script>
-        function loadJsPDFBackup() {
-            console.log('jsPDFバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
-            script.onerror = function() {
-                console.error('jsPDF全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadAutoTableBackup() {
-            console.log('AutoTableバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-            script.onerror = function() {
-                console.error('AutoTable全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2CanvasBackup() {
-            console.log('html2canvasバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
-            script.onerror = function() {
-                console.error('html2canvas全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2PdfBackup() {
-            console.log('html2pdfバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-            script.onerror = function() {
-                console.error('html2pdf全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-    </script>
     
     <style>
         /* 基本スタイル */
@@ -905,38 +858,106 @@
             showNotification('📄 PDF生成中...', 'info');
             
             const now = new Date();
-            const filename = `権限監査レポート_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.pdf`;
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+            const filename = `権限監査_${timestamp}.pdf`;
             
-            // html2pdfを使用
-            if (typeof html2pdf !== 'undefined') {
-                const element = document.body;
-                const options = {
-                    margin: [10, 10, 10, 10],
-                    filename: filename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { 
-                        scale: 2, 
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    },
-                    jsPDF: { 
-                        unit: 'mm', 
-                        format: 'a4', 
-                        orientation: 'landscape',
-                        compress: true
-                    },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            try {
+                if (typeof jsPDF === 'undefined') {
+                    throw new Error('jsPDFライブラリが読み込まれていません');
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // ヘッダー情報（日英両対応）
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 Permission Audit Report', 20, 20);
+                doc.text('Microsoft 365 権限監査レポート', 20, 30);
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.text(`生成日時: ${now.toLocaleString('ja-JP')}`, 20, 40);
+                doc.text('Microsoft 365統合管理ツール', 20, 35);
+                
+                // ヘッダーマッピング（日英対応）
+                const mapping = {
+                    'ユーザー名': 'User Name',
+                    'メールアドレス': 'Email Address',
+                    '部署': 'Department',
+                    '管理者ロール': 'Admin Role',
+                    'アクセス権限': 'Access Permission',
+                    '最終ログイン': 'Last Login',
+                    'MFA状況': 'MFA Status',
+                    'ステータス': 'Status'
                 };
                 
-                html2pdf().set(options).from(element).save().then(() => {
-                    showNotification('✅ PDFダウンロード完了！', 'success');
-                }).catch(error => {
-                    console.error('PDF生成エラー:', error);
-                    showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                // 値の変換マッピング
+                const valueMapping = {
+                    '高': 'High', '中': 'Medium', '低': 'Low',
+                    '正常': 'Normal', 'エラー': 'Error', '警告': 'Warning',
+                    '許可': 'Allowed', '禁止': 'Denied', '制限': 'Restricted'
+                };
+                
+                // テーブルデータを準備
+                const headers = [['User Name', 'Email Address', 'Department', 'Admin Role', 'Access Permission', 'Last Login', 'MFA Status', 'Status']];
+                const tableData = filteredData.map(row => [
+                    row['ユーザー名'] || '',
+                    row['メールアドレス'] || '',
+                    row['部署'] || '',
+                    row['管理者ロール'] || '',
+                    valueMapping[row['アクセス権限']] || row['アクセス権限'] || '',
+                    row['最終ログイン'] || '',
+                    valueMapping[row['MFA状況']] || row['MFA状況'] || '',
+                    valueMapping[row['ステータス']] || row['ステータス'] || ''
+                ]);
+                
+                // AutoTable プラグインを使用してテーブルを生成
+                doc.autoTable({
+                    head: headers,
+                    body: tableData,
+                    startY: 50,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [0, 120, 212],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 30 },  // ユーザー名
+                        1: { cellWidth: 35 },  // メールアドレス
+                        2: { cellWidth: 25 },  // 部署
+                        3: { cellWidth: 30 },  // 管理者ロール
+                        4: { cellWidth: 30 },  // アクセス権限
+                        5: { cellWidth: 25 },  // 最終ログイン
+                        6: { cellWidth: 20 },  // MFA状況
+                        7: { cellWidth: 20 }   // ステータス
+                    },
+                    margin: { top: 45, left: 20, right: 20 }
                 });
-            } else {
-                showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+                
+                // フッター
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.text(`ページ ${i} / ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+                }
+                
+                // PDFを保存
+                doc.save(filename);
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('PDF生成エラー:', error);
+                showNotification(`❌ PDFダウンロードに失敗: ${error.message}`, 'error');
             }
         }
         

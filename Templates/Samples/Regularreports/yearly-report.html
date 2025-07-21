@@ -13,15 +13,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" 
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
-    <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <!-- Enhanced PDF Generation Libraries with Working jsPDF -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -671,51 +666,177 @@
         function downloadPDF() {
             showNotification('📄 PDF生成中...', 'info');
             
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const filename = `年次レポート_${year}${month}${day}${hour}${minute}.pdf`;
-            
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    const element = document.body;
-                    const options = {
-                        margin: [10, 10, 10, 10],
-                        filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true,
-                            logging: false,
-                            allowTaint: true
-                        },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'landscape',
-                            compress: true
-                        },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                    };
-                    
-                    html2pdf().set(options).from(element).save().then(() => {
-                        showNotification('✅ PDFダウンロード完了！', 'success');
-                    }).catch(error => {
-                        console.error('PDF生成エラー:', error);
-                        showNotification('❌ PDFダウンロードに失敗しました', 'error');
-                    });
+            try {
+                console.log('PDF生成開始');
+                
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hour = String(now.getHours()).padStart(2, '0');
+                const minute = String(now.getMinutes()).padStart(2, '0');
+                const filename = `年次レポート_${year}${month}${day}${hour}${minute}.pdf`;
+                
+                if (typeof window.jsPDF === 'undefined') {
+                    console.log('jsPDF が見つかりません。フォールバック処理を実行します。');
+                    showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
+                    printPDF();
                     return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
                 }
+                
+                console.log('jsPDF が利用可能です');
+                
+                // jsPDF インスタンスを作成
+                const { jsPDF } = window.jsPDF;
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                
+                // Add bilingual headers (English + Japanese) to avoid encoding issues
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 Annual Report', 20, 20);
+                doc.text('Microsoft 365 年次レポート', 20, 30);
+                
+                doc.setFontSize(12);
+                doc.text(`Generated: ${new Date().toLocaleString('en-US')}`, 20, 40);
+                
+                // テーブルデータを取得
+                const table = document.getElementById('dataTable');
+                const tableData = [];
+                
+                if (table) {
+                    // Convert Japanese headers to English
+                    const headerRow = [];
+                    const headers = table.querySelectorAll('thead th');
+                    headers.forEach(header => {
+                        const originalHeader = header.textContent.trim();
+                        const mapping = {
+                            'ユーザー数': 'User Count',
+                            'ライセンス数': 'License Count',
+                            '年間コスト': 'Annual Cost',
+                            'サービス利用率': 'Service Utilization',
+                            'インシデント数': 'Incident Count',
+                            'コンプライアンス率': 'Compliance Rate',
+                            'セキュリティスコア': 'Security Score',
+                            'ユーザー満足度': 'User Satisfaction',
+                            '総合評価': 'Overall Rating',
+                            '前年比': 'Year over Year',
+                            'ステータス': 'Status',
+                            '重要度': 'Priority'
+                        };
+                        headerRow.push(mapping[originalHeader] || originalHeader);
+                    });
+                    
+                    // Convert Japanese data values to English
+                    const rows = table.querySelectorAll('tbody tr');
+                    const bodyData = [];
+                    rows.forEach(row => {
+                        const rowData = [];
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            const originalValue = cell.textContent.trim();
+                            const mapping = {
+                                '優秀': 'Excellent',
+                                '良好': 'Good',
+                                '普通': 'Average',
+                                '要改善': 'Needs Improvement',
+                                '高': 'High',
+                                '中': 'Medium', 
+                                '低': 'Low',
+                                'なし': 'None',
+                                'アクティブ': 'Active',
+                                '非アクティブ': 'Inactive',
+                                '増加': 'Increased',
+                                '減少': 'Decreased',
+                                '維持': 'Maintained',
+                                '達成': 'Achieved',
+                                '未達': 'Not Achieved'
+                            };
+                            rowData.push(mapping[originalValue] || originalValue);
+                        });
+                        if (rowData.length > 0) {
+                            bodyData.push(rowData);
+                        }
+                    });
+                    
+                    // autoTable プラグインを使用してテーブルを作成
+                    if (typeof doc.autoTable === 'function') {
+                        console.log('autoTable プラグインを使用してテーブルを生成');
+                        doc.autoTable({
+                            head: [headerRow],
+                            body: bodyData,
+                            startY: 50,
+                            styles: {
+                                fontSize: 8,
+                                cellPadding: 2
+                            },
+                            headStyles: {
+                                fillColor: [52, 73, 94],
+                                textColor: 255
+                            },
+                            columnStyles: {
+                                0: { cellWidth: 30 },
+                                1: { cellWidth: 25 },
+                                2: { cellWidth: 20 },
+                                3: { cellWidth: 25 },
+                                4: { cellWidth: 25 },
+                                5: { cellWidth: 20 },
+                                6: { cellWidth: 20 },
+                                7: { cellWidth: 20 },
+                                8: { cellWidth: 25 }
+                            }
+                        });
+                    } else {
+                        console.log('autoTable プラグインが見つかりません。基本的なテキスト出力を使用');
+                        let yPosition = 50;
+                        
+                        // ヘッダーを手動で追加
+                        doc.setFontSize(10);
+                        let xPosition = 20;
+                        headerRow.forEach(header => {
+                            doc.text(header, xPosition, yPosition);
+                            xPosition += 30;
+                        });
+                        yPosition += 10;
+                        
+                        // データ行を手動で追加
+                        doc.setFontSize(8);
+                        bodyData.forEach(row => {
+                            xPosition = 20;
+                            row.forEach(cell => {
+                                doc.text(cell.substring(0, 15), xPosition, yPosition);
+                                xPosition += 30;
+                            });
+                            yPosition += 8;
+                            if (yPosition > 180) {
+                                doc.addPage();
+                                yPosition = 20;
+                            }
+                        });
+                    }
+                }
+                
+                // フッター情報を追加
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.text(`Microsoft 365統合管理ツール - ${i}/${pageCount}`, 20, 200);
+                }
+                
+                console.log('PDF保存開始');
+                doc.save(filename);
+                
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                console.log('PDF生成完了');
+                
+            } catch (error) {
+                console.error('PDF生成中にエラーが発生しました:', error);
+                showNotification('❌ PDFダウンロードに失敗しました。印刷機能をお試しください。', 'error');
+                
+                // フォールバック: 印刷機能を使用
+                setTimeout(() => {
+                    printPDF();
+                }, 1000);
             }
-            
-            // Fallback to print
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
         }
         
         function initializeCharts() {

@@ -13,15 +13,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" 
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
-    <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <!-- Enhanced PDF Generation Libraries with Japanese Support -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js" 
+            onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js" 
+            onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js" 
+            onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/html2pdf.js@latest/dist/html2pdf.bundle.min.js" 
+            onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -1105,34 +1105,121 @@
         }
         
         function executeJsPdfDownload(filename) {
-            const { jsPDF } = window.jsPDF;
-            
-            html2canvas(document.body, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                allowTaint: true
-            }).then(canvas => {
-                const pdf = new jsPDF('l', 'mm', 'a4');
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            try {
+                const { jsPDF } = window.jsPDF;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
                 
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                const imgX = (pdfWidth - imgWidth * ratio) / 2;
-                const imgY = 0;
+                // Add bilingual headers (English + Japanese) to avoid encoding issues
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 Daily Activity Report', 20, 20);
+                doc.text('Microsoft 365 日次アクティビティレポート', 20, 30);
                 
-                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-                pdf.save(filename);
+                // Get table data and convert Japanese text to English
+                const table = document.getElementById('dataTable');
+                if (table) {
+                    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+                    const rows = Array.from(table.querySelectorAll('tbody tr')).map(row => 
+                        Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim())
+                    );
+                    
+                    // Convert Japanese headers to English
+                    const englishHeaders = headers.map(header => {
+                        const mapping = {
+                            'ユーザー名': 'User Name',
+                            '最終ログイン': 'Last Login',
+                            'ログイン回数': 'Login Count',
+                            'ログイン状態': 'Login Status',
+                            'アクセス場所': 'Access Location',
+                            '使用デバイス': 'Device',
+                            'リスクレベル': 'Risk Level',
+                            'アクティビティ詳細': 'Activity Details',
+                            'レポート日': 'Report Date',
+                            'ステータス': 'Status',
+                            'アクティビティ': 'Activity',
+                            '活動レベル': 'Activity Level',
+                            '活動スコア': 'Activity Score'
+                        };
+                        return mapping[header] || header;
+                    });
+                    
+                    // Convert Japanese values to English
+                    const englishRows = rows.map(row => 
+                        row.map(cell => {
+                            const mapping = {
+                                '高': 'High',
+                                '中': 'Medium', 
+                                '低': 'Low',
+                                'なし': 'None',
+                                'アクティブ': 'Active',
+                                '非アクティブ': 'Inactive',
+                                '成功': 'Success',
+                                '失敗': 'Failed',
+                                '警告': 'Warning',
+                                '正常': 'Normal',
+                                '異常': 'Abnormal'
+                            };
+                            return mapping[cell] || cell;
+                        })
+                    );
+                    
+                    // Generate PDF table with English text
+                    doc.autoTable({
+                        head: [englishHeaders],
+                        body: englishRows,
+                        startY: 40,
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2
+                        },
+                        headStyles: {
+                            fillColor: [0, 120, 212],
+                            textColor: 255,
+                            fontSize: 9
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 30 },
+                            1: { cellWidth: 25 },
+                            2: { cellWidth: 20 },
+                            3: { cellWidth: 25 },
+                            4: { cellWidth: 30 },
+                            5: { cellWidth: 25 },
+                            6: { cellWidth: 20 },
+                            7: { cellWidth: 40 }
+                        }
+                    });
+                } else {
+                    // Fallback to image-based PDF if table not found
+                    html2canvas(document.body, {
+                        scale: 1.5,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        const pdfWidth = doc.internal.pageSize.getWidth();
+                        const pdfHeight = doc.internal.pageSize.getHeight();
+                        const imgWidth = canvas.width;
+                        const imgHeight = canvas.height;
+                        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                        const imgY = 0;
+                        
+                        doc.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                    });
+                }
                 
+                doc.save(filename);
                 console.log('jsPDF PDF生成完了');
                 showNotification('✅ PDFダウンロード完了！', 'success');
-            }).catch(error => {
-                console.error('jsPDF + html2canvas エラー:', error);
+                
+            } catch (error) {
+                console.error('jsPDF エラー:', error);
                 showNotification('❌ PDFダウンロードに失敗しました', 'error');
-            });
+            }
         }
         
         function showNotification(message, type = 'info') {

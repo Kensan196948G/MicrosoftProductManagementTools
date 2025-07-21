@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# tmux × ClaudeCode 自動化スクリプト
+# 使用方法: claude-tmux
+
+SESSION_NAME="claude-dev"
+PROJECT_DIR="/media/kensan/LinuxHDD/ITSM-ITmanagementSystem"
+
+# セッションが既に存在するかチェック
+if tmux has-session -t $SESSION_NAME 2>/dev/null; then
+    echo "セッション $SESSION_NAME は既に存在します"
+    echo "既存セッションにアタッチします..."
+    tmux attach-session -t $SESSION_NAME
+    exit 0
+fi
+
+# プロジェクトディレクトリの存在確認
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "エラー: プロジェクトディレクトリが見つかりません: $PROJECT_DIR"
+    exit 1
+fi
+
+echo "新しいセッション $SESSION_NAME を作成します..."
+
+# 新しいセッションを作成（最初のペインでClaudeを起動）
+tmux new-session -d -s $SESSION_NAME -c "$PROJECT_DIR"
+
+# 2つ目のペインを水平分割で作成
+tmux split-window -h -t $SESSION_NAME -c "$PROJECT_DIR"
+
+# 3つ目のペインを垂直分割で作成（右側を上下に分割）
+tmux split-window -v -t $SESSION_NAME:0.1 -c "$PROJECT_DIR"
+
+# 各ペインでのコマンド実行
+echo "各ペインでClaudeを自動認証起動します..."
+
+# ペイン0: メインのClaude（対話用）
+tmux send-keys -t $SESSION_NAME:0.0 'clear && echo "=== Claude Code Main Session ===" && cd tmux && ./auto-claude-auth.sh --quick' C-m
+
+# ペイン1: サブのClaude（作業用）
+tmux send-keys -t $SESSION_NAME:0.1 'clear && echo "=== Claude Code Work Session ===" && sleep 5 && cd tmux && ./auto-claude-auth.sh --quick' C-m
+
+# ペイン2: システムコマンド用
+tmux send-keys -t $SESSION_NAME:0.2 'clear && echo "=== System Commands ===" && echo "プロジェクトディレクトリ: $PWD" && echo "自動認証スクリプト: tmux/auto-claude-auth.sh"' C-m
+
+# ペインのレイアウト調整
+tmux select-layout -t $SESSION_NAME main-vertical
+
+# メインペインを選択
+tmux select-pane -t $SESSION_NAME:0.0
+
+# セッションにアタッチ
+echo "セッションにアタッチします..."
+tmux attach-session -t $SESSION_NAME

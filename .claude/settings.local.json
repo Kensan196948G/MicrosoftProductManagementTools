@@ -12,7 +12,9 @@
       "Bash(ls:*)",
       "Bash(openssl pkcs12:*)",
       "Bash(sed:*)",
-      "Bash(openssl:*)"
+      "Bash(openssl:*)",
+      "Bash(chmod:*)",
+      "Bash(./tmux/send-message-enhanced-hierarchical.sh:*)"
     ],
     "deny": []
   }

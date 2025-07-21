@@ -118,8 +118,8 @@ show_menu() {
     echo "============================================================================"
     echo ""
     echo "👥 開発チーム構成:"
-    echo "1) 3人構成 - 標準開発 (CTO + Manager + Developer) 🌟推奨"
-    echo "2) 5人構成 - 大規模開発 (Architect + Backend + Frontend + Tester + DevOps)"
+    echo "1) 3人構成 - 標準開発 (Manager + CTO + Developer) 🌟推奨"
+    echo "2) 5人構成 - 大規模開発 (Manager + CTO + Frontend + Tester + DevOps)"
     echo ""
     echo "⚡ 高速セットアップ:"
     echo "3) 現在のセッション確認・接続"
@@ -133,11 +133,11 @@ show_menu() {
     echo "9) メッセージングシステムテスト"
     echo ""
     echo "📊 システム仕様:"
-    echo "   • 左側: CTO(上) + Manager(下) 固定"
+    echo "   • 左側: Manager(上) + CTO(下) 固定"
     echo "   • 右側: Developer 全幅"
     echo "   • 各役割の専門分野:"
-    echo "     - CTO: 技術戦略・アーキテクチャ決定 💼"
     echo "     - Manager: プロジェクト管理・進捗調整 👔"
+    echo "     - CTO: 技術戦略・アーキテクチャ決定 💼"
     echo "     - Developer: 実装・開発作業 👨‍💻"
     echo ""
     echo "🌟 Context7統合機能（オプション5・6）:"
@@ -146,8 +146,8 @@ show_menu() {
     echo "   • 全ペインで統一Context7サポート"
     echo "   • Claude AI 自動起動・認証"
     echo "   • tmux_shared_context.md 連携強化"
-    echo "   • オプション5: CTO→Manager→Developer 自動連携"
-    echo "   • オプション6: CTO→Manager→Dev0/Dev1/Dev2 自動連携"
+    echo "   • オプション5: Manager→CTO→Developer 自動連携"
+    echo "   • オプション6: Manager→CTO→Dev0/Dev1/Dev2 自動連携"
     echo ""
     echo "0) 終了"
     echo ""
@@ -201,14 +201,14 @@ launch_3person_team() {
     tmux set-window-option -t "$session" pane-active-border-style 'fg=colour208,bg=default,bold'
     tmux set-window-option -t "$session" pane-border-style 'fg=colour238,bg=default'
     
-    # Step 6: Set titles and roles (3-person team)
-    tmux select-pane -t "$session:0.0" -T "💼 CTO: Technical Leadership"
-    tmux select-pane -t "$session:0.1" -T "👔 Manager: Project Management"
-    tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: Implementation"
+    # Step 6: Set titles and roles with status (3-person team)
+    tmux select-pane -t "$session:0.0" -T "👔 Manager: 進捗管理 | 待機中"
+    tmux select-pane -t "$session:0.1" -T "💼 CTO: 技術戦略 | 待機中"
+    tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: 実装作業 | 待機中"
     
     # Step 7: Initialize panes with clear messages (3-person team)
-    tmux send-keys -t "$session:0.0" 'clear; echo "💼 CTO（ペイン0・左上）"; echo "役割: 技術戦略・アーキテクチャ決定"; echo "連携: tmux_shared_context.md + send-message.sh"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
-    tmux send-keys -t "$session:0.1" 'clear; echo "👔 Manager（ペイン1・左下）"; echo "役割: プロジェクト管理・進捗調整"; echo "連携: tmux_shared_context.md + send-message.sh"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
+    tmux send-keys -t "$session:0.0" 'clear; echo "👔 Manager（ペイン0・左上）"; echo "役割: プロジェクト管理・進捗調整"; echo "連携: tmux_shared_context.md + send-message.sh"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
+    tmux send-keys -t "$session:0.1" 'clear; echo "💼 CTO（ペイン1・左下）"; echo "役割: 技術戦略・アーキテクチャ決定"; echo "連携: tmux_shared_context.md + send-message.sh"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
     tmux send-keys -t "$session:0.2" 'clear; echo "👨‍💻 Developer（ペイン2・右全体）"; echo "役割: 実装・開発作業"; echo "連携: tmux_shared_context.md + send-message.sh"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
     
     # Step 8: Create shared context file
@@ -217,25 +217,25 @@ launch_3person_team() {
         echo "# 3人構成並列開発環境 - 共有コンテキスト" > "$shared_context"
         echo "## 更新時刻: $(date)" >> "$shared_context"
         echo "## 進捗状況:" >> "$shared_context"
-        echo "- CTO: 待機中" >> "$shared_context"
         echo "- Manager: 待機中" >> "$shared_context"
+        echo "- CTO: 待機中" >> "$shared_context"
         echo "- Developer: 待機中" >> "$shared_context"
         echo "" >> "$shared_context"
         echo "## 連携フロー:" >> "$shared_context"
-        echo "CTO → Manager → Developer → Manager → CTO" >> "$shared_context"
+        echo "Manager → CTO → Developer → CTO → Manager" >> "$shared_context"
     fi
     
     # Step 9: Start Claude in each pane with context files
     log_info "各ペインでClaude起動中（専用コンテキスト付き）..."
     
-    # CTO (pane 0) - immediate start with CTO context
-    tmux send-keys -t "$session:0.0" "clear && echo '💼 CTO - Claude起動中...' && claude --dangerously-skip-permissions \"\$(cat \"$PROJECT_DIR/tmux/instructions/cto.md\")\"" C-m
+    # Manager (pane 0) - immediate start with Manager context (use file-based prompt)
+    tmux send-keys -t "$session:0.0" "clear && echo '👔 Manager - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/manager.md'" C-m
     
-    # Manager (pane 1) - 3 second delay with Manager context
-    tmux send-keys -t "$session:0.1" "sleep 3 && clear && echo '👔 Manager - Claude起動中...' && claude --dangerously-skip-permissions \"\$(cat \"$PROJECT_DIR/tmux/instructions/manager.md\")\"" C-m
+    # CTO (pane 1) - 3 second delay with CTO context (use file-based prompt)
+    tmux send-keys -t "$session:0.1" "sleep 3 && clear && echo '💼 CTO - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/cto.md'" C-m
     
-    # Developer (pane 2) - 6 second delay with Developer context
-    tmux send-keys -t "$session:0.2" "sleep 6 && clear && echo '👨‍💻 Developer - Claude起動中...' && claude --dangerously-skip-permissions \"\$(cat \"$PROJECT_DIR/tmux/instructions/developer.md\")\"" C-m
+    # Developer (pane 2) - 6 second delay with Developer context (use file-based prompt)
+    tmux send-keys -t "$session:0.2" "sleep 6 && clear && echo '👨‍💻 Developer - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/developer.md'" C-m
     
     # Step 10: Setup automatic connectivity monitoring and collaboration system
     log_info "自動連携監視システムを起動中..."
@@ -256,10 +256,10 @@ launch_3person_team() {
                 break
             fi
             
-            # Update pane titles
-            tmux select-pane -t "$session:0.0" -T "💼 CTO: Technical Leadership" 2>/dev/null
-            tmux select-pane -t "$session:0.1" -T "👔 Manager: Project Management" 2>/dev/null
-            tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: Implementation" 2>/dev/null
+            # Update pane titles with dynamic status
+            tmux select-pane -t "$session:0.0" -T "👔 Manager: 進捗管理 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.1" -T "💼 CTO: 技術戦略 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: 実装作業 | 動作中 $(date +%H:%M)" 2>/dev/null
             
             # Update shared context timestamp
             if [ -f "$shared_context" ]; then
@@ -282,10 +282,10 @@ launch_3person_team() {
     echo "📊 構成詳細:"
     echo "   - セッション名: $session"
     echo "   - 総ペイン数: 3"
-    echo "   - 左側: 💼 CTO(0) + 👔 Manager(1)"
+    echo "   - 左側: 👔 Manager(0) + 💼 CTO(1)"
     echo "   - 右側: 👨‍💻 Developer(2)"
     echo "   - レイアウト: 左40% + 右60%"
-    echo "   - コンテキストファイル: cto.md, manager.md, developer.md"
+    echo "   - コンテキストファイル: manager.md, cto.md, developer.md"
     echo "   - 自動連携: tmux_shared_context.md + send-message.sh"
     echo "   - 完全自動化: 12秒間隔監視"
     echo ""
@@ -375,16 +375,16 @@ launch_5person_team() {
     tmux set-window-option -t "$session" pane-active-border-style 'fg=colour208,bg=default,bold'
     tmux set-window-option -t "$session" pane-border-style 'fg=colour238,bg=default'
     
-    # Step 7: Set titles and roles (5-pane independent architecture)
-    tmux select-pane -t "$session:0.0" -T "🏗️ Architect: System Design"
-    tmux select-pane -t "$session:0.1" -T "⚙️ Backend: API Development"
-    tmux select-pane -t "$session:0.2" -T "💻 Frontend: UI Development"
-    tmux select-pane -t "$session:0.3" -T "🔬 Tester: QA & Testing"
-    tmux select-pane -t "$session:0.4" -T "🔧 DevOps: Infrastructure"
+    # Step 7: Set titles and roles with status (5-pane independent architecture)
+    tmux select-pane -t "$session:0.0" -T "👔 Manager: 進捗管理 | 待機中"
+    tmux select-pane -t "$session:0.1" -T "💼 CTO: 技術戦略 | 待機中"
+    tmux select-pane -t "$session:0.2" -T "💻 Frontend: UI開発 | 待機中"
+    tmux select-pane -t "$session:0.3" -T "🔬 Tester: QA検証 | 待機中"
+    tmux select-pane -t "$session:0.4" -T "🔧 DevOps: 基盤構築 | 待機中"
     
     # Step 8: Initialize panes with clear messages (5-pane independent architecture)
-    tmux send-keys -t "$session:0.0" 'clear; echo "🏗️ Architect（ペイン0・左上）"; echo "役割: システム設計・アーキテクチャ"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
-    tmux send-keys -t "$session:0.1" 'clear; echo "⚙️ Backend（ペイン1・左下）"; echo "役割: API開発・データ処理"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
+    tmux send-keys -t "$session:0.0" 'clear; echo "👔 Manager（ペイン0・左上）"; echo "役割: プロジェクト管理・チーム調整"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
+    tmux send-keys -t "$session:0.1" 'clear; echo "💼 CTO（ペイン1・左下）"; echo "役割: 技術戦略・アーキテクチャ決定"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
     tmux send-keys -t "$session:0.2" 'clear; echo "💻 Frontend（ペイン2・右上）"; echo "役割: UI開発・PyQt6"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
     tmux send-keys -t "$session:0.3" 'clear; echo "🔬 Tester（ペイン3・右中）"; echo "役割: QA・テスト実装"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
     tmux send-keys -t "$session:0.4" 'clear; echo "🔧 DevOps（ペイン4・右下）"; echo "役割: 環境構築・CI/CD"; echo "共有ファイル: tmux_shared_context.md"; echo "準備完了"; cd "'"$PROJECT_DIR"'"' C-m
@@ -398,27 +398,27 @@ launch_5person_team() {
         echo "# 5ペイン並列開発環境 - 共有コンテキスト" > "$shared_context"
         echo "## 更新時刻: $(date)" >> "$shared_context"
         echo "## 進捗状況:" >> "$shared_context"
-        echo "- Architect: 待機中" >> "$shared_context"
-        echo "- Backend: 待機中" >> "$shared_context"
+        echo "- Manager: 待機中" >> "$shared_context"
+        echo "- CTO: 待機中" >> "$shared_context"
         echo "- Frontend: 待機中" >> "$shared_context"
         echo "- Tester: 待機中" >> "$shared_context"
         echo "- DevOps: 待機中" >> "$shared_context"
     fi
     
-    # Architect (pane 0) - immediate start with system design role
-    tmux send-keys -t "$session:0.0" "clear && echo '🏗️ Architect - Claude起動中...' && claude --dangerously-skip-permissions \"あなたはPython移行プロジェクトのアーキテクトです。システム設計とAPI設計を担当します。tmux_shared_context.mdで他の役割と連携してください。\"" C-m
+    # Manager (pane 0) - immediate start with project management role (use file-based prompt)
+    tmux send-keys -t "$session:0.0" "clear && echo '👔 Manager - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/manager.md'" C-m
     
-    # Backend (pane 1) - 3 second delay with backend role
-    tmux send-keys -t "$session:0.1" "sleep 3 && clear && echo '⚙️ Backend - Claude起動中...' && claude --dangerously-skip-permissions \"あなたはバックエンド開発者です。API実装とデータ処理を担当します。tmux_shared_context.mdで他の役割と連携してください。\"" C-m
+    # CTO (pane 1) - 3 second delay with technical leadership role (use file-based prompt)
+    tmux send-keys -t "$session:0.1" "sleep 3 && clear && echo '💼 CTO - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/cto.md'" C-m
     
-    # Frontend (pane 2) - 6 second delay with frontend role
-    tmux send-keys -t "$session:0.2" "sleep 6 && clear && echo '💻 Frontend - Claude起動中...' && claude --dangerously-skip-permissions \"あなたはフロントエンド開発者です。PyQt6を使用したGUI実装を担当します。tmux_shared_context.mdで他の役割と連携してください。\"" C-m
+    # Frontend (pane 2) - 6 second delay with frontend role (use file-based prompt)
+    tmux send-keys -t "$session:0.2" "sleep 6 && clear && echo '💻 Frontend - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/developer.md'" C-m
     
-    # Tester (pane 3) - 9 second delay with tester role
-    tmux send-keys -t "$session:0.3" "sleep 9 && clear && echo '🔬 Tester - Claude起動中...' && claude --dangerously-skip-permissions \"あなたはテスターです。テスト実装と品質保証を担当します。tmux_shared_context.mdで他の役割と連携してください。\"" C-m
+    # Tester (pane 3) - 9 second delay with tester role (use file-based prompt)
+    tmux send-keys -t "$session:0.3" "sleep 9 && clear && echo '🔬 Tester - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/developer.md'" C-m
     
-    # DevOps (pane 4) - 12 second delay with devops role
-    tmux send-keys -t "$session:0.4" "sleep 12 && clear && echo '🔧 DevOps - Claude起動中...' && claude --dangerously-skip-permissions \"あなたはDevOpsエンジニアです。環境構築とCI/CDを担当します。tmux_shared_context.mdで他の役割と連携してください。\"" C-m
+    # DevOps (pane 4) - 12 second delay with devops role (use file-based prompt)
+    tmux send-keys -t "$session:0.4" "sleep 12 && clear && echo '🔧 DevOps - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file 'tmux/instructions/developer.md'" C-m
     
     # Step 10: Pane title maintenance system (5-pane independent architecture)
     log_info "ペインタイトル維持システムを起動中..."
@@ -429,11 +429,11 @@ launch_5person_team() {
                 break
             fi
             
-            tmux select-pane -t "$session:0.0" -T "🏗️ Architect: System Design" 2>/dev/null
-            tmux select-pane -t "$session:0.1" -T "⚙️ Backend: API Development" 2>/dev/null
-            tmux select-pane -t "$session:0.2" -T "💻 Frontend: UI Development" 2>/dev/null
-            tmux select-pane -t "$session:0.3" -T "🔬 Tester: QA & Testing" 2>/dev/null
-            tmux select-pane -t "$session:0.4" -T "🔧 DevOps: Infrastructure" 2>/dev/null
+            tmux select-pane -t "$session:0.0" -T "👔 Manager: 進捗管理 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.1" -T "💼 CTO: 技術戦略 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.2" -T "💻 Frontend: UI開発 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.3" -T "🔬 Tester: QA検証 | 動作中 $(date +%H:%M)" 2>/dev/null
+            tmux select-pane -t "$session:0.4" -T "🔧 DevOps: 基盤構築 | 動作中 $(date +%H:%M)" 2>/dev/null
             
             sleep 3
         done
@@ -448,7 +448,7 @@ launch_5person_team() {
     echo "📊 構成詳細:"
     echo "   - セッション名: $session"
     echo "   - 総ペイン数: 5"
-    echo "   - 左側: 🏗️ Architect(0) + ⚙️ Backend(1)"
+    echo "   - 左側: 👔 Manager(0) + 💼 CTO(1)"
     echo "   - 右側: 💻 Frontend(2) + 🔬 Tester(3) + 🔧 DevOps(4)"
     echo "   - レイアウト: 左30% + 右70%"
     echo "   - 共有ファイル: tmux_shared_context.md"
@@ -520,7 +520,7 @@ launch_8person_team() {
     
     # Step 7: Set titles and roles
     tmux select-pane -t "$session:0.0" -T "👔 Manager: Coordination & Progress"
-    tmux select-pane -t "$session:0.1" -T "👑 CEO: Strategic Leadership"
+    tmux select-pane -t "$session:0.1" -T "💼 CTO: Technical Leadership"
     tmux select-pane -t "$session:0.2" -T "💻 Dev0: Frontend/UI"
     tmux select-pane -t "$session:0.3" -T "⚙️ Dev1: Backend/API"
     tmux select-pane -t "$session:0.4" -T "🔒 Dev2: QA/Test"
@@ -529,8 +529,8 @@ launch_8person_team() {
     tmux select-pane -t "$session:0.7" -T "📊 Dev5: Data/Analytics"
     
     # Step 8: Initialize and start Claude
-    local roles=("Manager" "CEO" "Dev0" "Dev1" "Dev2" "Dev3" "Dev4" "Dev5")
-    local icons=("👔" "👑" "💻" "⚙️" "🔒" "🧪" "🚀" "📊")
+    local roles=("Manager" "CTO" "Dev0" "Dev1" "Dev2" "Dev3" "Dev4" "Dev5")
+    local icons=("👔" "💼" "💻" "⚙️" "🔒" "🧪" "🚀" "📊")
     
     for pane in {0..7}; do
         local delay=$((pane * 3))
@@ -541,13 +541,13 @@ launch_8person_team() {
         local context_file=""
         if [[ "$role" == "Manager" ]]; then
             context_file="$PROJECT_DIR/tmux/instructions/manager.md"
-        elif [[ "$role" == "CEO" ]]; then
+        elif [[ "$role" == "CTO" ]]; then
             context_file="$PROJECT_DIR/tmux/instructions/cto.md"
         else
             context_file="$PROJECT_DIR/tmux/instructions/developer.md"
         fi
         
-        tmux send-keys -t "$session:0.$pane" "sleep $delay && clear && echo '$icon $role - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions \"\$(cat \"$context_file\")\"" C-m
+        tmux send-keys -t "$session:0.$pane" "sleep $delay && clear && echo '$icon $role - Claude起動中...' && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '${context_file#$PROJECT_DIR/}'" C-m
     done
     
     # Pane title maintenance
@@ -559,7 +559,7 @@ launch_8person_team() {
             fi
             
             tmux select-pane -t "$session:0.0" -T "👔 Manager: Coordination & Progress" 2>/dev/null
-            tmux select-pane -t "$session:0.1" -T "👑 CEO: Strategic Leadership" 2>/dev/null
+            tmux select-pane -t "$session:0.1" -T "💼 CTO: Technical Leadership" 2>/dev/null
             tmux select-pane -t "$session:0.2" -T "💻 Dev0: Frontend/UI" 2>/dev/null
             tmux select-pane -t "$session:0.3" -T "⚙️ Dev1: Backend/API" 2>/dev/null
             tmux select-pane -t "$session:0.4" -T "🔒 Dev2: QA/Test" 2>/dev/null
@@ -578,7 +578,7 @@ launch_8person_team() {
     echo "📊 構成詳細:"
     echo "   - セッション名: $session"
     echo "   - 総ペイン数: 8"
-    echo "   - 左側: 👔 Manager(0) + 👑 CEO(1)"
+    echo "   - 左側: 👔 Manager(0) + 💼 CTO(1)"
     echo "   - 右側: 💻 Dev0(2) + ⚙️ Dev1(3) + 🔒 Dev2(4) + 🧪 Dev3(5) + 🚀 Dev4(6) + 📊 Dev5(7)"
     echo ""
     echo "🚀 接続コマンド: tmux attach-session -t $session"
@@ -631,13 +631,13 @@ launch_context7_integrated_team() {
     tmux set-window-option -t "$session" automatic-rename off
     
     # Set Context7 enhanced titles (3-person architecture)
-    tmux select-pane -t "$session:0.0" -T "💼 CTO: Context7 + Technical Leadership"
-    tmux select-pane -t "$session:0.1" -T "👔 Manager: Context7 + Project Management"
+    tmux select-pane -t "$session:0.0" -T "👔 Manager: Context7 + Project Management"
+    tmux select-pane -t "$session:0.1" -T "💼 CTO: Context7 + Technical Leadership"
     tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: Context7 + Implementation"
     
     # Initialize with Context7 integration messages (3-person architecture)
-    tmux send-keys -t "$session:0.0" 'clear; echo "💼 CTO（Context7統合）"; echo "役割: Context7活用技術戦略"; echo "機能: 最新アーキテクチャ参照"; echo "共有: tmux_shared_context.md"; echo "準備完了"; cd "'$PROJECT_DIR'"' C-m
-    tmux send-keys -t "$session:0.1" 'clear; echo "👔 Manager（Context7統合）"; echo "役割: Context7活用プロジェクト管理"; echo "機能: 最新管理手法参照"; echo "共有: tmux_shared_context.md"; echo "準備完了"; cd "'$PROJECT_DIR'"' C-m
+    tmux send-keys -t "$session:0.0" 'clear; echo "👔 Manager（Context7統合）"; echo "役割: Context7活用プロジェクト管理"; echo "機能: 最新管理手法参照"; echo "共有: tmux_shared_context.md"; echo "準備完了"; cd "'$PROJECT_DIR'"' C-m
+    tmux send-keys -t "$session:0.1" 'clear; echo "💼 CTO（Context7統合）"; echo "役割: Context7活用技術戦略"; echo "機能: 最新アーキテクチャ参照"; echo "共有: tmux_shared_context.md"; echo "準備完了"; cd "'$PROJECT_DIR'"' C-m
     tmux send-keys -t "$session:0.2" 'clear; echo "👨‍💻 Developer（Context7統合）"; echo "役割: Context7活用実装"; echo "機能: 最新技術実装参照"; echo "共有: tmux_shared_context.md"; echo "準備完了"; cd "'$PROJECT_DIR'"' C-m
     
     # Start Claude with Context7 integration in each pane (3-person architecture)
@@ -649,25 +649,43 @@ launch_context7_integrated_team() {
         echo "# 3人構成並列開発環境 - Context7統合共有コンテキスト" > "$shared_context"
         echo "## 更新時刻: $(date)" >> "$shared_context"
         echo "## 進捗状況:" >> "$shared_context"
-        echo "- CTO: Context7統合待機中" >> "$shared_context"
         echo "- Manager: Context7統合待機中" >> "$shared_context"
+        echo "- CTO: Context7統合待機中" >> "$shared_context"
         echo "- Developer: Context7統合待機中" >> "$shared_context"
         echo "" >> "$shared_context"
         echo "## 連携フロー:" >> "$shared_context"
-        echo "CTO → Manager → Developer → Manager → CTO" >> "$shared_context"
+        echo "Manager → CTO → Developer → CTO → Manager" >> "$shared_context"
     fi
     
     # Enhanced context messages with Context7 integration
     local context7_prompt="あなたは3人構成並列開発環境の専門役割です。Context7統合機能を活用して最新技術情報を自動取得し、Microsoft 365 Python移行プロジェクトを効率化してください。tmux_shared_context.mdで他の役割と連携してください。"
     
-    # CTO with Context7
-    tmux send-keys -t "$session:0.0" "claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/cto.md\")\"" C-m
+    # Create temporary context files with Context7 integration
+    local temp_cto_context="/tmp/cto_context7_$(date +%s).md"
+    local temp_manager_context="/tmp/manager_context7_$(date +%s).md"
+    local temp_developer_context="/tmp/developer_context7_$(date +%s).md"
     
-    # Manager with Context7
-    tmux send-keys -t "$session:0.1" "sleep 3 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/manager.md\")\"" C-m
+    # Create Context7 integrated instruction files
+    echo "$context7_prompt" > "$temp_cto_context"
+    echo "" >> "$temp_cto_context"
+    cat "$PROJECT_DIR/tmux/instructions/cto.md" >> "$temp_cto_context"
     
-    # Developer with Context7
-    tmux send-keys -t "$session:0.2" "sleep 6 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/developer.md\")\"" C-m
+    echo "$context7_prompt" > "$temp_manager_context"
+    echo "" >> "$temp_manager_context"
+    cat "$PROJECT_DIR/tmux/instructions/manager.md" >> "$temp_manager_context"
+    
+    echo "$context7_prompt" > "$temp_developer_context"
+    echo "" >> "$temp_developer_context"
+    cat "$PROJECT_DIR/tmux/instructions/developer.md" >> "$temp_developer_context"
+    
+    # Manager with Context7 (file-based)
+    tmux send-keys -t "$session:0.0" "cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_manager_context'" C-m
+    
+    # CTO with Context7 (file-based)
+    tmux send-keys -t "$session:0.1" "sleep 3 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_cto_context'" C-m
+    
+    # Developer with Context7 (file-based)
+    tmux send-keys -t "$session:0.2" "sleep 6 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_developer_context'" C-m
     
     # Context7 integration test (removed automatic message sending)
     log_info "Context7統合テスト機能を準備中..."
@@ -682,8 +700,8 @@ launch_context7_integrated_team() {
                 break
             fi
             
-            tmux select-pane -t "$session:0.0" -T "💼 CTO: Context7 + Technical Leadership" 2>/dev/null
-            tmux select-pane -t "$session:0.1" -T "👔 Manager: Context7 + Project Management" 2>/dev/null
+            tmux select-pane -t "$session:0.0" -T "👔 Manager: Context7 + Project Management" 2>/dev/null
+            tmux select-pane -t "$session:0.1" -T "💼 CTO: Context7 + Technical Leadership" 2>/dev/null
             tmux select-pane -t "$session:0.2" -T "👨‍💻 Developer: Context7 + Implementation" 2>/dev/null
             
             sleep 3
@@ -820,16 +838,44 @@ launch_context7_integrated_5person_team() {
     # Enhanced context messages with Context7 integration
     local context7_prompt="あなたは5人構成並列開発環境の専門役割です。Context7統合機能を活用して最新技術情報を自動取得し、Microsoft 365 Python移行プロジェクトを効率化してください。tmux_shared_context.mdで他の役割と連携してください。"
     
-    # Manager with Context7
-    tmux send-keys -t "$session:0.0" "claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/manager.md\")\"" C-m
+    # Create temporary context files with Context7 integration for 5-person team
+    local temp_manager_context="/tmp/manager_context7_5team_$(date +%s).md"
+    local temp_cto_context="/tmp/cto_context7_5team_$(date +%s).md"
+    local temp_dev0_context="/tmp/dev0_context7_5team_$(date +%s).md"
+    local temp_dev1_context="/tmp/dev1_context7_5team_$(date +%s).md"
+    local temp_dev2_context="/tmp/dev2_context7_5team_$(date +%s).md"
     
-    # CTO with Context7
-    tmux send-keys -t "$session:0.1" "sleep 3 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/cto.md\")\"" C-m
+    # Create Context7 integrated instruction files for 5-person team
+    echo "$context7_prompt" > "$temp_manager_context"
+    echo "" >> "$temp_manager_context"
+    cat "$PROJECT_DIR/tmux/instructions/manager.md" >> "$temp_manager_context"
     
-    # Dev0, Dev1, Dev2 with Context7
-    tmux send-keys -t "$session:0.2" "sleep 6 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/developer.md\")\"" C-m
-    tmux send-keys -t "$session:0.3" "sleep 9 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/developer.md\")\"" C-m
-    tmux send-keys -t "$session:0.4" "sleep 12 && claude --dangerously-skip-permissions \"$context7_prompt \$(cat \"$PROJECT_DIR/tmux/instructions/developer.md\")\"" C-m
+    echo "$context7_prompt" > "$temp_cto_context"
+    echo "" >> "$temp_cto_context"
+    cat "$PROJECT_DIR/tmux/instructions/cto.md" >> "$temp_cto_context"
+    
+    echo "$context7_prompt" > "$temp_dev0_context"
+    echo "" >> "$temp_dev0_context"
+    cat "$PROJECT_DIR/tmux/instructions/developer.md" >> "$temp_dev0_context"
+    
+    echo "$context7_prompt" > "$temp_dev1_context"
+    echo "" >> "$temp_dev1_context"
+    cat "$PROJECT_DIR/tmux/instructions/developer.md" >> "$temp_dev1_context"
+    
+    echo "$context7_prompt" > "$temp_dev2_context"
+    echo "" >> "$temp_dev2_context"
+    cat "$PROJECT_DIR/tmux/instructions/developer.md" >> "$temp_dev2_context"
+    
+    # Manager with Context7 (file-based)
+    tmux send-keys -t "$session:0.0" "cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_manager_context'" C-m
+    
+    # CTO with Context7 (file-based)
+    tmux send-keys -t "$session:0.1" "sleep 3 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_cto_context'" C-m
+    
+    # Dev0, Dev1, Dev2 with Context7 (file-based)
+    tmux send-keys -t "$session:0.2" "sleep 6 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_dev0_context'" C-m
+    tmux send-keys -t "$session:0.3" "sleep 9 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_dev1_context'" C-m
+    tmux send-keys -t "$session:0.4" "sleep 12 && cd '$PROJECT_DIR' && claude --dangerously-skip-permissions --file '$temp_dev2_context'" C-m
     
     # Step 10: Context7 integration test (removed automatic message sending)
     log_info "Context7統合テスト機能を準備中..."

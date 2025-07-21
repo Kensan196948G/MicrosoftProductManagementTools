@@ -80,12 +80,24 @@ function Get-M365UserDailyActivity {
                     DailyEmailsSent = $dailyEmailsSent
                     TeamsMessages = $teamsMessages
                     ActivityLevel = $activityLevel
-                    ActivityScore = switch ($activityLevel) {
-                        "高" { Get-Random -Minimum 80 -Maximum 100 }
-                        "中" { Get-Random -Minimum 40 -Maximum 79 }
-                        "低" { Get-Random -Minimum 0 -Maximum 39 }
+                    ActiveDateTime = if ($user.LastSignInDateTime) { 
+                        $user.LastSignInDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+                    } else { 
+                        "未ログイン" 
                     }
-                    Status = if ($user.AccountEnabled) { "アクティブ" } else { "非アクティブ" }
+                    Status = if (-not $user.AccountEnabled) {
+                        "非アクティブ（アカウント無効）"
+                    } elseif ($user.LastSignInDateTime -and $user.LastSignInDateTime -gt (Get-Date).AddDays(-1)) {
+                        "アクティブ（24時間以内にログイン）"
+                    } elseif ($user.LastSignInDateTime -and $user.LastSignInDateTime -gt (Get-Date).AddDays(-7)) {
+                        "アクティブ（7日以内にログイン）"
+                    } elseif ($user.LastSignInDateTime -and $user.LastSignInDateTime -gt (Get-Date).AddDays(-30)) {
+                        "アクティブ（30日以内にログイン）"
+                    } elseif ($user.LastSignInDateTime) {
+                        "警告（30日以上ログインなし）"
+                    } else {
+                        "警告（ログイン履歴なし）"
+                    }
                     ReportDate = (Get-Date).ToString("yyyy-MM-dd")
                 }
                 

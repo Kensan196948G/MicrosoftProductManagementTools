@@ -292,24 +292,50 @@ function Test-M365Authentication {
     param()
     
     try {
-        # Check Microsoft Graph connection
-        $context = Get-MgContext -ErrorAction SilentlyContinue
-        $Script:GraphConnected = $null -ne $context
+        # スクリプト変数の状態を基本とし、軽量なテストで確認
+        $graphResult = $Script:GraphConnected
+        $exoResult = $Script:ExchangeConnected
         
-        # Check Exchange Online connection
-        try {
-            Get-OrganizationConfig -ErrorAction Stop | Out-Null
-            $Script:ExchangeConnected = $true
+        # Microsoft Graphの軽量テスト（スクリプト変数がtrueの場合のみ）
+        if ($Script:GraphConnected) {
+            try {
+                $context = Get-MgContext -ErrorAction SilentlyContinue
+                if (-not $context) {
+                    $graphResult = $false
+                    $Script:GraphConnected = $false
+                    Write-ModuleLog "⚠️ Microsoft Graph接続が失効しています" "WARNING"
+                }
+            }
+            catch {
+                $graphResult = $false
+                $Script:GraphConnected = $false
+                Write-ModuleLog "⚠️ Microsoft Graph接続確認エラー: $($_.Exception.Message)" "WARNING"
+            }
         }
-        catch {
-            $Script:ExchangeConnected = $false
+        
+        # Exchange Onlineの軽量テスト（スクリプト変数がtrueの場合のみ）
+        if ($Script:ExchangeConnected) {
+            try {
+                # より軽量な接続確認（組織設定取得の代わりに、既存のセッション確認）
+                $sessions = Get-PSSession | Where-Object { $_.ConfigurationName -eq "Microsoft.Exchange" -and $_.State -eq "Opened" }
+                if (-not $sessions) {
+                    $exoResult = $false
+                    $Script:ExchangeConnected = $false
+                    Write-ModuleLog "⚠️ Exchange Online接続が失効しています" "WARNING"
+                }
+            }
+            catch {
+                $exoResult = $false
+                $Script:ExchangeConnected = $false
+                Write-ModuleLog "⚠️ Exchange Online接続確認エラー: $($_.Exception.Message)" "WARNING"
+            }
         }
         
         $Script:LastConnectionCheck = Get-Date
         
         return @{
-            GraphConnected = $Script:GraphConnected
-            ExchangeConnected = $Script:ExchangeConnected
+            GraphConnected = $graphResult
+            ExchangeConnected = $exoResult
             LastCheck = $Script:LastConnectionCheck
         }
     }
@@ -411,9 +437,10 @@ function Connect-M365Services {
                 Write-ModuleLog "  ClientId: $clientId" "INFO"
                 
                 # 証明書ベース認証の設定チェック（Microsoft365非対話式認証統一）
-                $certificateThumbprint = $config.EntraID.CertificateThumbprint
-                $certificatePath = $config.EntraID.CertificatePath
-                $certificatePassword = $config.EntraID.CertificatePassword
+                # 環境変数展開処理を追加
+                $certificateThumbprint = Resolve-ConfigValue -Value $config.EntraID.CertificateThumbprint -EnvVars $envVars
+                $certificatePath = Resolve-ConfigValue -Value $config.EntraID.CertificatePath -EnvVars $envVars
+                $certificatePassword = Resolve-ConfigValue -Value $config.EntraID.CertificatePassword -EnvVars $envVars
                 
                 Write-ModuleLog "  CertificateThumbprint: $certificateThumbprint" "INFO"
                 Write-ModuleLog "  CertificatePath: $certificatePath" "INFO"
@@ -499,33 +526,33 @@ function Connect-M365Services {
                             Write-ModuleLog "  - $($module.Name): $($module.Version)" "DEBUG"
                         }
                         
-                        # 代替手段: より基本的な接続方法を試行
-                        Write-ModuleLog "🔄 代替接続方法を試行中..." "INFO"
+                        # 証明書ベース認証でのMicrosoft Graph接続を試行
+                        Write-ModuleLog "🔄 証明書ベース認証でMicrosoft Graph接続を試行中..." "INFO"
                         try {
-                            # Microsoft Graph正しい3点セット接続
                             Import-Module Microsoft.Graph.Authentication -Force -ErrorAction SilentlyContinue
                             
+                            # 証明書ベース認証パラメータ
                             $connectParams = @{
-                                ClientId     = $clientId      # 文字列でOK
-                                TenantId     = $tenantId      # 文字列でOK
-                                ClientSecret = $clientSecret  # 文字列でOK（ConvertTo-SecureString不要！）
-                                NoWelcome    = $true
+                                ClientId              = $clientId
+                                TenantId              = $tenantId
+                                CertificateThumbprint = $certificateThumbprint
+                                NoWelcome             = $true
                             }
                             
-                            Write-ModuleLog "🔍 代替接続パラメータ: ClientId=$clientId, TenantId=$tenantId" "INFO"
+                            Write-ModuleLog "🔍 証明書ベース接続パラメータ: ClientId=$clientId, TenantId=$tenantId, CertificateThumbprint=$certificateThumbprint" "INFO"
                             Connect-MgGraph @connectParams
                             
                             # 接続テスト
                             $testResult = Get-MgContext
                             if ($testResult) {
                                 $Script:GraphConnected = $true
-                                Write-ModuleLog "✅ 代替方法で Microsoft Graph に接続成功" "SUCCESS"
+                                Write-ModuleLog "✅ 証明書ベース認証でMicrosoft Graphに接続成功" "SUCCESS"
                             } else {
                                 $Script:GraphConnected = $false
-                                Write-ModuleLog "❌ 代替方法でも接続に失敗しました" "ERROR"
+                                Write-ModuleLog "❌ 証明書ベース認証でも接続に失敗しました" "ERROR"
                             }
                         } catch {
-                            Write-ModuleLog "❌ 代替接続方法も失敗: $($_.Exception.Message)" "ERROR"
+                            Write-ModuleLog "❌ 証明書ベース認証も失敗: $($_.Exception.Message)" "ERROR"
                             $Script:GraphConnected = $false
                         }
                     }
@@ -547,8 +574,9 @@ function Connect-M365Services {
                     $config = Get-Content $configPath -Raw | ConvertFrom-Json
                     $organization = $config.ExchangeOnline.Organization
                     $appId = Resolve-ConfigValue -Value $config.ExchangeOnline.AppId -EnvVars $envVars
-                    $certificateThumbprint = $config.ExchangeOnline.CertificateThumbprint
-                    $certificatePath = $config.ExchangeOnline.CertificatePath
+                    # 環境変数展開処理を追加
+                    $certificateThumbprint = Resolve-ConfigValue -Value $config.ExchangeOnline.CertificateThumbprint -EnvVars $envVars
+                    $certificatePath = Resolve-ConfigValue -Value $config.ExchangeOnline.CertificatePath -EnvVars $envVars
                     $certificatePassword = Resolve-ConfigValue -Value $config.ExchangeOnline.CertificatePassword -EnvVars $envVars
                     
                     # 証明書パスの解決

@@ -14,14 +14,11 @@
           rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@4.5.11/index.css';">
     
     <!-- Enhanced PDF Generation Libraries with Fallbacks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
+    <!-- Japanese font support for jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/polyfills.umd.js"></script>
     
     <!-- Enhanced Chart.js Integration -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" 
@@ -447,35 +444,26 @@
                 </div>
                 
                 <div class="filter-dropdown">
-                    <label for="filter1">部署</label>
+                    <label for="filter1">ユーザー名</label>
                     <select id="filter1" class="dropdown-select">
                         <option value="">すべて</option>
-                        <option value="営業部">営業部</option>
-                        <option value="開発部">開発部</option>
-                        <option value="総務部">総務部</option>
-                        <option value="人事部">人事部</option>
-                        <option value="経理部">経理部</option>
                     </select>
                 </div>
                 
                 <div class="filter-dropdown">
-                    <label for="filter2">アクティビティレベル</label>
+                    <label for="filter2">ユーザープリンシパル名</label>
                     <select id="filter2" class="dropdown-select">
+                        <option value="">すべて</option>
+                    </select>
+                </div>
+                
+                <div class="filter-dropdown">
+                    <label for="filter3">アクティビティレベル</label>
+                    <select id="filter3" class="dropdown-select">
                         <option value="">すべて</option>
                         <option value="高">高</option>
                         <option value="中">中</option>
                         <option value="低">低</option>
-                        <option value="なし">なし</option>
-                    </select>
-                </div>
-                
-                <div class="filter-dropdown">
-                    <label for="filter3">ステータス</label>
-                    <select id="filter3" class="dropdown-select">
-                        <option value="">すべて</option>
-                        <option value="アクティブ">アクティブ</option>
-                        <option value="警告">警告</option>
-                        <option value="非アクティブ">非アクティブ</option>
                     </select>
                 </div>
                 
@@ -519,7 +507,7 @@
                             <th>日次メール</th>
                             <th>Teamsアクティビティ</th>
                             <th>アクティビティレベル</th>
-                            <th>アクティビティスコア</th>
+                            <th>アクティブ日時</th>
                             <th>ステータス</th>
                         </tr>
                     </thead>
@@ -538,6 +526,12 @@
     </footer>
 
     <script>
+        // Pagination settings
+        let currentPage = 1;
+        let itemsPerPage = 50;
+        let allData = [];
+        let originalData = []; // 元データの保持用
+        
         // Enhanced Functionality for User Daily Activity Reports
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
@@ -565,6 +559,16 @@
                     filterElement.value = '';
                 }
             }
+            // フィルターをリセットして全データを表示
+            allData = originalData;
+            showPage(1);
+            
+            // 総件数を元に戻す
+            const totalRecordsElement = document.getElementById('totalRecords');
+            if (totalRecordsElement) {
+                totalRecordsElement.textContent = originalData.length;
+            }
+            
             showNotification('フィルターをリセットしました', 'info');
         }
         
@@ -614,7 +618,7 @@
             }, 500);
         }
         
-        function downloadPDF() {
+        async function downloadPDF() {
             showNotification('📄 PDF生成中...', 'info');
             
             const now = new Date();
@@ -623,50 +627,309 @@
             const day = String(now.getDate()).padStart(2, '0');
             const hour = String(now.getHours()).padStart(2, '0');
             const minute = String(now.getMinutes()).padStart(2, '0');
-            const filename = `ユーザー別日次アクティビティレポート_${year}${month}${day}${hour}${minute}.pdf`;
+            const filename = `ユーザー日次活動_${year}${month}${day}${hour}${minute}.pdf`;
             
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    const element = document.body;
-                    const options = {
-                        margin: [10, 10, 10, 10],
-                        filename: filename,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                            scale: 2, 
-                            useCORS: true,
-                            logging: false,
-                            allowTaint: true
-                        },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'landscape',
-                            compress: true
-                        },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            try {
+                console.log('PDF生成開始: jsPDF使用');
+                
+                // jsPDF instance with Japanese font support
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // Set font for better Japanese character support
+                doc.setFont('helvetica', 'normal');
+                doc.setProperties({
+                    title: 'ユーザー別日次アクティビティレポート',
+                    subject: 'Daily User Activity Report',
+                    author: 'Microsoft 365統合管理ツール',
+                    keywords: 'Microsoft 365, Activity Report, Users',
+                    creator: 'Microsoft 365 Management Tool'
+                });
+                
+                // Add bilingual headers (English + Japanese) to avoid encoding issues
+                doc.setFontSize(16);
+                doc.text('User Daily Activity Report', 20, 20);
+                doc.text('ユーザー別日次アクティビティレポート', 20, 30);
+                
+                // Date
+                doc.setFontSize(10);
+                doc.text(`Generated: ${now.toLocaleString('en-US')}`, 20, 40);
+                
+                // Table data
+                const table = document.getElementById('dataTable');
+                const headers = [];
+                const rows = [];
+                
+                // Convert Japanese headers to English
+                const headerCells = table.querySelectorAll('thead th');
+                headerCells.forEach(cell => {
+                    const originalHeader = cell.textContent.trim();
+                    const mapping = {
+                        'ユーザー名': 'User Name',
+                        'ユーザープリンシパル名': 'User Principal Name',
+                        '部署': 'Department',
+                        '最終サインイン': 'Last Sign-In',
+                        '日次ログイン': 'Daily Logins',
+                        '日次メール': 'Daily Emails',
+                        'Teamsアクティビティ': 'Teams Activity',
+                        'アクティビティレベル': 'Activity Level',
+                        'アクティブ日時': 'Active DateTime',
+                        'ステータス': 'Status'
                     };
-                    
-                    html2pdf().set(options).from(element).save().then(() => {
-                        showNotification('✅ PDFダウンロード完了！', 'success');
-                    }).catch(error => {
-                        console.error('PDF生成エラー:', error);
-                        showNotification('❌ PDFダウンロードに失敗しました', 'error');
+                    headers.push(mapping[originalHeader] || originalHeader);
+                });
+                
+                // Get data rows
+                const bodyRows = table.querySelectorAll('tbody tr');
+                bodyRows.forEach(row => {
+                    const rowData = [];
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach(cell => {
+                        let text = cell.textContent.trim();
+                        // Remove badge styling for PDF
+                        if (cell.querySelector('.badge')) {
+                            text = cell.querySelector('.badge').textContent.trim();
+                        }
+                        // Convert Japanese values to English
+                        const mapping = {
+                            '高': 'High',
+                            '中': 'Medium', 
+                            '低': 'Low',
+                            'なし': 'None',
+                            'アクティブ': 'Active',
+                            '非アクティブ': 'Inactive',
+                            '成功': 'Success',
+                            '失敗': 'Failed',
+                            '警告': 'Warning',
+                            '正常': 'Normal',
+                            '異常': 'Abnormal'
+                        };
+                        rowData.push(mapping[text] || text);
                     });
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
+                    if (rowData.length > 0) {
+                        rows.push(rowData);
+                    }
+                });
+                
+                console.log('テーブルデータ準備完了:', { headers: headers.length, rows: rows.length });
+                
+                // Generate table using autoTable
+                doc.autoTable({
+                    head: [headers],
+                    body: rows,
+                    startY: 50,
+                    theme: 'striped',
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 8,
+                        cellPadding: 2,
+                        overflow: 'linebreak'
+                    },
+                    pageBreak: 'auto',
+                    rowPageBreak: 'avoid',
+                    showHead: 'everyPage',
+                    headStyles: {
+                        fillColor: [52, 73, 94],
+                        textColor: 255,
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 249, 250]
+                    },
+                    margin: { top: 40, right: 10, bottom: 10, left: 10 },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' },
+                        1: { cellWidth: 'auto' },
+                        2: { cellWidth: 'auto' }
+                    }
+                });
+                
+                console.log('PDF生成完了、ダウンロード開始');
+                doc.save(filename);
+                showNotification('✅ PDFダウンロード完了！', 'success');
+                
+            } catch (error) {
+                console.error('jsPDFでのPDF生成エラー:', error);
+                console.log('html2canvasを使用した代替方法を試みます...');
+                
+                // Fallback to html2canvas method
+                try {
+                    const element = document.querySelector('.table-container');
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+                    
+                    const imgWidth = 280;
+                    const pageHeight = 195;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 10;
+                    
+                    // Add title
+                    pdf.setFontSize(16);
+                    pdf.text('User Daily Activity Report', 20, position);
+                    position += 10;
+                    
+                    // Add image
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight - position;
+                    
+                    // Add pages if needed
+                    while (heightLeft >= 0) {
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight, '', 'FAST', 0, -(pageHeight - position + 10) * (heightLeft / imgHeight + 1));
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    pdf.save(filename);
+                    showNotification('✅ PDFダウンロード完了！', 'success');
+                } catch (canvasError) {
+                    console.error('html2canvasでのPDF生成エラー:', canvasError);
+                    showNotification('❌ PDF生成に失敗しました。印刷機能をお試しください。', 'error');
+                    // Fallback to print
+                    printPDF();
                 }
             }
+        }
+        
+        // Pagination functions
+        function initPagination() {
+            const tableBody = document.getElementById('tableBody');
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+            allData = rows;
+            showPage(1);
+        }
+        
+        function showPage(page) {
+            currentPage = page;
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
             
-            // Fallback to print
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
+            const start = (page - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = allData.slice(start, end);
+            
+            pageData.forEach(row => {
+                tableBody.appendChild(row.cloneNode(true));
+            });
+            
+            updatePaginationControls();
+        }
+        
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(allData.length / itemsPerPage);
+            const totalRecordsElement = document.getElementById('totalRecords');
+            if (totalRecordsElement) {
+                totalRecordsElement.textContent = allData.length;
+            }
+            
+            // Create or update pagination controls
+            let paginationContainer = document.getElementById('paginationControls');
+            if (!paginationContainer) {
+                const tableContainer = document.querySelector('.table-container');
+                paginationContainer = document.createElement('div');
+                paginationContainer.id = 'paginationControls';
+                paginationContainer.style.cssText = 'padding: 1rem; text-align: center; background: #f8f9fa; border-top: 1px solid #dee2e6;';
+                tableContainer.appendChild(paginationContainer);
+            }
+            
+            paginationContainer.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
+                    <button class="btn btn-secondary" onclick="showPage(1)" ${currentPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-angle-double-left"></i> 最初
+                    </button>
+                    <button class="btn btn-secondary" onclick="showPage(${Math.max(1, currentPage - 1)})" ${currentPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-angle-left"></i> 前へ
+                    </button>
+                    <span style="padding: 0.5rem 1rem; background: white; border-radius: 4px;">
+                        ページ <strong>${currentPage}</strong> / ${totalPages} (全 ${allData.length} 件)
+                    </span>
+                    <button class="btn btn-secondary" onclick="showPage(${Math.min(totalPages, currentPage + 1)})" ${currentPage === totalPages ? 'disabled' : ''}>
+                        次へ <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button class="btn btn-secondary" onclick="showPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
+                        最後 <i class="fas fa-angle-double-right"></i>
+                    </button>
+                    <select class="dropdown-select" style="width: auto; margin-left: 1rem;" onchange="itemsPerPage = parseInt(this.value); showPage(1);">
+                        <option value="25" ${itemsPerPage === 25 ? 'selected' : ''}>25件</option>
+                        <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50件</option>
+                        <option value="100" ${itemsPerPage === 100 ? 'selected' : ''}>100件</option>
+                        <option value="${allData.length}">全件</option>
+                    </select>
+                </div>
+            `;
+        }
+        
+        // フィルター機能の実装
+        function applyFilters() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const activityFilter = document.getElementById('filter3').value;
+            const rows = Array.from(originalData);
+            
+            const filteredData = rows.filter(row => {
+                const cells = row.cells;
+                const userName = cells[0].textContent.toLowerCase();
+                const upn = cells[1].textContent.toLowerCase();
+                const department = cells[2].textContent.toLowerCase();
+                const activityLevel = cells[7].textContent;
+                const status = cells[9].textContent;
+                
+                // 検索フィルター
+                const matchesSearch = !searchValue || 
+                    userName.includes(searchValue) || 
+                    upn.includes(searchValue) ||
+                    department.includes(searchValue);
+                
+                // アクティビティレベルフィルター
+                const matchesActivity = !activityFilter || 
+                    activityLevel === activityFilter;
+                
+                return matchesSearch && matchesActivity;
+            });
+            
+            allData = filteredData;
+            showPage(1);
+            
+            // フィルタリング結果の件数を更新
+            const totalRecordsElement = document.getElementById('totalRecords');
+            if (totalRecordsElement) {
+                totalRecordsElement.textContent = filteredData.length;
+            }
+        }
+        
+        // 元のinitPagination関数を修正
+        function initPagination() {
+            const tableBody = document.getElementById('tableBody');
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+            originalData = rows; // 元データを保存
+            allData = rows;
+            showPage(1);
+            
+            // イベントリスナーの追加
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('filter3').addEventListener('change', applyFilters);
         }
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             showNotification('ユーザー別日次アクティビティレポートが読み込まれました', 'success');
+            initPagination();
         });
     </script>
 </body>

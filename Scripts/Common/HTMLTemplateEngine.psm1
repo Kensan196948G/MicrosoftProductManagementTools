@@ -305,7 +305,7 @@ function Generate-EnhancedHTMLReport {
             "Title" = $Title
             "REPORT_DATE" = Get-Date -Format "yyyy年MM月dd日 HH:mm:ss"
             "REPORT_TIME" = Get-Date -Format "HH:mm:ss"
-            "SYSTEM_INFO" = "Microsoft 365統合管理ツール v2.0"
+            "SYSTEM_INFO" = "PowerShell $($PSVersionTable.PSVersion) | Microsoft Graph API v2.0 | $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
             "TOTAL_COUNT" = $Data.Count
             "ChartLabels" = ($chartData.labels | ConvertTo-Json)
             "ChartData" = ($chartData.data | ConvertTo-Json)
@@ -352,6 +352,21 @@ function Generate-EnhancedHTMLReport {
                 $variables["TOTAL_USERS"] = $Data.Count
                 $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.UsageLevel -ne "未使用" }).Count
             }
+            "UserDailyActivity" {
+                $variables["USER_DAILY_ACTIVITY_DATA"] = $htmlTable
+                $variables["TOTAL_USERS"] = $Data.Count
+                # Count users whose Status starts with "アクティブ"
+                $variables["ACTIVE_USERS"] = ($Data | Where-Object { $_.Status -like "アクティブ*" }).Count
+                # Count activity levels
+                $variables["HIGH_ACTIVITY_USERS"] = ($Data | Where-Object { $_.ActivityLevel -eq "高" }).Count
+                $variables["MEDIUM_ACTIVITY_USERS"] = ($Data | Where-Object { $_.ActivityLevel -eq "中" }).Count
+                $variables["LOW_ACTIVITY_USERS"] = ($Data | Where-Object { $_.ActivityLevel -eq "低" }).Count
+                $variables["INACTIVE_USERS"] = ($Data | Where-Object { $_.Status -like "非アクティブ*" }).Count
+                # Calculate daily totals
+                $variables["DAILY_LOGINS"] = ($Data | Measure-Object DailyLogins -Sum).Sum
+                $variables["DAILY_EMAILS"] = ($Data | Measure-Object DailyEmailsSent -Sum).Sum
+                $variables["TEAMS_MESSAGES"] = ($Data | Measure-Object TeamsMessages -Sum).Sum
+            }
             default {
                 # デフォルトの汎用変数
                 $variables["USER_DATA"] = $htmlTable
@@ -359,12 +374,18 @@ function Generate-EnhancedHTMLReport {
                 $variables["MFA_DATA"] = $htmlTable
                 $variables["TEAMS_DATA"] = $htmlTable
                 $variables["DAILY_ACTIVITY_DATA"] = $htmlTable
+                $variables["USER_DAILY_ACTIVITY_DATA"] = $htmlTable
                 $variables["TOTAL_USERS"] = $Data.Count
                 $variables["ACTIVE_USERS"] = $Data.Count
                 $variables["TOTAL_LICENSES"] = $Data.Count
                 $variables["DAILY_LOGINS"] = 0
                 $variables["DAILY_EMAILS"] = 0
                 $variables["DAILY_ALERTS"] = 0
+                # Activity level counts
+                $variables["HIGH_ACTIVITY_USERS"] = 0
+                $variables["MEDIUM_ACTIVITY_USERS"] = 0
+                $variables["LOW_ACTIVITY_USERS"] = 0
+                $variables["INACTIVE_USERS"] = 0
             }
         }
         

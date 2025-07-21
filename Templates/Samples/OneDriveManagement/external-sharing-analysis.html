@@ -9,102 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- PDF生成ライブラリ（複数のCDN対応） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
-            onerror="console.error('jsPDF CDN1 failed'); loadJsPDFBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" 
-            onerror="console.error('jsPDF AutoTable CDN1 failed'); loadAutoTableBackup();"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" 
-            onerror="console.error('html2canvas CDN1 failed'); loadHtml2CanvasBackup();"></script>
-    <!-- html2pdf.js (PDF生成用) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" 
-            onerror="console.error('html2pdf CDN1 failed'); loadHtml2PdfBackup();"></script>
+    <!-- PDF生成ライブラリ -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@latest/dist/html2canvas.min.js"></script>
     
-    <!-- バックアップCDN読み込み関数 -->
     <script>
-        function loadJsPDFBackup() {
-            console.log('jsPDFバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
-            script.onerror = function() {
-                console.error('jsPDF全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadAutoTableBackup() {
-            console.log('AutoTableバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-            script.onerror = function() {
-                console.error('AutoTable全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2CanvasBackup() {
-            console.log('html2canvasバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
-            script.onerror = function() {
-                console.error('html2canvas全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-        
-        function loadHtml2PdfBackup() {
-            console.log('html2pdfバックアップCDNから読み込み中...');
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-            script.onerror = function() {
-                console.error('html2pdf全CDN読み込み失敗');
-            };
-            document.head.appendChild(script);
-        }
-    </script>
-    
-    <!-- jsPDF初期化確認スクリプト -->
-    <script>
-        // PDF生成ライブラリの初期化確認
+        // テーブル初期化
         window.addEventListener('DOMContentLoaded', function() {
-            console.log('=== PDF生成ライブラリ初期化確認 ===');
-            console.log('window.jsPDF:', typeof window.jsPDF);
-            console.log('global jsPDF:', typeof jsPDF);
-            console.log('window.jspdf:', typeof window.jspdf);
-            console.log('html2canvas:', typeof html2canvas);
-            console.log('html2pdf:', typeof html2pdf);
-            
-            // jsPDF の統一化
-            if (typeof window.jsPDF === 'undefined') {
-                if (typeof jsPDF !== 'undefined') {
-                    window.jsPDF = jsPDF;
-                    console.log('jsPDFをwindow.jsPDFに設定しました');
-                } else if (typeof window.jspdf !== 'undefined') {
-                    window.jsPDF = window.jspdf;
-                    console.log('window.jspdfをwindow.jsPDFに設定しました');
-                }
-            }
-            
-            // autoTable確認
-            if (window.jsPDF && window.jsPDF.jsPDF && window.jsPDF.jsPDF.autoTable) {
-                console.log('autoTable確認: 利用可能');
-            } else {
-                console.log('autoTable確認: 利用不可');
-            }
-            
-            // html2pdf確認
-            if (typeof html2pdf !== 'undefined') {
-                console.log('html2pdf確認: 利用可能');
-            } else {
-                console.log('html2pdf確認: 利用不可');
-            }
-            
-            // 最終確認
-            console.log('最終確認 - window.jsPDF:', typeof window.jsPDF);
-            console.log('最終確認 - html2pdf:', typeof html2pdf);
-            console.log('===============================');
-            
-            // テーブル初期化
             initializeTable();
         });
     </script>
@@ -1497,105 +1409,109 @@
             console.log('PDFダウンロード開始...');
             showNotification('📄 PDF生成中...', 'info');
             
-            // 日時付きファイル名生成
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const filename = `OneDrive外部共有分析レポート${year}${month}${day}${hour}${minute}.pdf`;
-            
-            // まずhtml2pdfを試行（最も確実）
-            if (typeof html2pdf !== 'undefined') {
-                try {
-                    console.log('html2pdfを使用してPDF生成');
-                    executeHtml2PdfDownload(filename);
-                    return;
-                } catch (error) {
-                    console.error('html2pdf エラー:', error);
-                }
-            }
-            
-            // jsPDF + html2canvasのフォールバック
-            if (typeof window.jsPDF !== 'undefined' && typeof html2canvas !== 'undefined') {
-                try {
-                    console.log('jsPDF + html2canvasを使用してPDF生成');
-                    executeJsPdfDownload(filename);
-                    return;
-                } catch (error) {
-                    console.error('jsPDF エラー:', error);
-                }
-            }
-            
-            // 最終フォールバック：印刷
-            console.log('PDFライブラリが利用不可。印刷にフォールバック');
-            showNotification('PDFライブラリが見つかりません。印刷機能を使用してください。', 'error');
-            printPDF();
-        }
-        
-        // html2pdf.jsでPDF生成
-        function executeHtml2PdfDownload(filename) {
-            const element = document.body;
-            const options = {
-                margin: [10, 10, 10, 10],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true,
-                    logging: false,
-                    allowTaint: true
-                },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: 'a4', 
+            try {
+                // タイムスタンプ生成
+                const now = new Date();
+                const timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') + 
+                    String(now.getSeconds()).padStart(2, '0');
+                
+                const filename = `OneDrive外部共有分析_${timestamp}.pdf`;
+                
+                // jsPDFでテーブルをPDF化
+                const { jsPDF } = window.jspdf || window.jsPDF || jsPDF;
+                const doc = new jsPDF({
                     orientation: 'landscape',
-                    compress: true
-                },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-            };
-            
-            html2pdf().set(options).from(element).save().then(() => {
-                console.log('html2pdf PDF生成完了');
-                showNotification('✅ PDFダウンロード完了！', 'success');
-            }).catch(error => {
-                console.error('html2pdf エラー:', error);
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // PDFタイトル（日英両対応）
+                doc.setFontSize(16);
+                doc.text('Microsoft 365 OneDrive External Sharing Report', 20, 20);
+                doc.text('Microsoft 365 OneDrive外部共有分析レポート', 20, 30);
+                
+                // 生成日時
+                doc.setFontSize(10);
+                doc.text(`生成日時: ${now.toLocaleString('ja-JP')}`, 20, 40);
+                
+                // ヘッダーマッピング（日英対応）
+                const mapping = {
+                    'ファイル名': 'File Name',
+                    '所有者': 'Owner',
+                    '外部ドメイン': 'External Domain',
+                    '共有相手メール': 'Shared Email',
+                    'アクセス権限': 'Access Permission',
+                    '共有URL': 'Sharing URL',
+                    '共有開始日': 'Share Date',
+                    '最終アクセス': 'Last Access',
+                    'リスクレベル': 'Risk Level'
+                };
+                
+                // 値の変換マッピング
+                const valueMapping = {
+                    '高': 'High', '中': 'Medium', '低': 'Low',
+                    '正常': 'Normal', 'エラー': 'Error', '警告': 'Warning',
+                    '許可': 'Allowed', '禁止': 'Denied', '制限': 'Restricted'
+                };
+                
+                // テーブルデータを準備
+                const headers = Array.from(document.querySelectorAll('#dataTable th')).map(th => th.textContent.trim());
+                const englishHeaders = headers.map(h => mapping[h] || h);
+                const rows = filteredData.map(row => 
+                    headers.map(header => {
+                        let value = row[header] || '';
+                        return valueMapping[value] || value;
+                    })
+                );
+                
+                // autoTableでテーブル生成
+                doc.autoTable({
+                    head: [englishHeaders],
+                    body: rows,
+                    startY: 50,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [0, 120, 212],
+                        textColor: 255,
+                        fontSize: 9,
+                        fontStyle: 'bold'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [245, 245, 245]
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 25 }, // ユーザー名
+                        1: { cellWidth: 30 }, // ファイル名
+                        2: { cellWidth: 25 }, // 外部共有相手
+                        3: { cellWidth: 20 }, // 共有タイプ
+                        4: { cellWidth: 20 }, // 権限レベル
+                        5: { cellWidth: 20 }, // 共有日時
+                        6: { cellWidth: 20 }, // 最終アクセス
+                        7: { cellWidth: 15 }, // リスクレベル
+                        8: { cellWidth: 20 }  // 部署
+                    },
+                    margin: { top: 40, right: 10, bottom: 20, left: 10 },
+                    tableWidth: 'auto',
+                    overflow: 'linebreak'
+                });
+                
+                // PDF保存
+                doc.save(filename);
+                
+                console.log('PDF生成完了:', filename);
+                showNotification(`✅ PDFダウンロード完了！(${filteredData.length}件)`, 'success');
+                
+            } catch (error) {
+                console.error('PDFダウンロードエラー:', error);
                 showNotification('❌ PDFダウンロードに失敗しました', 'error');
-                executeJsPdfDownload(filename);
-            });
-        }
-        
-        // jsPDF + html2canvasでPDF生成
-        function executeJsPdfDownload(filename) {
-            const { jsPDF } = window.jsPDF;
-            
-            html2canvas(document.body, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                allowTaint: true
-            }).then(canvas => {
-                const pdf = new jsPDF('l', 'mm', 'a4');
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                const imgX = (pdfWidth - imgWidth * ratio) / 2;
-                const imgY = 0;
-                
-                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-                pdf.save(filename);
-                
-                console.log('jsPDF PDF生成完了');
-                showNotification('✅ PDFダウンロード完了！', 'success');
-            }).catch(error => {
-                console.error('jsPDF + html2canvas エラー:', error);
-                showNotification('❌ PDFダウンロードに失敗しました', 'error');
-            });
+            }
         }
         
         // 通知表示

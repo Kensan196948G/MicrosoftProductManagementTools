@@ -1,0 +1,202 @@
+{
+  "timestamp": "2025-07-11T09:16:16+09:00",
+  "testType": "Emergency Post-Switch Integration Test",
+  "duration": "00:00:29",
+  "serverStatus": {
+    "running": true,
+    "version": "simple",
+    "apiCount": 3,
+    "responseTime": 95,
+    "mode": "Simple mode - Core features only"
+  },
+  "componentResults": [
+    {
+      "component": "VendorManagementPage",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/vendors",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/vendors/statistics",
+          "method": "GET", 
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "ServiceTargetSettings",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/service-level",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/service-level/objectives",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "AvailabilityManagement",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/availability",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/availability-metrics",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "PerformanceManagement",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/capacity",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/performance-metrics",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "ServiceQualityMeasurement",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/quality",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/quality/metrics",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "SLAViolationManagement",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/sla-violations",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/service-level/violations",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    },
+    {
+      "component": "CategoryManagement",
+      "status": "failed",
+      "apiTests": [
+        {
+          "endpoint": "/api/incidents/categories",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        },
+        {
+          "endpoint": "/api/problems/categories",
+          "method": "GET",
+          "status": 404,
+          "success": false,
+          "error": "Not Found - Missing API"
+        }
+      ],
+      "workingEndpoints": 0,
+      "totalEndpoints": 2,
+      "overallScore": 0
+    }
+  ],
+  "apiCommunication": {
+    "totalEndpoints": 14,
+    "workingEndpoints": 0,
+    "failedEndpoints": 14,
+    "successRate": 0,
+    "avgResponseTime": 95
+  },
+  "overallStatus": "failed",
+  "qualityScore": 0,
+  "criticalIssues": [
+    "Server still running in simple mode - full switch not completed",
+    "All 7 components failing - APIs not available",
+    "VendorManagementPage: 0/2 endpoints working",
+    "ServiceTargetSettings: 0/2 endpoints working", 
+    "AvailabilityManagement: 0/2 endpoints working",
+    "PerformanceManagement: 0/2 endpoints working",
+    "ServiceQualityMeasurement: 0/2 endpoints working",
+    "SLAViolationManagement: 0/2 endpoints working",
+    "CategoryManagement: 0/2 endpoints working"
+  ],
+  "recommendations": [
+    "CRITICAL: Switch from app-simple.js to app.ts (complete version)",
+    "Follow SERVER_SWITCH_PROCEDURE.md for proper switch",
+    "All components are non-functional due to missing APIs",
+    "System NOT ready for production use"
+  ],
+  "conclusion": "SERVER SWITCH REQUIRED IMMEDIATELY"
+}

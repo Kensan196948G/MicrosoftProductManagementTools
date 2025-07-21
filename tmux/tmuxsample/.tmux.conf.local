@@ -1,0 +1,72 @@
+# ITSM tmux configuration
+# URL確認システム統合設定
+
+# プレフィックスキー設定（デフォルト: Ctrl+b）
+set -g prefix C-b
+bind C-b send-prefix
+
+# URL確認システムのキーバインド
+# Ctrl+b u: URL一覧表示
+bind u run-shell "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./tmux-url-helper.sh urls"
+
+# Ctrl+b o: ブラウザ起動（統合起動）
+bind o run-shell "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./tmux-url-helper.sh launch"
+
+# Ctrl+b s: サーバー状態確認
+bind s run-shell "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./tmux-url-helper.sh status"
+
+# Ctrl+b p: UIパネル起動
+bind p new-window -n "UI-Panel" "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./tmux-ui-panel.sh panel"
+
+# Ctrl+b m: モニタリング開始
+bind m new-window -n "Monitor" "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./tmux-url-helper.sh monitor"
+
+# Ctrl+b a: サーバー自動起動
+bind a new-window -n "Auto-Start" "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./auto-start-servers.sh auto"
+
+# Ctrl+b r: サーバー再起動
+bind r run-shell "cd /media/kensan/LinuxHDD/ITSM-ITmanagementSystem/tmux && ./auto-start-servers.sh restart"
+
+# ステータスバー設定
+set -g status-interval 10
+set -g status-right-length 60
+set -g status-right "#[fg=green]ITSM #[fg=yellow]| #[fg=cyan]%Y-%m-%d %H:%M"
+
+# ペイン分割のキーバインド
+bind | split-window -h
+bind - split-window -v
+
+# ペイン移動のキーバインド（vim風）
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+# マウスサポート
+set -g mouse on
+
+# 256色サポート
+set -g default-terminal "screen-256color"
+
+# ヒストリーサイズ
+set -g history-limit 10000
+
+# ウィンドウ番号を1から開始
+set -g base-index 1
+setw -g pane-base-index 1
+
+# アクティブなペインの強調
+set -g pane-active-border-style fg=blue,bg=default
+
+# コピーモード設定（vi風）
+setw -g mode-keys vi
+bind-key -T copy-mode-vi v send-keys -X begin-selection
+bind-key -T copy-mode-vi y send-keys -X copy-selection-and-cancel
+
+# 通知設定
+setw -g monitor-activity on
+set -g visual-activity on
+
+# タイトル設定
+set -g set-titles on
+set -g set-titles-string "ITSM System - #S:#I:#W"

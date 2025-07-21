@@ -1,0 +1,281 @@
+groups:
+  - name: microsoft365-tools.rules
+    rules:
+      # Application availability rules
+      - alert: ApplicationDown
+        expr: up{job="m365-tools"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: microsoft365-tools
+        annotations:
+          summary: "Microsoft 365 Tools application is down"
+          description: "The Microsoft 365 Tools application has been down for more than 1 minute. Instance: {{ $labels.instance }}"
+          runbook_url: "https://wiki.company.com/runbooks/m365-tools-down"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="m365-tools",code=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes. Instance: {{ $labels.instance }}"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="m365-tools"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High latency detected"
+          description: "95th percentile latency is {{ $value }}s for the last 5 minutes. Instance: {{ $labels.instance }}"
+
+      # Resource utilization rules
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{container="m365-tools"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} for container {{ $labels.container }} on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes{container="m365-tools"} / container_spec_memory_limit_bytes{container="m365-tools"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} for container {{ $labels.container }} on {{ $labels.instance }}"
+
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total{container="m365-tools"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: microsoft365-tools
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping"
+
+      # Database connectivity rules
+      - alert: DatabaseConnectionFailed
+        expr: microsoft365_tools_database_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: microsoft365-tools
+        annotations:
+          summary: "Database connection failed"
+          description: "Failed to connect to database. Check database availability and connection settings."
+
+      - alert: HighDatabaseLatency
+        expr: microsoft365_tools_database_query_duration_seconds{quantile="0.95"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High database query latency"
+          description: "95th percentile database query latency is {{ $value }}s"
+
+      # Microsoft Graph API rules
+      - alert: GraphAPIRateLimited
+        expr: rate(microsoft365_tools_graph_api_rate_limited_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "Microsoft Graph API rate limiting detected"
+          description: "Application is being rate limited by Microsoft Graph API. Rate: {{ $value }} per second"
+
+      - alert: GraphAPIAuthenticationFailed
+        expr: microsoft365_tools_graph_api_auth_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: microsoft365-tools
+        annotations:
+          summary: "Microsoft Graph API authentication failed"
+          description: "Failed to authenticate with Microsoft Graph API. Check credentials and permissions."
+
+      - alert: GraphAPIHighErrorRate
+        expr: rate(microsoft365_tools_graph_api_errors_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "High Microsoft Graph API error rate"
+          description: "Microsoft Graph API error rate is {{ $value | humanizePercentage }}"
+
+      # Storage and backup rules
+      - alert: DiskSpaceRunningLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "Disk space running low"
+          description: "Available disk space is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: BackupFailed
+        expr: microsoft365_tools_backup_last_success_timestamp < (time() - 86400)
+        for: 0m
+        labels:
+          severity: critical
+          service: microsoft365-tools
+        annotations:
+          summary: "Backup failed or overdue"
+          description: "Last successful backup was more than 24 hours ago"
+
+      # Business logic rules
+      - alert: ReportGenerationFailed
+        expr: rate(microsoft365_tools_report_generation_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "Report generation failures detected"
+          description: "{{ $value }} report generation failures in the last 10 minutes"
+
+      - alert: UserSyncStalled
+        expr: microsoft365_tools_user_sync_last_success_timestamp < (time() - 3600)
+        for: 0m
+        labels:
+          severity: warning
+          service: microsoft365-tools
+        annotations:
+          summary: "User synchronization stalled"
+          description: "User sync has not completed successfully in the last hour"
+
+      # Kubernetes cluster rules
+      - alert: NodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node not ready"
+          description: "Node {{ $labels.node }} has been not ready for more than 5 minutes"
+
+      - alert: PodNotReady
+        expr: kube_pod_status_ready{condition="true",namespace="microsoft-365-tools"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 5 minutes"
+
+      - alert: DeploymentReplicasMismatch
+        expr: kube_deployment_status_replicas{namespace="microsoft-365-tools"} != kube_deployment_spec_replicas{namespace="microsoft-365-tools"}
+        for: 10m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Deployment replicas mismatch"
+          description: "Deployment {{ $labels.deployment }} has {{ $value }} replicas available, but {{ $labels.spec_replicas }} expected"
+
+      # SSL certificate expiration
+      - alert: SSLCertificateExpiring
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 0m
+        labels:
+          severity: warning
+          service: ssl
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: SSLCertificateExpired
+        expr: probe_ssl_earliest_cert_expiry - time() <= 0
+        for: 0m
+        labels:
+          severity: critical
+          service: ssl
+        annotations:
+          summary: "SSL certificate expired"
+          description: "SSL certificate for {{ $labels.instance }} has expired"
+
+  - name: business-continuity.rules
+    rules:
+      # Business continuity and SLA rules
+      - alert: SLABreach
+        expr: |
+          (
+            sum(rate(http_requests_total{job="m365-tools",code!~"5.."}[1h])) /
+            sum(rate(http_requests_total{job="m365-tools"}[1h]))
+          ) * 100 < 99.9
+        for: 0m
+        labels:
+          severity: critical
+          service: sla
+        annotations:
+          summary: "SLA breach detected"
+          description: "Service availability is {{ $value | humanizePercentage }}, below the 99.9% SLA threshold"
+
+      - alert: DataExportDelayed
+        expr: microsoft365_tools_data_export_last_success_timestamp < (time() - 7200)
+        for: 0m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Data export delayed"
+          description: "Data export has not completed successfully in the last 2 hours"
+
+      - alert: ComplianceReportOverdue
+        expr: microsoft365_tools_compliance_report_last_success_timestamp < (time() - 86400)
+        for: 0m
+        labels:
+          severity: critical
+          service: compliance
+        annotations:
+          summary: "Compliance report overdue"
+          description: "Compliance report has not been generated in the last 24 hours"
+
+  - name: security.rules
+    rules:
+      # Security monitoring rules
+      - alert: UnauthorizedAccess
+        expr: rate(microsoft365_tools_auth_failures_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "High number of authentication failures"
+          description: "{{ $value }} authentication failures per second in the last 5 minutes"
+
+      - alert: SuspiciousActivity
+        expr: rate(microsoft365_tools_suspicious_requests_total[10m]) > 1
+        for: 0m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Suspicious activity detected"
+          description: "{{ $value }} suspicious requests detected in the last 10 minutes"
+
+      - alert: SecurityScanFailed
+        expr: microsoft365_tools_security_scan_last_success_timestamp < (time() - 86400)
+        for: 0m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Security scan failed or overdue"
+          description: "Security scan has not completed successfully in the last 24 hours"

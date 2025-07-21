@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Polyfill Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Crypto.randomUUID 互換性テスト</h1>
+    <div id="results"></div>
+    <button onclick="runTests()">テストを実行</button>
+    <button onclick="clearResults()">結果をクリア</button>
+
+    <script>
+        // IE11 compatible crypto.randomUUID polyfill
+        (function() {
+            'use strict';
+            
+            function generateUUID() {
+                // Use crypto.getRandomValues if available
+                if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+                    var buffer = new Uint8Array(16);
+                    window.crypto.getRandomValues(buffer);
+                    
+                    // Convert to UUID format (version 4)
+                    buffer[6] = (buffer[6] & 0x0f) | 0x40; // Version 4
+                    buffer[8] = (buffer[8] & 0x3f) | 0x80; // Variant 10
+                    
+                    // IE11 compatible array conversion
+                    var hex = Array.prototype.map.call(buffer, function(b) {
+                        return (b < 16 ? '0' : '') + b.toString(16);
+                    }).join('');
+                    
+                    return [
+                        hex.slice(0, 8),
+                        hex.slice(8, 12),
+                        hex.slice(12, 16),
+                        hex.slice(16, 20),
+                        hex.slice(20, 32)
+                    ].join('-');
+                } else {
+                    // Enhanced fallback using timestamp and performance.now()
+                    var d = new Date().getTime();
+                    var d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
+                    
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16;
+                        if (d > 0) {
+                            r = (d + r) % 16 | 0;
+                            d = Math.floor(d / 16);
+                        } else {
+                            r = (d2 + r) % 16 | 0;
+                            d2 = Math.floor(d2 / 16);
+                        }
+                        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                    });
+                }
+            }
+            
+            // Apply polyfill to all possible global objects with IE11 compatibility
+            try {
+                // For window (browser)
+                if (typeof window !== 'undefined') {
+                    if (!window.crypto) {
+                        window.crypto = {};
+                    }
+                    if (!window.crypto.randomUUID) {
+                        window.crypto.randomUUID = generateUUID;
+                    }
+                    
+                    // Try to force override to ensure availability
+                    try {
+                        Object.defineProperty(window.crypto, 'randomUUID', {
+                            value: generateUUID,
+                            writable: false,
+                            configurable: true
+                        });
+                    } catch (defineError) {
+                        // If defineProperty fails, try direct assignment
+                        window.crypto.randomUUID = generateUUID;
+                    }
+                }
+                
+                // For globalThis (universal) - with IE11 compatibility check
+                if (typeof globalThis !== 'undefined') {
+                    if (!globalThis.crypto) {
+                        globalThis.crypto = {};
+                    }
+                    if (!globalThis.crypto.randomUUID) {
+                        globalThis.crypto.randomUUID = generateUUID;
+                    }
+                    
+                    // Try to force override to ensure availability
+                    try {
+                        Object.defineProperty(globalThis.crypto, 'randomUUID', {
+                            value: generateUUID,
+                            writable: false,
+                            configurable: true
+                        });
+                    } catch (defineError) {
+                        // If defineProperty fails, try direct assignment
+                        globalThis.crypto.randomUUID = generateUUID;
+                    }
+                }
+                
+                // For self (web workers)
+                if (typeof self !== 'undefined') {
+                    if (!self.crypto) {
+                        self.crypto = {};
+                    }
+                    if (!self.crypto.randomUUID) {
+                        self.crypto.randomUUID = generateUUID;
+                    }
+                }
+                
+                // Additional check - if crypto is still undefined globally
+                if (typeof crypto === 'undefined') {
+                    window.crypto = { randomUUID: generateUUID };
+                    try {
+                        globalThis.crypto = { randomUUID: generateUUID };
+                    } catch (e) {
+                        // Ignore globalThis errors in IE11
+                    }
+                }
+                
+                console.log('Crypto polyfill applied successfully');
+            } catch (error) {
+                console.warn('Failed to apply crypto polyfill:', error);
+            }
+        })();
+
+        function log(message, type) {
+            type = type || 'info';
+            var results = document.getElementById('results');
+            var div = document.createElement('div');
+            div.className = 'test-result ' + type;
+            div.textContent = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function isValidUUID(uuid) {
+            var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(uuid);
+        }
+
+        function runTests() {
+            clearResults();
+            
+            log('=== Crypto.randomUUID 互換性テスト開始 ===', 'info');
+            
+            // Test 1: Check if crypto object exists
+            if (typeof window.crypto !== 'undefined') {
+                log('✓ window.crypto オブジェクトが存在します', 'success');
+            } else {
+                log('✗ window.crypto オブジェクトが存在しません', 'error');
+                return;
+            }
+            
+            // Test 2: Check if randomUUID method exists
+            if (typeof window.crypto.randomUUID === 'function') {
+                log('✓ window.crypto.randomUUID メソッドが存在します', 'success');
+            } else {
+                log('✗ window.crypto.randomUUID メソッドが存在しません', 'error');
+                return;
+            }
+            
+            // Test 3: Generate UUID and validate format
+            try {
+                var uuid = window.crypto.randomUUID();
+                log('生成されたUUID: ' + uuid, 'info');
+                
+                if (isValidUUID(uuid)) {
+                    log('✓ UUIDの形式が正しいです', 'success');
+                } else {
+                    log('✗ UUIDの形式が正しくありません', 'error');
+                }
+            } catch (error) {
+                log('✗ UUID生成でエラーが発生しました: ' + error.message, 'error');
+                return;
+            }
+            
+            // Test 4: Generate multiple UUIDs and check uniqueness
+            var uuids = [];
+            var duplicateFound = false;
+            
+            for (var i = 0; i < 10; i++) {
+                var uuid = window.crypto.randomUUID();
+                if (uuids.indexOf(uuid) !== -1) {
+                    duplicateFound = true;
+                    break;
+                }
+                uuids.push(uuid);
+            }
+            
+            if (!duplicateFound) {
+                log('✓ 10個のUUIDが全て異なる値です', 'success');
+            } else {
+                log('✗ 重複したUUIDが検出されました', 'error');
+            }
+            
+            // Test 5: Browser compatibility information
+            var userAgent = navigator.userAgent;
+            log('ブラウザ情報: ' + userAgent, 'info');
+            
+            // Test 6: Feature detection
+            var hasNativeCrypto = typeof window.crypto !== 'undefined' && window.crypto.getRandomValues;
+            if (hasNativeCrypto) {
+                log('✓ ネイティブのcrypto.getRandomValues()が利用可能です', 'success');
+            } else {
+                log('⚠ フォールバック実装を使用しています', 'info');
+            }
+            
+            log('=== テスト完了 ===', 'info');
+        }
+
+        // Run tests automatically on page load
+        window.onload = function() {
+            runTests();
+        };
+    </script>
+</body>
+</html>

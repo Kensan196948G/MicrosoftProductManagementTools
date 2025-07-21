@@ -82,6 +82,14 @@ load_pane_mapping() {
 
 # セッション名を動的に検出
 detect_active_session() {
+    # 6team Context7セッションを最優先で検索
+    local sessions_6team=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^MicrosoftProductTools-6team-Context7")
+    
+    if [[ -n "$sessions_6team" ]]; then
+        echo "$sessions_6team" | head -n1
+        return 0
+    fi
+    
     # Microsoft 365 Python Migration Project セッションを検索
     local sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^MicrosoftProductTools-Python")
     
@@ -471,8 +479,11 @@ resolve_target() {
             return 0
             ;;
         "manager")
+            # 6teamセッションでは特別なペイン配置
+            if [[ "$session_name" == "MicrosoftProductTools-6team-Context7" ]]; then
+                echo "$session_name:0.0"  # 6teamではManager=ペイン0（左上）
             # マッピング情報を読み込んで適切なペインを返す
-            if load_pane_mapping && [[ "$LAYOUT_TYPE" == "hierarchical" ]]; then
+            elif load_pane_mapping && [[ "$LAYOUT_TYPE" == "hierarchical" ]]; then
                 echo "$session_name:0.$MANAGER_PANE"
             else
                 echo "$session_name:0.0"  # 従来レイアウトではmanagerは常に0
@@ -486,8 +497,19 @@ resolve_target() {
         dev[0-9]|dev1[0-2])  # dev0-dev12 まで対応
             local dev_num="${agent#dev}"
             
+            # 6teamセッションでは特別なペイン配置
+            if [[ "$session_name" == "MicrosoftProductTools-6team-Context7" ]]; then
+                # 6teamセッションの実際のペイン構成に基づく
+                case "$dev_num" in
+                    0) echo "$session_name:0.2"; return 0 ;;  # Frontend Migration
+                    1) echo "$session_name:0.3"; return 0 ;;  # Python API Routes  
+                    2) echo "$session_name:0.4"; return 0 ;;  # Dev03: 開発作業
+                    3) echo "$session_name:0.5"; return 0 ;;  # DB Schema
+                    4|5) return 1 ;;  # dev4, dev5は存在しない
+                    *) return 1 ;;
+                esac
             # 階層レイアウトでは動的にペイン番号を解決
-            if load_pane_mapping && [[ "$LAYOUT_TYPE" == "hierarchical" ]]; then
+            elif load_pane_mapping && [[ "$LAYOUT_TYPE" == "hierarchical" ]]; then
                 IFS=',' read -ra dev_panes <<< "$DEVELOPER_PANES"
                 local dev_index=$dev_num
                 
