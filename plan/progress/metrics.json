@@ -1,0 +1,32 @@
+{
+  "development_metrics": {
+    "code_coverage": 35,
+    "build_success_rate": 0,
+    "test_success_rate": 0,
+    "deployment_success_rate": 0,
+    "bug_density": 0.2,
+    "technical_debt_hours": 40
+  },
+  "project_metrics": {
+    "overall_progress": 75,
+    "milestone_completion_rate": 0,
+    "task_completion_rate": 5,
+    "schedule_adherence": 60,
+    "resource_utilization": 70,
+    "risk_score": 75
+  },
+  "quality_metrics": {
+    "security_score": 85,
+    "performance_score": 70,
+    "maintainability_score": 65,
+    "reliability_score": 60,
+    "usability_score": 80
+  },
+  "team_metrics": {
+    "velocity": 15,
+    "burn_rate": 60,
+    "satisfaction_score": 75,
+    "collaboration_score": 80
+  },
+  "last_updated": "2025-07-21T09:44:56.981339"
+}

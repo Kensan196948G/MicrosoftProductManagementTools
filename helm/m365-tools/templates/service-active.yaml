@@ -1,0 +1,57 @@
+{{- if eq .Values.deployment.type "blue-green" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-active
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    service-type: "active"
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /health
+    {{- with .Values.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "m365-tools.selectorLabels" . | nindent 4 }}
+    version: {{ .Values.blueGreen.activeVersion | default "blue" }}
+{{- end }}
+---
+{{- if eq .Values.deployment.type "blue-green" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-preview
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    service-type: "preview"
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /health
+    {{- with .Values.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "m365-tools.selectorLabels" . | nindent 4 }}
+    version: {{ if eq (.Values.blueGreen.activeVersion | default "blue") "blue" }}green{{ else }}blue{{ end }}
+{{- end }}

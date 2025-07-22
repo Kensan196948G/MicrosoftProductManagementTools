@@ -1,0 +1,22 @@
+apiVersion: v2
+name: m365-tools
+description: Microsoft 365 Management Tools - Enterprise Kubernetes Deployment
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+home: https://github.com/your-org/MicrosoftProductManagementTools
+sources:
+  - https://github.com/your-org/MicrosoftProductManagementTools
+maintainers:
+  - name: DevOps Team
+    email: devops@company.com
+keywords:
+  - microsoft365
+  - management
+  - enterprise
+  - iso27001
+  - compliance
+annotations:
+  category: Enterprise
+  licenses: MIT
+dependencies: []

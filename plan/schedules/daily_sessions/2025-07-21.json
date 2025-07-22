@@ -1,0 +1,79 @@
+{
+  "session_info": {
+    "date": "2025-07-21",
+    "day_of_week": "monday",
+    "phase": "緊急修復フェーズ",
+    "session_type": "claude_code_development"
+  },
+  "schedule": {
+    "time": "08:30-15:30",
+    "claude_hours": 5,
+    "focus": "緊急修復・重要実装",
+    "phases": [
+      "テスト環境修復",
+      "GUI基盤構築",
+      "API統合"
+    ],
+    "date": "2025-07-21",
+    "day_of_week": "monday",
+    "phase_tasks": [
+      "conftest.py競合解消",
+      "pytest環境確認",
+      "CI/CD状況確認"
+    ]
+  },
+  "specific_tasks": [
+    "conftest.py競合解消",
+    "pytest環境確認",
+    "CI/CD状況確認"
+  ],
+  "success_criteria": {
+    "pytest_success_rate": "90%以上",
+    "ci_cd_pipeline": "完全復旧",
+    "development_environment": "標準化完了"
+  },
+  "risk_mitigation": [],
+  "preparation_checklist": [
+    "前回セッション結果確認",
+    "今日の作業優先度確認",
+    "開発環境状況確認",
+    "tmux環境準備",
+    "必要なファイル・ドキュメント準備"
+  ],
+  "session_structure": {
+    "preparation": {
+      "duration_minutes": 5,
+      "tasks": [
+        "環境復旧",
+        "前回進捗確認",
+        "今日の作業優先度確認",
+        "tmux環境起動"
+      ]
+    },
+    "main_development": {
+      "duration_minutes": 290,
+      "tasks": [
+        "自動開発ループ実行",
+        "リアルタイム品質監視",
+        "並列テスト実行",
+        "自動修復システム動作"
+      ]
+    },
+    "handover": {
+      "duration_minutes": 5,
+      "tasks": [
+        "作業内容自動コミット",
+        "進捗状況更新",
+        "次回作業計画生成",
+        "完了レポート生成"
+      ]
+    }
+  },
+  "handover_checklist": [
+    "作業内容Git コミット",
+    "進捗状況更新",
+    "発見した問題の記録",
+    "次回作業項目明確化",
+    "品質メトリクス更新"
+  ]
+}

@@ -41,6 +41,19 @@ from src.api.security import MultiTenantManager, OAuth2Scopes
 from src.monitoring.health_checks import HealthCheckManager
 from src.monitoring.azure_monitor_integration import AzureMonitorIntegration
 
+# Enhanced Error Handling & Quality Improvements
+from src.core.error_handling import (
+    structured_logger, error_handler, handle_errors, 
+    log_performance, audit_action, initialize_error_handling
+)
+from src.api.optimization.performance_optimizer import (
+    performance_middleware, initialize_performance_optimization, 
+    get_performance_stats
+)
+from src.quality.continuous_improvement import (
+    continuous_quality_manager, run_quality_analysis
+)
+
 # Configure logging
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -98,6 +111,14 @@ async def lifespan(app: FastAPI):
             await azure_monitor.initialize()
             app.state.azure_monitor = azure_monitor
             logger.info("✅ Azure Monitor integration initialized")
+        
+        # Initialize Enhanced Error Handling
+        initialize_error_handling()
+        logger.info("✅ Enhanced error handling system initialized")
+        
+        # Initialize Performance Optimization
+        await initialize_performance_optimization()
+        logger.info("✅ Performance optimization system initialized")
         
         logger.info("🎉 All services started successfully")
         
@@ -248,6 +269,9 @@ class ErrorResponse(BaseModel):
 def setup_middleware(app: FastAPI):
     """Configure FastAPI middleware"""
     
+    # Performance monitoring middleware (first - important for correct metrics)
+    app.middleware("http")(performance_middleware)
+    
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -255,7 +279,7 @@ def setup_middleware(app: FastAPI):
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
+        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Response-Time"]
     )
     
     # Trusted host middleware
@@ -777,6 +801,45 @@ async def dashboard():
 # Configure application
 setup_middleware(app)
 setup_routers(app)
+
+# Add enhanced API endpoints
+@app.get("/api/quality/report", tags=["Quality"], summary="Get latest quality report")
+@handle_errors()
+@log_performance("quality_report")
+async def get_quality_report():
+    """Get the latest comprehensive quality report"""
+    from src.quality.continuous_improvement import get_latest_quality_report
+    
+    report = await get_latest_quality_report()
+    if report:
+        return {"success": True, "report": report}
+    else:
+        return {"success": False, "message": "No quality report available"}
+
+@app.post("/api/quality/analyze", tags=["Quality"], summary="Run quality analysis")
+@handle_errors()
+@log_performance("quality_analysis")
+@audit_action("quality_analysis", "system")
+async def run_quality_analysis():
+    """Run comprehensive quality analysis"""
+    report = await run_quality_analysis()
+    return {"success": True, "report": report.to_dict()}
+
+@app.get("/api/performance/stats", tags=["Performance"], summary="Get performance statistics")
+@handle_errors()
+@log_performance("performance_stats")
+async def get_performance_statistics():
+    """Get detailed performance statistics"""
+    stats = await get_performance_stats()
+    return {"success": True, "stats": stats}
+
+@app.get("/api/system/error-stats", tags=["System"], summary="Get error statistics")
+@handle_errors()
+async def get_error_statistics():
+    """Get system error statistics"""
+    from src.core.error_handling import get_error_statistics
+    stats = get_error_statistics()
+    return {"success": True, "error_stats": stats}
 
 # Development server
 if __name__ == "__main__":

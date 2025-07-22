@@ -1,0 +1,13 @@
+{
+  "backup_timestamp": "2025-07-21T13:11:44.552257",
+  "project_root": "/mnt/e/MicrosoftProductManagementTools",
+  "backup_count": 6,
+  "original_files": {
+    "root": "/mnt/e/MicrosoftProductManagementTools/conftest.py",
+    "tests": "/mnt/e/MicrosoftProductManagementTools/Tests/conftest.py",
+    "src_tests": "/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py",
+    "gui_tests": "/mnt/e/MicrosoftProductManagementTools/src/gui/tests/conftest.py",
+    "integration_tests": "/mnt/e/MicrosoftProductManagementTools/src/gui/integration/tests/conftest.py",
+    "compatibility": "/mnt/e/MicrosoftProductManagementTools/Tests/compatibility/conftest.py"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "date": "2025-07-21",
+  "timestamp": "2025-07-21T09:44:57.018508",
+  "summary": {
+    "overall_progress": 25,
+    "total_milestones": 5,
+    "completed_milestones": 0,
+    "at_risk_milestones": 1,
+    "total_tasks": 7,
+    "completed_tasks": 0,
+    "in_progress_tasks": 1,
+    "tasks_completed_today": 0,
+    "tasks_updated_today": 1,
+    "critical_blockers": 1
+  },
+  "milestone_status": {
+    "M1_emergency_fix": {
+      "name": "緊急修復完了",
+      "progress": 85,
+      "status": "in_progress",
+      "health": "at_risk",
+      "due_date": "2025-08-04",
+      "days_until_due": 13
+    },
+    "M2_gui_foundation": {
+      "name": "Python GUI基盤完成",
+      "progress": 20,
+      "status": "pending",
+      "health": "on_track",
+      "due_date": "2025-08-18",
+      "days_until_due": 27
+    },
+    "M3_api_integration": {
+      "name": "API統合・CLI完成",
+      "progress": 5,
+      "status": "pending",
+      "health": "on_track",
+      "due_date": "2025-09-01",
+      "days_until_due": 41
+    },
+    "M4_quality_assurance": {
+      "name": "品質保証完成",
+      "progress": 0,
+      "status": "pending",
+      "health": "not_started",
+      "due_date": "2025-09-15",
+      "days_until_due": 55
+    },
+    "M5_release": {
+      "name": "リリース完了",
+      "progress": 0,
+      "status": "pending",
+      "health": "not_started",
+      "due_date": "2025-10-14",
+      "days_until_due": 84
+    }
+  },
+  "today_activities": {
+    "completed_tasks": [],
+    "updated_tasks": [
+      {
+        "title": "conftest.py競合解消",
+        "milestone": "M1_emergency_fix",
+        "progress": 70,
+        "notes": "conftest.py重複定義の統合作業中。src/とtests/の統合実施中。",
+        "assignee": "Backend Developer"
+      }
+    ]
+  },
+  "alerts": {
+    "at_risk_milestones": [
+      {
+        "name": "緊急修復完了",
+        "progress": 85,
+        "due_date": "2025-08-04",
+        "days_until_due": 13
+      }
+    ],
+    "critical_blockers": [
+      {
+        "task": "CI/CDパイプライン修復",
+        "blockers": [
+          "テスト環境依存"
+        ],
+        "assignee": "DevOps Engineer",
+        "milestone": "M1_emergency_fix"
+      }
+    ]
+  },
+  "next_day_focus": [
+    "conftest.py競合解消",
+    "ブロッカー解消: CI/CDパイプライン修復"
+  ],
+  "metrics": {
+    "code_coverage": 35,
+    "build_success_rate": 0,
+    "test_success_rate": 0,
+    "deployment_success_rate": 0,
+    "bug_density": 0.2,
+    "technical_debt_hours": 40
+  },
+  "recommendations": [
+    "🚨 1件のマイルストーンが遅延リスクです。リソース追加またはスコープ調整を検討してください。",
+    "🚧 1件のタスクがブロックされています。ブロッカー解消を最優先してください。",
+    "📈 全体進捗が60%未満です。クリティカルパスの見直しとリソース配分の最適化を検討してください。"
+  ]
+}

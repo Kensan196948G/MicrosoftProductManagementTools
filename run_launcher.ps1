@@ -331,10 +331,10 @@ function Show-MainMenu {
     Show-Header
     
     Write-ColorText "🎯 メインメニュー" -Color Magenta
-    Write-Separator -Character "─" -Color DarkGray
-    Write-Host ""
-    
-    $menuItems = @(
+    Write-Separator -Character "─" -Color DarkGray;
+    Write-Host "";
+    ;
+    $menuItems = @(;
         @{ Number = "1"; Icon = $Script:Icons.GUI; Text = "GUI モード"; Description = "Windows Forms GUIアプリケーション"; Color = "Cyan" }
         @{ Number = "2"; Icon = $Script:Icons.CLI; Text = "CLI モード"; Description = "コマンドライン操作"; Color = "Green" }
         @{ Number = "3"; Icon = $Script:Icons.Setup; Text = "セットアップ"; Description = "初期設定・環境構築"; Color = "Yellow" }
@@ -392,10 +392,10 @@ function Start-GUIMode {
         # Windowsプラットフォームチェック
         if ($PSVersionTable.Platform -and $PSVersionTable.Platform -ne "Win32NT") {
             throw "GUIアプリケーションはWindows環境でのみ動作します。現在のプラットフォーム: $($PSVersionTable.Platform)"
-        }
-        
-        # アニメーション表示（エラーハンドリング付き）
-        $steps = @(
+        };
+        ;
+        # アニメーション表示（エラーハンドリング付き）;
+        $steps = @(;
             @{ Text = "環境チェック"; Icon = $Script:Icons.Search }
             @{ Text = "モジュール読み込み"; Icon = $Script:Icons.Loading }
             @{ Text = "GUI初期化"; Icon = $Script:Icons.Settings }
@@ -489,10 +489,10 @@ function Start-CLIMode {
     
     Show-Header -Minimal
     Write-IconMessage $Script:Icons.CLI "CLI モードメニュー" -Color Green
-    Write-Separator -Character "─" -Color DarkGray
-    Write-Host ""
-    
-    $cliOptions = @(
+    Write-Separator -Character "─" -Color DarkGray;
+    Write-Host "";
+    ;
+    $cliOptions = @(;
         @{ Number = "1"; Icon = $Script:Icons.Daily; Text = "日次レポート"; Command = "daily" }
         @{ Number = "2"; Icon = $Script:Icons.Weekly; Text = "週次レポート"; Command = "weekly" }
         @{ Number = "3"; Icon = $Script:Icons.Monthly; Text = "月次レポート"; Command = "monthly" }
@@ -568,10 +568,10 @@ function Start-Setup {
     
     Show-Header -Minimal
     Write-IconMessage $Script:Icons.Setup "セットアップメニュー" -Color Yellow
-    Write-Separator -Character "─" -Color DarkGray
-    Write-Host ""
-    
-    $setupOptions = @(
+    Write-Separator -Character "─" -Color DarkGray;
+    Write-Host "";
+    ;
+    $setupOptions = @(;
         @{ Number = "1"; Icon = $Script:Icons.Lightning; Text = "クイックセットアップ"; Description = "推奨設定で自動構成" }
         @{ Number = "2"; Icon = $Script:Icons.Settings; Text = "詳細セットアップ"; Description = "手動で詳細設定" }
         @{ Number = "3"; Icon = $Script:Icons.Key; Text = "認証設定"; Description = "Microsoft 365認証情報" }
@@ -656,10 +656,10 @@ function Start-TestMode {
     
     Show-Header -Minimal
     Write-IconMessage $Script:Icons.Test "テストメニュー" -Color Magenta
-    Write-Separator -Character "─" -Color DarkGray
-    Write-Host ""
-    
-    $testOptions = @(
+    Write-Separator -Character "─" -Color DarkGray;
+    Write-Host "";
+    ;
+    $testOptions = @(;
         @{ Number = "1"; Icon = $Script:Icons.Network; Text = "接続テスト"; Script = "test-auth.ps1" }
         @{ Number = "2"; Icon = $Script:Icons.Exchange; Text = "Exchange Online テスト"; Script = "test-exchange-auth.ps1" }
         @{ Number = "3"; Icon = $Script:Icons.Teams; Text = "Teams API テスト"; Script = "test-teams-api.ps1" }
@@ -717,10 +717,10 @@ function Start-TestMode {
 function Start-AdvancedMode {
     Show-Header -Minimal
     Write-IconMessage $Script:Icons.Advanced "高度な機能" -Color Blue
-    Write-Separator -Character "─" -Color DarkGray
-    Write-Host ""
-    
-    $advancedOptions = @(
+    Write-Separator -Character "─" -Color DarkGray;
+    Write-Host "";
+    ;
+    $advancedOptions = @(;
         @{ Number = "1"; Icon = $Script:Icons.Performance; Text = "パフォーマンス分析" }
         @{ Number = "2"; Icon = $Script:Icons.Security; Text = "セキュリティ監査" }
         @{ Number = "3"; Icon = $Script:Icons.Database; Text = "データベース管理" }
@@ -813,10 +813,10 @@ function Main {
         Show-Header
         Start-Sleep -Seconds 1
     }
-    
-    # モード指定がある場合は直接実行
-    if ($Mode) {
-        switch ($Mode.ToLower()) {
+    ;
+    # モード指定がある場合は直接実行;
+    if ($Mode) {;
+        switch ($Mode.ToLower()) {;
             "gui" { Start-GUIMode; return }
             "cli" { Start-CLIMode; return }
             "setup" { Start-Setup; return }
@@ -876,8 +876,8 @@ catch {
     if ($DebugMode) {
         Write-Host ""
         Write-ColorText "スタックトレース:" -Color Yellow
-        Write-Host $_.ScriptStackTrace
-    }
-    
-    exit 1
+        Write-Host $_.ScriptStackTrace;
+    };
+    ;
+    exit 1;
 }

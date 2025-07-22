@@ -1,0 +1,103 @@
+# Grafana Datasource Configuration for Microsoft 365 Tools
+# Prometheus datasource with enhanced configuration
+
+apiVersion: 1
+
+datasources:
+  # Primary Prometheus datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    
+    # HTTP settings
+    timeout: 60s
+    httpMethod: GET
+    
+    # Custom headers for authentication if needed
+    httpHeaderName1: 'X-Grafana-User'
+    httpHeaderValue1: 'grafana'
+    
+    # JSON data configuration
+    jsonData:
+      timeInterval: 15s
+      queryTimeout: 60s
+      httpMethod: GET
+      
+      # Prometheus-specific settings
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+      cacheLevel: High
+      
+      # Custom query parameters
+      customQueryParameters: 'timeout=60s'
+      
+      # Exemplars configuration
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
+    
+    # Access settings
+    uid: prometheus-main
+    orgId: 1
+    version: 1
+    
+    # Metadata
+    tags:
+      - prometheus
+      - monitoring
+      - microsoft365
+
+  # Loki datasource for logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    
+    # HTTP settings
+    timeout: 60s
+    
+    # JSON data configuration
+    jsonData:
+      timeout: 60s
+      maxLines: 1000
+      derivedFields:
+        - matcherRegex: '"trace_id":"(\w+)"'
+          name: trace_id
+          url: '$${__value.raw}'
+          datasourceUid: jaeger
+    
+    # Access settings
+    uid: loki-main
+    orgId: 1
+    version: 1
+    
+    # Metadata
+    tags:
+      - loki
+      - logs
+      - microsoft365
+
+  # Optional: Jaeger for distributed tracing
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:14268
+    isDefault: false
+    
+    # JSON data configuration
+    jsonData:
+      timeout: 60s
+      
+    # Access settings
+    uid: jaeger-main
+    orgId: 1
+    version: 1
+    
+    # Metadata
+    tags:
+      - jaeger
+      - tracing
+      - microsoft365

@@ -1,0 +1,143 @@
+{
+  "week_info": {
+    "week_number": 1,
+    "start_date": "2025-07-21",
+    "end_date": "2025-07-27",
+    "current_phase": "緊急修復フェーズ",
+    "claude_sessions_planned": 5
+  },
+  "daily_schedule": {
+    "monday": {
+      "time": "08:30-15:30",
+      "claude_hours": 5,
+      "focus": "緊急修復・重要実装",
+      "phases": [
+        "テスト環境修復",
+        "GUI基盤構築",
+        "API統合"
+      ],
+      "date": "2025-07-21",
+      "day_of_week": "monday",
+      "phase_tasks": [
+        "conftest.py競合解消",
+        "pytest環境確認",
+        "CI/CD状況確認"
+      ]
+    },
+    "tuesday": {
+      "time": "休み",
+      "claude_hours": 0,
+      "focus": "自動監視・品質チェック",
+      "automated_tasks": [
+        "品質監視",
+        "自動修復",
+        "進捗更新"
+      ],
+      "date": "2025-07-22",
+      "day_of_week": "tuesday",
+      "phase_tasks": [
+        "一般開発作業"
+      ]
+    },
+    "wednesday": {
+      "time": "08:30-15:30",
+      "claude_hours": 5,
+      "focus": "API統合・CLI実装",
+      "phases": [
+        "Microsoft Graph統合",
+        "PowerShellブリッジ",
+        "CLI機能"
+      ],
+      "date": "2025-07-23",
+      "day_of_week": "wednesday",
+      "phase_tasks": [
+        "依存関係問題解決",
+        "仮想環境標準化",
+        "パッケージ更新"
+      ]
+    },
+    "thursday": {
+      "time": "休み",
+      "claude_hours": 0,
+      "focus": "自動テスト・レポート生成",
+      "automated_tasks": [
+        "統合テスト",
+        "パフォーマンステスト",
+        "セキュリティ監査"
+      ],
+      "date": "2025-07-24",
+      "day_of_week": "thursday",
+      "phase_tasks": [
+        "一般開発作業"
+      ]
+    },
+    "friday": {
+      "time": "08:30-15:30",
+      "claude_hours": 5,
+      "focus": "GUI実装・品質保証",
+      "phases": [
+        "PyQt6実装",
+        "品質保証",
+        "統合テスト"
+      ],
+      "date": "2025-07-25",
+      "day_of_week": "friday",
+      "phase_tasks": [
+        "GitHub Actions修正",
+        "自動テスト復旧",
+        "品質チェック"
+      ]
+    },
+    "saturday": {
+      "time": "09:00-17:00",
+      "claude_hours": 5,
+      "focus": "統合テスト・デバッグ",
+      "phases": [
+        "統合テスト",
+        "バグ修正",
+        "パフォーマンス最適化"
+      ],
+      "date": "2025-07-26",
+      "day_of_week": "saturday",
+      "phase_tasks": [
+        "統合テスト実行",
+        "全体動作確認",
+        "週末バグ修正"
+      ]
+    },
+    "sunday": {
+      "time": "09:00-17:00",
+      "claude_hours": 5,
+      "focus": "リファクタリング・ドキュメント",
+      "phases": [
+        "コード品質向上",
+        "ドキュメント更新",
+        "次週準備"
+      ],
+      "date": "2025-07-27",
+      "day_of_week": "sunday",
+      "phase_tasks": [
+        "コード品質向上",
+        "ドキュメント更新",
+        "次週準備"
+      ]
+    }
+  },
+  "weekly_objectives": [
+    "conftest.py競合解消",
+    "pytest環境修復",
+    "CI/CDパイプライン復旧",
+    "依存関係問題解決",
+    "開発環境標準化"
+  ],
+  "milestones_this_week": [],
+  "risk_factors": [
+    {
+      "period": "2025-07-21 to 2025-08-04",
+      "risk": "テスト環境修復失敗",
+      "probability": "60%",
+      "impact": "プロジェクト遅延",
+      "mitigation": "Plan B: ハイブリッド運用切替"
+    }
+  ]
+}

@@ -133,3 +133,7 @@ TestScripts/TestReports_Emergency_Backup_*/
 
 # Emergency backups
 *Emergency_Backup_*/
+
+####New 2025/07/22 ####
+pytest_env/
+venv/

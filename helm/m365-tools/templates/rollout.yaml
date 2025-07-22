@@ -1,0 +1,221 @@
+{{- if and .Values.rollouts.enabled (or (eq .Values.deployment.type "canary") (eq .Values.deployment.type "blue-green")) }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-rollout
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+  annotations:
+    rollout.argoproj.io/revision: "{{ .Release.Revision }}"
+    {{- with .Values.additionalAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  
+  strategy:
+    {{- if eq .Values.deployment.type "canary" }}
+    canary:
+      canaryService: {{ include "m365-tools.fullname" . }}-canary
+      stableService: {{ include "m365-tools.fullname" . }}-stable
+      trafficRouting:
+        nginx:
+          stableIngress: {{ include "m365-tools.fullname" . }}-stable
+          annotationPrefix: nginx.ingress.kubernetes.io
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+            canary-by-header-value: "true"
+      steps:
+        {{- range .Values.canary.steps }}
+        - {{- toYaml . | nindent 10 }}
+        {{- end }}
+      analysis:
+        templates:
+        - templateName: {{ include "m365-tools.fullname" . }}-success-rate
+        args:
+        - name: service-name
+          value: {{ include "m365-tools.fullname" . }}-canary
+      scaleDownDelaySeconds: {{ .Values.canary.scaleDownDelaySeconds | default 30 }}
+    {{- else if eq .Values.deployment.type "blue-green" }}
+    blueGreen:
+      activeService: {{ include "m365-tools.fullname" . }}-active
+      previewService: {{ include "m365-tools.fullname" . }}-preview
+      autoPromotionEnabled: {{ .Values.blueGreen.autoPromotionEnabled | default false }}
+      scaleDownDelaySeconds: {{ .Values.blueGreen.scaleDownDelaySeconds | default 30 }}
+      prePromotionAnalysis:
+        templates:
+        - templateName: {{ include "m365-tools.fullname" . }}-success-rate
+        args:
+        - name: service-name
+          value: {{ include "m365-tools.fullname" . }}-preview
+      postPromotionAnalysis:
+        templates:
+        - templateName: {{ include "m365-tools.fullname" . }}-success-rate
+        args:
+        - name: service-name
+          value: {{ include "m365-tools.fullname" . }}-active
+    {{- end }}
+  
+  selector:
+    matchLabels:
+      {{- include "m365-tools.selectorLabels" . | nindent 6 }}
+  
+  template:
+    metadata:
+      labels:
+        {{- include "m365-tools.selectorLabels" . | nindent 8 }}
+        {{- with .Values.additionalLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.additionalAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "m365-tools.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.environment }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel }}
+            - name: DEBUG
+              value: {{ .Values.config.debug | quote }}
+            - name: DEPLOYMENT_TYPE
+              value: {{ .Values.deployment.type | quote }}
+            - name: ROLLOUT_ENABLED
+              value: "true"
+            {{- if eq .Values.deployment.type "canary" }}
+            - name: CANARY_ENABLED
+              value: "true"
+            {{- end }}
+            {{- if eq .Values.deployment.type "blue-green" }}
+            - name: BLUE_GREEN_ENABLED
+              value: "true"
+            {{- end }}
+            # Microsoft Graph configuration
+            - name: MICROSOFT_TENANT_ID
+              value: {{ .Values.config.microsoft365.tenantId }}
+            - name: MICROSOFT_CLIENT_ID
+              value: {{ .Values.config.microsoft365.clientId }}
+            - name: MICROSOFT_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "m365-tools.fullname" . }}-secret
+                  key: microsoft-client-secret
+            # Database configuration
+            - name: DATABASE_HOST
+              value: {{ .Values.config.database.host }}
+            - name: DATABASE_PORT
+              value: {{ .Values.config.database.port | quote }}
+            - name: DATABASE_NAME
+              value: {{ .Values.config.database.name }}
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "m365-tools.fullname" . }}-secret
+                  key: database-password
+            # Redis configuration
+            - name: REDIS_HOST
+              value: {{ .Values.config.redis.host }}
+            - name: REDIS_PORT
+              value: {{ .Values.config.redis.port | quote }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "m365-tools.fullname" . }}-secret
+                  key: redis-password
+            # Security configuration
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "m365-tools.fullname" . }}-secret
+                  key: secret-key
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "m365-tools.fullname" . }}-secret
+                  key: jwt-secret-key
+            # Monitoring configuration
+            - name: PROMETHEUS_METRICS_ENABLED
+              value: {{ .Values.monitoring.enabled | quote }}
+            - name: HEALTH_CHECK_INTERVAL
+              value: "30"
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.healthCheck.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.healthCheck.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: app-data
+              mountPath: /app/data
+            {{- if .Values.persistence.enabled }}
+            - name: persistent-storage
+              mountPath: /app/storage
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- with .Values.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: app-data
+          emptyDir: {}
+        {{- if .Values.persistence.enabled }}
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: {{ include "m365-tools.fullname" . }}-pvc
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

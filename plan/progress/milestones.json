@@ -1,0 +1,131 @@
+{
+  "M1_emergency_fix": {
+    "name": "緊急修復完了",
+    "description": "テスト環境修復・依存関係解決・CI/CD復旧",
+    "due_date": "2025-08-04",
+    "status": "in_progress",
+    "progress": 85,
+    "priority": "critical",
+    "success_criteria": [
+      "pytest成功率: 90%以上",
+      "CI/CDパイプライン: 完全復旧",
+      "仮想環境: 標準化完了",
+      "依存関係: 問題解消",
+      "GitHub Actions: 正常動作"
+    ],
+    "tasks": [
+      "conftest_fix",
+      "ci_cd_repair",
+      "dependency_resolution",
+      "venv_standardization"
+    ],
+    "responsible": "Dev Team Lead",
+    "health_status": "at_risk",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.963868"
+  },
+  "M2_gui_foundation": {
+    "name": "Python GUI基盤完成",
+    "description": "PyQt6メインウィンドウ・26機能ボタン・基本機能実装",
+    "due_date": "2025-08-18",
+    "status": "pending",
+    "progress": 20,
+    "priority": "high",
+    "success_criteria": [
+      "PyQt6メインウィンドウ: 完全動作",
+      "26機能ボタン: レイアウト完成",
+      "リアルタイムログ: 実装完了",
+      "基本エラーハンドリング: 実装完了",
+      "PowerShell版呼び出し: 動作確認"
+    ],
+    "tasks": [
+      "pyqt6_main_window",
+      "button_grid",
+      "log_viewer",
+      "error_handling",
+      "powershell_bridge"
+    ],
+    "responsible": "Frontend Team",
+    "health_status": "on_track",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.963903"
+  },
+  "M3_api_integration": {
+    "name": "API統合・CLI完成",
+    "description": "Microsoft Graph・Exchange Online統合・CLI機能実装",
+    "due_date": "2025-09-01",
+    "status": "pending",
+    "progress": 5,
+    "priority": "high",
+    "success_criteria": [
+      "Microsoft Graph: 完全統合",
+      "Exchange Online: ブリッジ完成",
+      "CLI機能: PowerShell版同等",
+      "認証システム: 証明書ベース完成",
+      "レポート生成: 全機能動作"
+    ],
+    "tasks": [
+      "graph_integration",
+      "exchange_bridge",
+      "cli_implementation",
+      "auth_system",
+      "report_generation"
+    ],
+    "responsible": "Backend Team",
+    "health_status": "on_track",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.963907"
+  },
+  "M4_quality_assurance": {
+    "name": "品質保証完成",
+    "description": "テスト・セキュリティ・パフォーマンス検証",
+    "due_date": "2025-09-15",
+    "status": "pending",
+    "progress": 0,
+    "priority": "high",
+    "success_criteria": [
+      "単体テスト: 80%カバレッジ",
+      "統合テスト: 主要機能100%",
+      "E2Eテスト: ユーザーシナリオ90%",
+      "セキュリティ監査: 完全パス",
+      "パフォーマンステスト: 要件達成"
+    ],
+    "tasks": [
+      "unit_tests",
+      "integration_tests",
+      "e2e_tests",
+      "security_audit",
+      "performance_tests"
+    ],
+    "responsible": "QA Team",
+    "health_status": "not_started",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.963910"
+  },
+  "M5_release": {
+    "name": "リリース完了",
+    "description": "本番環境デプロイ・ユーザー受け入れ・監視開始",
+    "due_date": "2025-10-14",
+    "status": "pending",
+    "progress": 0,
+    "priority": "critical",
+    "success_criteria": [
+      "プロダクション環境: 構築完了",
+      "ユーザー受け入れテスト: 承認取得",
+      "ドキュメント: 最新化完了",
+      "監視システム: 稼働開始",
+      "サポート体制: 準備完了"
+    ],
+    "tasks": [
+      "production_deploy",
+      "uat",
+      "documentation",
+      "monitoring",
+      "support_setup"
+    ],
+    "responsible": "DevOps Team",
+    "health_status": "not_started",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.963913"
+  }
+}

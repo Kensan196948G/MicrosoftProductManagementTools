@@ -1,0 +1,86 @@
+# Grafana Dashboard Provisioning Configuration
+# Automated dashboard deployment for Microsoft 365 Tools
+
+apiVersion: 1
+
+providers:
+  # Microsoft 365 Tools dashboards
+  - name: 'microsoft365-tools'
+    orgId: 1
+    folder: 'Microsoft 365 Tools'
+    folderUid: 'm365-tools'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/m365-tools
+    tags:
+      - microsoft365
+      - enterprise
+      - monitoring
+
+  # Infrastructure dashboards
+  - name: 'infrastructure'
+    orgId: 1
+    folder: 'Infrastructure'
+    folderUid: 'infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/infrastructure
+    tags:
+      - infrastructure
+      - kubernetes
+      - system
+
+  # Blue-Green and Canary deployment dashboards
+  - name: 'deployment-strategies'
+    orgId: 1
+    folder: 'Deployment Strategies'
+    folderUid: 'deployment-strategies'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/deployments
+    tags:
+      - deployment
+      - blue-green
+      - canary
+      - ci-cd
+
+  # Application performance monitoring
+  - name: 'application-monitoring'
+    orgId: 1
+    folder: 'Application Monitoring'
+    folderUid: 'application-monitoring'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/applications
+    tags:
+      - application
+      - performance
+      - apis
+
+  # Business metrics dashboards
+  - name: 'business-metrics'
+    orgId: 1
+    folder: 'Business Metrics'
+    folderUid: 'business-metrics'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/business
+    tags:
+      - business
+      - microsoft365
+      - kpis

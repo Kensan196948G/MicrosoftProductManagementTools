@@ -1,0 +1,246 @@
+# Microsoft 365 Management Tools - Application Alerting Rules
+# Enterprise-grade alerting for application health and performance
+
+groups:
+  - name: microsoft365.application
+    rules:
+      # Application Health Alerts
+      - alert: M365ApplicationDown
+        expr: up{job=~"microsoft365-api|m365-tools-.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: microsoft365-tools
+        annotations:
+          summary: "Microsoft 365 Tools application is down"
+          description: "Application {{ $labels.instance }} has been down for more than 2 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/application-down"
+
+      - alert: M365ApplicationHighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{job=~"microsoft365-api|m365-tools-.*", code=~"5.."}[5m]) /
+            rate(http_requests_total{job=~"microsoft365-api|m365-tools-.*"}[5m])
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+          service: microsoft365-tools
+        annotations:
+          summary: "High error rate detected in Microsoft 365 Tools"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-error-rate"
+
+      - alert: M365ApplicationCriticalErrorRate
+        expr: |
+          (
+            rate(http_requests_total{job=~"microsoft365-api|m365-tools-.*", code=~"5.."}[5m]) /
+            rate(http_requests_total{job=~"microsoft365-api|m365-tools-.*"}[5m])
+          ) * 100 > 10
+        for: 2m
+        labels:
+          severity: critical
+          category: performance
+          service: microsoft365-tools
+        annotations:
+          summary: "Critical error rate detected in Microsoft 365 Tools"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/critical-error-rate"
+
+      # Performance Alerts
+      - alert: M365ApplicationHighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{job=~"microsoft365-api|m365-tools-.*"}[5m])
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          category: performance
+          service: microsoft365-tools
+        annotations:
+          summary: "High latency detected in Microsoft 365 Tools"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-latency"
+
+      - alert: M365ApplicationCriticalLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{job=~"microsoft365-api|m365-tools-.*"}[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: critical
+          category: performance
+          service: microsoft365-tools
+        annotations:
+          summary: "Critical latency detected in Microsoft 365 Tools"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/critical-latency"
+
+      # Resource Usage Alerts
+      - alert: M365ApplicationHighCPUUsage
+        expr: |
+          rate(container_cpu_usage_seconds_total{pod=~".*m365-tools.*"}[5m]) * 100 > 80
+        for: 15m
+        labels:
+          severity: warning
+          category: resources
+          service: microsoft365-tools
+        annotations:
+          summary: "High CPU usage in Microsoft 365 Tools"
+          description: "CPU usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-cpu"
+
+      - alert: M365ApplicationHighMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{pod=~".*m365-tools.*"} /
+            container_spec_memory_limit_bytes{pod=~".*m365-tools.*"}
+          ) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+          service: microsoft365-tools
+        annotations:
+          summary: "High memory usage in Microsoft 365 Tools"
+          description: "Memory usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-memory"
+
+      # Microsoft 365 Service Specific Alerts
+      - alert: M365GraphAPIThrottling
+        expr: |
+          increase(m365_graph_api_throttled_requests_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: external_api
+          service: microsoft365-graph
+        annotations:
+          summary: "Microsoft Graph API throttling detected"
+          description: "{{ $value }} Graph API requests have been throttled in the last 5 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/graph-throttling"
+
+      - alert: M365ExchangeOnlineConnection
+        expr: |
+          m365_exchange_online_connected == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: connectivity
+          service: exchange-online
+        annotations:
+          summary: "Exchange Online connection lost"
+          description: "Unable to connect to Exchange Online for more than 5 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/exchange-connection"
+
+      - alert: M365TeamsServiceDegraded
+        expr: |
+          m365_teams_service_health != 1
+        for: 10m
+        labels:
+          severity: warning
+          category: service_health
+          service: microsoft-teams
+        annotations:
+          summary: "Microsoft Teams service degradation detected"
+          description: "Teams service health status is degraded"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/teams-degraded"
+
+  - name: microsoft365.deployment
+    rules:
+      # Blue-Green Deployment Alerts
+      - alert: M365BlueGreenDeploymentFailed
+        expr: |
+          kube_deployment_status_replicas_available{deployment=~".*m365-tools.*-(blue|green)"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: deployment
+          service: microsoft365-tools
+        annotations:
+          summary: "Blue-Green deployment failed"
+          description: "{{ $labels.deployment }} has no available replicas"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/blue-green-failure"
+
+      # Canary Deployment Alerts
+      - alert: M365CanaryDeploymentHighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{deployment_type="canary", code=~"5.."}[5m]) /
+            rate(http_requests_total{deployment_type="canary"}[5m])
+          ) * 100 > 2
+        for: 3m
+        labels:
+          severity: warning
+          category: deployment
+          service: microsoft365-tools
+        annotations:
+          summary: "Canary deployment showing high error rate"
+          description: "Canary version error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/canary-high-errors"
+
+      - alert: M365CanaryDeploymentLatencyIssue
+        expr: |
+          (
+            histogram_quantile(0.95, 
+              rate(http_request_duration_seconds_bucket{deployment_type="canary"}[5m])
+            ) -
+            histogram_quantile(0.95, 
+              rate(http_request_duration_seconds_bucket{deployment_version="blue"}[5m])
+            )
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: deployment
+          service: microsoft365-tools
+        annotations:
+          summary: "Canary deployment showing higher latency"
+          description: "Canary version latency is {{ $value }}s higher than stable version"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/canary-high-latency"
+
+  - name: microsoft365.business
+    rules:
+      # Business Logic Alerts
+      - alert: M365LicenseExpirationWarning
+        expr: |
+          m365_license_days_until_expiry < 30
+        for: 1h
+        labels:
+          severity: warning
+          category: licensing
+          service: microsoft365-licensing
+        annotations:
+          summary: "Microsoft 365 licenses expiring soon"
+          description: "{{ $value }} days until license expiration for tenant {{ $labels.tenant_id }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/license-expiration"
+
+      - alert: M365StorageQuotaExceeded
+        expr: |
+          (m365_onedrive_storage_used / m365_onedrive_storage_total) * 100 > 90
+        for: 30m
+        labels:
+          severity: warning
+          category: storage
+          service: onedrive
+        annotations:
+          summary: "OneDrive storage quota nearly exceeded"
+          description: "Storage usage is {{ $value | humanizePercentage }} for user {{ $labels.user_principal_name }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/storage-quota"
+
+      - alert: M365UnusualLoginActivity
+        expr: |
+          increase(m365_signin_risk_detections_total[1h]) > 10
+        for: 5m
+        labels:
+          severity: critical
+          category: security
+          service: azure-ad
+        annotations:
+          summary: "Unusual sign-in activity detected"
+          description: "{{ $value }} risky sign-ins detected in the last hour"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/unusual-logins"

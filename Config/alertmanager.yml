@@ -49,6 +49,26 @@ route:
     - match:
         service: api
       receiver: 'api-alerts'
+    
+    # Deployment strategy alerts
+    - match_re:
+        alertname: 'M365.*Deployment.*'
+      receiver: 'deployment-alerts'
+      repeat_interval: 10m
+    
+    # Blue-Green specific alerts
+    - match:
+        category: deployment
+      match_re:
+        alertname: '.*BlueGreen.*'
+      receiver: 'blue-green-alerts'
+    
+    # Canary specific alerts
+    - match:
+        category: deployment
+      match_re:
+        alertname: '.*Canary.*'
+      receiver: 'canary-alerts'
 
 # Inhibition rules
 inhibit_rules:
@@ -234,6 +254,83 @@ receivers:
           Status: {{ .Labels.status_code }}
           
           Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+
+  # Deployment strategy alerts
+  - name: 'deployment-alerts'
+    email_configs:
+      - to: '${ALERT_TO_EMAILS}'
+        subject: '🚀 Deployment: {{ .GroupLabels.alertname }}'
+        body: |
+          🚀 DEPLOYMENT ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          
+          Deployment strategy alert - requires immediate attention to ensure zero-downtime deployment.
+          
+          Deployment Type: {{ .Labels.deployment_type }}
+          Version: {{ .Labels.version }}
+          Service: {{ .Labels.service }}
+          
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+
+  # Blue-Green deployment alerts
+  - name: 'blue-green-alerts'
+    email_configs:
+      - to: '${ALERT_TO_EMAILS}'
+        subject: '🔵🟢 Blue-Green: {{ .GroupLabels.alertname }}'
+        body: |
+          🔵🟢 BLUE-GREEN DEPLOYMENT ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          
+          Blue-Green deployment issue detected. Check traffic routing and service health.
+          
+          Deployment Version: {{ .Labels.deployment_version }}
+          Service: {{ .Labels.service }}
+          Instance: {{ .Labels.instance }}
+          
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+
+  # Canary deployment alerts
+  - name: 'canary-alerts'
+    email_configs:
+      - to: '${ALERT_TO_EMAILS}'
+        subject: '🐤 Canary: {{ .GroupLabels.alertname }}'
+        body: |
+          🐤 CANARY DEPLOYMENT ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          
+          Canary deployment showing issues. Consider rollback or traffic adjustment.
+          
+          Canary Weight: {{ .Labels.canary_weight }}%
+          Service: {{ .Labels.service }}
+          Version: {{ .Labels.version }}
+          
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+    webhook_configs:
+      - url: '${TEAMS_WEBHOOK_URL}'
+        send_resolved: true
+        title: '🐤 Canary Deployment Alert'
+        text: |
+          **Canary Deployment Issue Detected**
+          
+          {{ range .Alerts }}
+          **Summary:** {{ .Annotations.summary }}
+          **Description:** {{ .Annotations.description }}
+          **Canary Traffic:** {{ .Labels.canary_weight }}%
+          **Service:** {{ .Labels.service }}
+          **Started:** {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
           {{ end }}
 
 # Templates for custom formatting

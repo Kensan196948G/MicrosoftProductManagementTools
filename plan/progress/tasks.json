@@ -1,0 +1,140 @@
+{
+  "conftest_fix": {
+    "title": "conftest.py競合解消",
+    "description": "pytest実行不可能状態の解消・テスト環境完全修復",
+    "milestone": "M1_emergency_fix",
+    "priority": "critical",
+    "status": "in_progress",
+    "progress": 70,
+    "estimated_hours": 8,
+    "actual_hours": 6,
+    "assignee": "Backend Developer",
+    "scheduled_start": "2025-07-21T09:00:00",
+    "scheduled_end": "2025-07-23T17:00:00",
+    "dependencies": [],
+    "blockers": [],
+    "notes": "conftest.py重複定義の統合作業中。src/とtests/の統合実施中。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971707"
+  },
+  "ci_cd_repair": {
+    "title": "CI/CDパイプライン修復",
+    "description": "GitHub Actions ワークフロー正常化・自動テスト復旧",
+    "milestone": "M1_emergency_fix",
+    "priority": "critical",
+    "status": "pending",
+    "progress": 30,
+    "estimated_hours": 12,
+    "actual_hours": 0,
+    "assignee": "DevOps Engineer",
+    "scheduled_start": "2025-07-22T09:00:00",
+    "scheduled_end": "2025-07-24T17:00:00",
+    "dependencies": [
+      "conftest_fix"
+    ],
+    "blockers": [
+      "テスト環境依存"
+    ],
+    "notes": "conftest.py修復後に実施予定。ワークフロー簡素化を検討。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971729"
+  },
+  "dependency_resolution": {
+    "title": "依存関係問題解決",
+    "description": "requirements.txt vs pyproject.toml統一・仮想環境標準化",
+    "milestone": "M1_emergency_fix",
+    "priority": "critical",
+    "status": "pending",
+    "progress": 40,
+    "estimated_hours": 6,
+    "actual_hours": 2,
+    "assignee": "Backend Developer",
+    "scheduled_start": "2025-07-21T14:00:00",
+    "scheduled_end": "2025-07-22T20:00:00",
+    "dependencies": [],
+    "blockers": [],
+    "notes": "pyproject.toml統一方針で進行中。バージョン競合調査完了。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971733"
+  },
+  "pyqt6_main_window": {
+    "title": "PyQt6メインウィンドウ実装",
+    "description": "26機能ボタン配置・基本レイアウト・リアルタイムログ実装",
+    "milestone": "M2_gui_foundation",
+    "priority": "high",
+    "status": "pending",
+    "progress": 15,
+    "estimated_hours": 20,
+    "actual_hours": 3,
+    "assignee": "Frontend Developer",
+    "scheduled_start": "2025-08-05T09:00:00",
+    "scheduled_end": "2025-08-12T17:00:00",
+    "dependencies": [
+      "ci_cd_repair"
+    ],
+    "blockers": [],
+    "notes": "基本構造設計完了。PyQt6基本実装開始予定。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971736"
+  },
+  "button_grid": {
+    "title": "26機能ボタングリッド実装",
+    "description": "セクション別ボタン配置・クリックイベント・プログレス表示",
+    "milestone": "M2_gui_foundation",
+    "priority": "high",
+    "status": "pending",
+    "progress": 10,
+    "estimated_hours": 15,
+    "actual_hours": 1,
+    "assignee": "Frontend Developer",
+    "scheduled_start": "2025-08-06T09:00:00",
+    "scheduled_end": "2025-08-10T17:00:00",
+    "dependencies": [
+      "pyqt6_main_window"
+    ],
+    "blockers": [],
+    "notes": "26機能のグループ分けとレイアウト設計完了。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971739"
+  },
+  "graph_integration": {
+    "title": "Microsoft Graph完全統合",
+    "description": "MSAL Python・Graph SDK統合・ユーザー/ライセンス取得",
+    "milestone": "M3_api_integration",
+    "priority": "high",
+    "status": "pending",
+    "progress": 10,
+    "estimated_hours": 30,
+    "actual_hours": 3,
+    "assignee": "Backend Developer",
+    "scheduled_start": "2025-08-19T09:00:00",
+    "scheduled_end": "2025-08-28T17:00:00",
+    "dependencies": [
+      "pyqt6_main_window"
+    ],
+    "blockers": [],
+    "notes": "認証システム設計検討中。証明書ベース認証方針で進行。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971744"
+  },
+  "exchange_bridge": {
+    "title": "Exchange Online PowerShellブリッジ",
+    "description": "PowerShell-Python統合・メールボックス/フロー分析",
+    "milestone": "M3_api_integration",
+    "priority": "high",
+    "status": "pending",
+    "progress": 5,
+    "estimated_hours": 25,
+    "actual_hours": 1,
+    "assignee": "Backend Developer",
+    "scheduled_start": "2025-08-20T09:00:00",
+    "scheduled_end": "2025-08-29T17:00:00",
+    "dependencies": [
+      "graph_integration"
+    ],
+    "blockers": [],
+    "notes": "PowerShellコマンド実行アーキテクチャ設計中。",
+    "created_date": "2025-07-21",
+    "last_updated": "2025-07-21T09:44:56.971764"
+  }
+}

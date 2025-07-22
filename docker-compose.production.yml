@@ -4,22 +4,29 @@ version: '3.8'
 # Enterprise-grade Docker Compose configuration with high availability
 
 services:
-  # Main FastAPI Application
+  # Main FastAPI Application with Enhanced Configuration
   api:
     build:
       context: .
       dockerfile: Dockerfile.production
-    image: microsoft365-tools:latest
-    container_name: m365-api
+      args:
+        - PYTHON_VERSION=3.11
+        - BUILD_DATE=${BUILD_DATE:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}
+        - VCS_REF=${GITHUB_SHA:-unknown}
+    image: microsoft365-tools:${IMAGE_TAG:-latest}
+    container_name: m365-api-production
     restart: unless-stopped
     
     environment:
       - ENVIRONMENT=production
       - LOG_LEVEL=info
-      - WORKERS=4
+      - WORKERS=${API_WORKERS:-4}
       - MAX_REQUESTS=1000
       - MAX_REQUESTS_JITTER=50
       - KEEPALIVE=2
+      - WORKER_CLASS=uvicorn.workers.UvicornWorker
+      - WORKER_CONNECTIONS=1000
+      - PRELOAD_APP=true
       
       # Database
       - DATABASE_URL=postgresql://m365user:${POSTGRES_PASSWORD}@postgres:5432/microsoft365_tools

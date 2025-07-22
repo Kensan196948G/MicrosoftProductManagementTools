@@ -1,0 +1,316 @@
+{
+  "project_info": {
+    "name": "Microsoft 365管理ツール Python移行プロジェクト",
+    "start_date": "2025-07-21",
+    "target_release_date": "2025-10-14",
+    "total_duration_days": 85,
+    "claude_code_sessions": 60,
+    "development_approach": "自動開発・修復ループ"
+  },
+  "claude_code_schedule": {
+    "weekly_pattern": {
+      "monday": {
+        "time": "08:30-15:30",
+        "claude_hours": 5,
+        "focus": "緊急修復・重要実装",
+        "phases": ["テスト環境修復", "GUI基盤構築", "API統合"]
+      },
+      "tuesday": {
+        "time": "休み",
+        "claude_hours": 0,
+        "focus": "自動監視・品質チェック",
+        "automated_tasks": ["品質監視", "自動修復", "進捗更新"]
+      },
+      "wednesday": {
+        "time": "08:30-15:30",
+        "claude_hours": 5,
+        "focus": "API統合・CLI実装",
+        "phases": ["Microsoft Graph統合", "PowerShellブリッジ", "CLI機能"]
+      },
+      "thursday": {
+        "time": "休み",
+        "claude_hours": 0,
+        "focus": "自動テスト・レポート生成",
+        "automated_tasks": ["統合テスト", "パフォーマンステスト", "セキュリティ監査"]
+      },
+      "friday": {
+        "time": "08:30-15:30",
+        "claude_hours": 5,
+        "focus": "GUI実装・品質保証",
+        "phases": ["PyQt6実装", "品質保証", "統合テスト"]
+      },
+      "saturday": {
+        "time": "09:00-17:00",
+        "claude_hours": 5,
+        "focus": "統合テスト・デバッグ",
+        "phases": ["統合テスト", "バグ修正", "パフォーマンス最適化"]
+      },
+      "sunday": {
+        "time": "09:00-17:00",
+        "claude_hours": 5,
+        "focus": "リファクタリング・ドキュメント",
+        "phases": ["コード品質向上", "ドキュメント更新", "次週準備"]
+      }
+    },
+    "session_structure": {
+      "preparation": {
+        "duration_minutes": 5,
+        "tasks": ["環境復旧", "前回進捗確認", "今日の作業優先度確認", "tmux環境起動"]
+      },
+      "main_development": {
+        "duration_minutes": 290,
+        "tasks": ["自動開発ループ実行", "リアルタイム品質監視", "並列テスト実行", "自動修復システム動作"]
+      },
+      "handover": {
+        "duration_minutes": 5,
+        "tasks": ["作業内容自動コミット", "進捗状況更新", "次回作業計画生成", "完了レポート生成"]
+      }
+    }
+  },
+  "development_phases": {
+    "phase_1": {
+      "name": "緊急修復フェーズ",
+      "duration": "2025-07-21 to 2025-08-04",
+      "weeks": 2,
+      "claude_sessions": 10,
+      "objectives": [
+        "conftest.py競合解消",
+        "pytest環境修復",
+        "CI/CDパイプライン復旧",
+        "依存関係問題解決",
+        "開発環境標準化"
+      ],
+      "success_criteria": {
+        "pytest_success_rate": "90%以上",
+        "ci_cd_pipeline": "完全復旧",
+        "development_environment": "標準化完了"
+      }
+    },
+    "phase_2": {
+      "name": "Python GUI基盤完成",
+      "duration": "2025-08-05 to 2025-08-18",
+      "weeks": 2,
+      "claude_sessions": 10,
+      "objectives": [
+        "PyQt6メインウィンドウ実装",
+        "26機能ボタングリッド実装",
+        "リアルタイムログ表示",
+        "PowerShellブリッジ統合",
+        "基本エラーハンドリング"
+      ],
+      "success_criteria": {
+        "gui_startup_time": "3秒以内",
+        "memory_usage": "200MB以下",
+        "basic_function_rate": "80%以上動作"
+      }
+    },
+    "phase_3": {
+      "name": "API統合・CLI完成",
+      "duration": "2025-08-19 to 2025-09-01",
+      "weeks": 2,
+      "claude_sessions": 10,
+      "objectives": [
+        "Microsoft Graph完全統合",
+        "Exchange Online PowerShellブリッジ",
+        "CLI機能完全実装",
+        "認証システム最終化",
+        "レポート生成機能統合"
+      ],
+      "success_criteria": {
+        "api_response_time": "2秒以内",
+        "cli_success_rate": "95%以上",
+        "feature_parity": "PowerShell版100%同等"
+      }
+    },
+    "phase_4": {
+      "name": "品質保証完成",
+      "duration": "2025-09-02 to 2025-09-15",
+      "weeks": 2,
+      "claude_sessions": 10,
+      "objectives": [
+        "単体テスト実装（80%カバレッジ）",
+        "統合テスト実装",
+        "E2Eテストシナリオ実行",
+        "セキュリティ監査",
+        "パフォーマンステスト"
+      ],
+      "success_criteria": {
+        "test_coverage": "80%以上",
+        "security_score": "95点以上",
+        "performance": "要件達成"
+      }
+    },
+    "phase_5": {
+      "name": "リリース完了",
+      "duration": "2025-09-16 to 2025-10-14",
+      "weeks": 4,
+      "claude_sessions": 20,
+      "objectives": [
+        "プロダクション環境構築",
+        "ユーザー受け入れテスト",
+        "ドキュメント最終化",
+        "監視システム稼働",
+        "サポート体制準備"
+      ],
+      "success_criteria": {
+        "deployment_success_rate": "100%",
+        "system_uptime": "99.9%",
+        "user_satisfaction": "85%以上"
+      }
+    }
+  },
+  "milestones": {
+    "M1": {
+      "name": "緊急修復完了",
+      "date": "2025-08-04",
+      "week": 2,
+      "phase": "phase_1",
+      "deliverables": [
+        "pytest成功率90%以上達成",
+        "CI/CDパイプライン完全復旧",
+        "仮想環境標準化完了",
+        "依存関係問題解消",
+        "GitHub Actions正常動作"
+      ]
+    },
+    "M2": {
+      "name": "Python GUI基盤完成",
+      "date": "2025-08-18",
+      "week": 4,
+      "phase": "phase_2",
+      "deliverables": [
+        "PyQt6メインウィンドウ完全動作",
+        "26機能ボタンレイアウト完成",
+        "リアルタイムログ実装完了",
+        "基本エラーハンドリング実装",
+        "PowerShell版呼び出し動作確認"
+      ]
+    },
+    "M3": {
+      "name": "API統合・CLI完成",
+      "date": "2025-09-01",
+      "week": 6,
+      "phase": "phase_3",
+      "deliverables": [
+        "Microsoft Graph完全統合",
+        "Exchange Onlineブリッジ完成",
+        "CLI機能PowerShell版同等",
+        "認証システム証明書ベース完成",
+        "レポート生成全機能動作"
+      ]
+    },
+    "M4": {
+      "name": "品質保証完成",
+      "date": "2025-09-15",
+      "week": 8,
+      "phase": "phase_4",
+      "deliverables": [
+        "単体テスト80%カバレッジ",
+        "統合テスト主要機能100%",
+        "E2Eテストユーザーシナリオ90%",
+        "セキュリティ監査完全パス",
+        "パフォーマンステスト要件達成"
+      ]
+    },
+    "M5": {
+      "name": "リリース完了",
+      "date": "2025-10-14",
+      "week": 12,
+      "phase": "phase_5",
+      "deliverables": [
+        "プロダクション環境構築完了",
+        "ユーザー受け入れテスト承認取得",
+        "ドキュメント最新化完了",
+        "監視システム稼働開始",
+        "サポート体制準備完了"
+      ]
+    }
+  },
+  "risk_management": {
+    "high_risk_periods": [
+      {
+        "period": "2025-07-21 to 2025-08-04",
+        "risk": "テスト環境修復失敗",
+        "probability": "60%",
+        "impact": "プロジェクト遅延",
+        "mitigation": "Plan B: ハイブリッド運用切替"
+      },
+      {
+        "period": "2025-08-19 to 2025-09-01", 
+        "risk": "API統合複雑性",
+        "probability": "40%",
+        "impact": "機能不完全",
+        "mitigation": "段階的統合・PowerShell版併用"
+      }
+    ],
+    "contingency_plans": {
+      "plan_a": "完全Python移行（理想ケース・40%成功率）",
+      "plan_b": "ハイブリッド運用（現実的・75%成功率）",
+      "plan_c": "PowerShell版改良（保守的・90%成功率）",
+      "plan_d": "リリース延期（最終手段・95%成功率）"
+    }
+  },
+  "go_no_go_checkpoints": {
+    "week_2": {
+      "date": "2025-08-04",
+      "criteria": [
+        "pytest成功率90%以上",
+        "CI/CDパイプライン完全復旧",
+        "依存関係問題解消"
+      ],
+      "decision": "Plan A継続 vs Plan B実行"
+    },
+    "week_4": {
+      "date": "2025-08-18",
+      "criteria": [
+        "PyQt6メインウィンドウ完全動作",
+        "基本機能80%実装",
+        "パフォーマンス要件内"
+      ],
+      "decision": "Plan A継続 vs Plan B実行"
+    },
+    "week_6": {
+      "date": "2025-09-01",
+      "criteria": [
+        "Microsoft Graph完全統合",
+        "Exchange Onlineブリッジ動作",
+        "認証システム証明書ベース完成"
+      ],
+      "decision": "Plan A継続 vs Plan C検討"
+    },
+    "week_8": {
+      "date": "2025-09-15",
+      "criteria": [
+        "テストカバレッジ80%以上",
+        "Critical/Highバグ完全解消",
+        "パフォーマンス要件達成"
+      ],
+      "decision": "リリース準備 vs Plan D実行"
+    }
+  },
+  "tracking_metrics": {
+    "daily_metrics": [
+      "claude_session_duration",
+      "tasks_completed",
+      "bugs_fixed",
+      "test_success_rate",
+      "code_coverage_change"
+    ],
+    "weekly_metrics": [
+      "milestone_progress",
+      "phase_completion_rate",
+      "quality_score",
+      "performance_metrics",
+      "risk_level"
+    ],
+    "reporting_schedule": {
+      "daily_progress": "毎日18:00自動生成",
+      "weekly_summary": "日曜日20:00生成",
+      "milestone_review": "マイルストーン達成時",
+      "go_no_go_report": "判定日前日生成"
+    }
+  },
+  "created_date": "2025-07-21",
+  "last_updated": "2025-07-21T11:20:00+09:00",
+  "version": "1.0"
+}

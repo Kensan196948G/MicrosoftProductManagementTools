@@ -1,0 +1,88 @@
+{{- if .Values.rollouts.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-success-rate
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+spec:
+  args:
+  - name: service-name
+  - name: prometheus-server
+    value: {{ .Values.rollouts.analysis.prometheusServer | default "prometheus:9090" }}
+  
+  metrics:
+  - name: success-rate
+    interval: {{ .Values.rollouts.analysis.interval | default "5m" }}
+    successCondition: result[0] >= 0.95
+    failureCondition: result[0] < 0.90
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://{{"{{"}}args.prometheus-server{{"}}"}}
+        query: |
+          sum(irate(
+            prometheus_http_requests_total{job="{{"{{"}}args.service-name{{"}}"}}", code=~"[23].."}[5m]
+          )) / 
+          sum(irate(
+            prometheus_http_requests_total{job="{{"{{"}}args.service-name{{"}}"}}"}[5m]
+          ))
+  
+  - name: latency-p99
+    interval: {{ .Values.rollouts.analysis.interval | default "5m" }}
+    successCondition: result[0] <= 0.5
+    failureCondition: result[0] > 1.0
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://{{"{{"}}args.prometheus-server{{"}}"}}
+        query: |
+          histogram_quantile(0.99, 
+            sum(irate(
+              prometheus_http_request_duration_seconds_bucket{job="{{"{{"}}args.service-name{{"}}"}}"}[5m]
+            )) by (le)
+          )
+
+  - name: error-rate
+    interval: {{ .Values.rollouts.analysis.interval | default "5m" }}
+    successCondition: result[0] <= 0.05
+    failureCondition: result[0] > 0.10
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://{{"{{"}}args.prometheus-server{{"}}"}}
+        query: |
+          sum(irate(
+            prometheus_http_requests_total{job="{{"{{"}}args.service-name{{"}}"}}", code=~"[45].."}[5m]
+          )) / 
+          sum(irate(
+            prometheus_http_requests_total{job="{{"{{"}}args.service-name{{"}}"}}"}[5m]
+          ))
+
+  - name: cpu-usage
+    interval: {{ .Values.rollouts.analysis.interval | default "5m" }}
+    successCondition: result[0] <= 0.8
+    failureCondition: result[0] > 0.9
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://{{"{{"}}args.prometheus-server{{"}}"}}
+        query: |
+          avg(rate(
+            container_cpu_usage_seconds_total{pod=~"{{"{{"}}args.service-name{{"}}"}}-.*"}[5m]
+          ))
+
+  - name: memory-usage
+    interval: {{ .Values.rollouts.analysis.interval | default "5m" }}
+    successCondition: result[0] <= 0.8
+    failureCondition: result[0] > 0.9
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: http://{{"{{"}}args.prometheus-server{{"}}"}}
+        query: |
+          avg(
+            container_memory_working_set_bytes{pod=~"{{"{{"}}args.service-name{{"}}"}}-.*"} / 
+            container_spec_memory_limit_bytes{pod=~"{{"{{"}}args.service-name{{"}}"}}-.*"}
+          )
+{{- end }}

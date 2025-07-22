@@ -1,0 +1,134 @@
+# Bandit Security Configuration for Microsoft 365 Management Tools
+# Enterprise-grade Python security scanning configuration
+
+# Directories to exclude from scanning
+exclude_dirs:
+  - "*/tests/*"
+  - "*/test_*"
+  - "*/_test_*"
+  - "*/venv/*"
+  - "*/.venv/*"
+  - "*/node_modules/*"
+  - "*/.git/*"
+  - "*/build/*"
+  - "*/dist/*"
+  - "*/__pycache__/*"
+  - "*/htmlcov/*"
+  - "*/TestResults/*"
+  - "*/Reports/*"
+
+# Test IDs to skip (with justification)
+skips:
+  - B101  # assert_used - Acceptable in test environments
+  - B601  # paramiko_calls - Not using paramiko library
+
+# Security tests to run
+tests:
+  # Code injection tests
+  - B102  # exec_used - Detect dangerous exec() usage
+  - B103  # set_bad_file_permissions - File permission issues
+  - B104  # hardcoded_bind_all_interfaces - Network binding issues
+  - B105  # hardcoded_password_string - Hardcoded passwords
+  - B106  # hardcoded_password_funcarg - Password in function args
+  - B107  # hardcoded_password_default - Default password values
+  - B108  # hardcoded_tmp_directory - Hardcoded temp directories
+  - B110  # try_except_pass - Silent exception handling
+  - B112  # try_except_continue - Exception handling issues
+  
+  # Framework-specific tests  
+  - B201  # flask_debug_true - Flask debug mode
+  - B202  # tarfile_unsafe_members - Unsafe tar extraction
+  - B301  # pickle - Unsafe pickle usage
+  - B302  # marshal - Unsafe marshal usage
+  - B303  # md5 - Weak hash function
+  - B304  # des - Weak encryption
+  - B305  # cipher - Weak cipher usage
+  - B306  # mktemp_q - Unsafe temp file creation
+  - B307  # eval - Dangerous eval() usage
+  - B308  # mark_safe - Django mark_safe usage
+  - B309  # httpsconnection - HTTPS connection issues
+  - B310  # urllib_urlopen - URL opening vulnerabilities
+  - B311  # random - Weak random number generation
+  - B312  # telnetlib - Insecure telnet usage
+  
+  # XML parsing vulnerabilities
+  - B313  # xml_bad_cElementTree - Unsafe XML parsing
+  - B314  # xml_bad_ElementTree - Unsafe XML parsing
+  - B315  # xml_bad_expatreader - Unsafe XML parsing
+  - B316  # xml_bad_expatbuilder - Unsafe XML parsing
+  - B317  # xml_bad_sax - Unsafe XML parsing
+  - B318  # xml_bad_minidom - Unsafe XML parsing
+  - B319  # xml_bad_pulldom - Unsafe XML parsing
+  - B320  # xml_bad_xmlparser - Unsafe XML parsing
+  
+  # Network and system tests
+  - B321  # ftplib - Insecure FTP usage
+  - B322  # input - Dangerous input() usage
+  - B323  # unverified_context - SSL context issues
+  - B324  # hashlib_new_insecure_functions - Weak hash functions
+  - B325  # tempnam - Unsafe temp naming
+  
+  # Import-based tests
+  - B401  # import_telnetlib - Insecure telnet imports
+  - B402  # import_ftplib - Insecure FTP imports  
+  - B403  # import_pickle - Unsafe pickle imports
+  - B404  # import_subprocess - Subprocess security
+  - B405  # import_xml_etree - XML parsing imports
+  - B406  # import_xml_sax - XML SAX imports
+  - B407  # import_xml_expat - XML expat imports
+  - B408  # import_xml_minidom - XML minidom imports
+  - B409  # import_xml_pulldom - XML pulldom imports
+  - B410  # import_lxml - LXML imports
+  - B411  # import_xmlrpclib - XML-RPC imports
+  - B412  # import_httpoxy - HTTPoxy vulnerability
+  - B413  # import_pycrypto - PyCrypto imports
+  
+  # SSL/TLS and crypto tests
+  - B501  # request_with_no_cert_validation - Certificate validation
+  - B502  # ssl_with_bad_version - SSL version issues
+  - B503  # ssl_with_bad_defaults - SSL default issues
+  - B504  # ssl_with_no_version - SSL version specification
+  - B505  # weak_cryptographic_key - Weak crypto keys
+  - B506  # yaml_load - YAML loading vulnerabilities
+  - B507  # ssh_no_host_key_verification - SSH host key verification
+  
+  # Subprocess and shell tests
+  - B602  # subprocess_popen_with_shell_equals_true - Shell injection
+  - B603  # subprocess_without_shell_equals_true - Subprocess issues
+  - B604  # any_other_function_with_shell_equals_true - Shell usage
+  - B605  # start_process_with_a_shell - Process shell usage
+  - B606  # start_process_with_no_shell - Process security
+  - B607  # start_process_with_partial_path - Path traversal
+  - B608  # hardcoded_sql_expressions - SQL injection
+  - B609  # linux_commands_wildcard_injection - Command injection
+  - B610  # django_extra_used - Django ORM issues
+  - B611  # django_rawsql_used - Django raw SQL
+  
+  # Template and rendering tests
+  - B701  # jinja2_autoescape_false - Template escaping
+  - B702  # use_of_mako_templates - Mako template usage
+  - B703  # django_mark_safe - Django mark_safe usage
+
+# Severity levels to report
+severity:
+  - high
+  - medium
+  - low
+
+# Confidence levels to report  
+confidence:
+  - high
+  - medium
+  - low
+
+# Custom plugins (if any)
+plugins: []
+
+# Output format options
+output_format: json
+
+# Maximum lines to report per issue
+max_lines: 10
+
+# Report confidence level
+report_confidence: medium

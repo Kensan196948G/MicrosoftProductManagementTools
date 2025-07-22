@@ -17,6 +17,7 @@ alerting:
 
 # Load alerting rules
 rule_files:
+  - "alerts/*.yml"
   - "alert_rules.yml"
 
 # Scrape configurations
@@ -83,6 +84,129 @@ scrape_configs:
     static_configs:
       - targets: ['alertmanager:9093']
     scrape_interval: 30s
+
+  # Blue-Green deployment monitoring
+  - job_name: 'm365-tools-blue'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - m365-tools
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_version]
+        action: keep
+        regex: blue
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - target_label: deployment_version
+        replacement: blue
+
+  - job_name: 'm365-tools-green'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - m365-tools
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_version]
+        action: keep
+        regex: green
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - target_label: deployment_version
+        replacement: green
+
+  # Canary deployment monitoring
+  - job_name: 'm365-tools-canary'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - m365-tools
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_rollouts_pod_template_hash]
+        action: keep
+        regex: .+
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - target_label: deployment_type
+        replacement: canary
+
+  # Microsoft 365 specific monitoring
+  - job_name: 'm365-service-health'
+    static_configs:
+      - targets: ['api:8000']
+    scrape_interval: 60s
+    metrics_path: /metrics/m365/health
+    scrape_timeout: 30s
+
+  - job_name: 'm365-api-performance'
+    static_configs:
+      - targets: ['api:8000']
+    scrape_interval: 30s
+    metrics_path: /metrics/m365/performance
+    scrape_timeout: 15s
+
+  # Kubernetes API server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+  # Kubernetes pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
 
 # Storage configuration
 storage:

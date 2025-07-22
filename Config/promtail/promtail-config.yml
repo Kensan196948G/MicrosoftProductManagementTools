@@ -1,0 +1,259 @@
+# Promtail Configuration for Microsoft 365 Management Tools
+# Enterprise log collection and forwarding to Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+  log_format: json
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    timeout: 10s
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+    external_labels:
+      cluster: 'microsoft365-tools-production'
+      environment: 'production'
+
+scrape_configs:
+  # Microsoft 365 API application logs
+  - job_name: m365-api-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: m365-api
+          service: microsoft365-api
+          environment: production
+          __path__: /var/log/m365-api/*.log
+
+  # Container logs (Docker format)
+  - job_name: docker-logs
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.service"]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        target_label: container_name
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: project
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            logger: logger
+            thread: thread
+      # Extract log level
+      - labels:
+          level: level
+          logger: logger
+      # Timestamp parsing
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      # Output formatting
+      - output:
+          source: message
+
+  # Kubernetes pod logs
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - m365-tools
+            - monitoring
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: .*-logs
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: __host__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: container
+      - replacement: /var/log/pods/*$1/*.log
+        separator: /
+        source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        target_label: __path__
+    pipeline_stages:
+      # Parse container runtime format
+      - regex:
+          expression: '^(?P<time>\S+) (?P<stream>stdout|stderr) (?P<flags>\S+) (?P<content>.*)$'
+      - json:
+          expressions:
+            timestamp: time
+            output: content
+            stream: stream
+      - labels:
+          stream: stream
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      - output:
+          source: output
+
+  # Application-specific log parsing for Microsoft 365 Tools
+  - job_name: m365-structured-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: m365-structured
+          service: microsoft365-tools
+          environment: production
+          __path__: /app/logs/*.json
+    pipeline_stages:
+      # Parse structured JSON logs
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            component: component
+            user_id: user_id
+            tenant_id: tenant_id
+            operation: operation
+            duration_ms: duration_ms
+            error_code: error_code
+            correlation_id: correlation_id
+      # Extract important labels
+      - labels:
+          level: level
+          component: component
+          operation: operation
+          tenant_id: tenant_id
+      # Parse timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      # Format output
+      - template:
+          source: output_msg
+          template: '{{ .message }}{{ if .error_code }} [Error: {{ .error_code }}]{{ end }}{{ if .duration_ms }} [Duration: {{ .duration_ms }}ms]{{ end }}'
+      - output:
+          source: output_msg
+
+  # System logs
+  - job_name: system-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          service: system
+          environment: production
+          __path__: /var/log/syslog
+    pipeline_stages:
+      # Parse syslog format
+      - regex:
+          expression: '^(?P<timestamp>\w+\s+\d+\s+\d+:\d+:\d+)\s+(?P<hostname>\S+)\s+(?P<service>\S+)(?:\[(?P<pid>\d+)\])?:\s+(?P<message>.*)$'
+      - labels:
+          hostname: hostname
+          service: service
+          pid: pid
+      - timestamp:
+          source: timestamp
+          format: 'Jan 2 15:04:05'
+          location: 'Local'
+      - output:
+          source: message
+
+  # Error logs with special handling
+  - job_name: error-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: error-logs
+          service: microsoft365-tools
+          environment: production
+          level: error
+          __path__: /app/logs/error*.log
+    pipeline_stages:
+      # Parse error log format
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            stack_trace: stack_trace
+            component: component
+            operation: operation
+            error_code: error_code
+            user_context: user_context
+      - labels:
+          level: level
+          component: component
+          error_code: error_code
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      # Combine message and stack trace
+      - template:
+          source: formatted_error
+          template: '{{ .message }}{{ if .stack_trace }}\nStack Trace:\n{{ .stack_trace }}{{ end }}'
+      - output:
+          source: formatted_error
+
+  # Audit logs with compliance requirements
+  - job_name: audit-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: audit-logs
+          service: microsoft365-tools
+          environment: production
+          log_type: audit
+          __path__: /app/logs/audit/*.log
+    pipeline_stages:
+      # Parse audit log format
+      - json:
+          expressions:
+            timestamp: timestamp
+            event_type: event_type
+            user_id: user_id
+            tenant_id: tenant_id
+            resource: resource
+            action: action
+            result: result
+            client_ip: client_ip
+            user_agent: user_agent
+            session_id: session_id
+            risk_level: risk_level
+      - labels:
+          event_type: event_type
+          action: action
+          result: result
+          risk_level: risk_level
+          tenant_id: tenant_id
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      # Format audit message
+      - template:
+          source: audit_message
+          template: 'User {{ .user_id }} performed {{ .action }} on {{ .resource }} with result {{ .result }} from {{ .client_ip }}'
+      - output:
+          source: audit_message

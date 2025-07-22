@@ -1,11 +1,11 @@
 {
     "generated_at": "",
     "backup_statistics": {
-        "total_backups": 64,
-        "total_size": "1.5G",
-        "success_rate": 98.3,
-        "successful_backups_24h": 61,
-        "total_attempts_24h": 62
+        "total_backups": 88,
+        "total_size": "2.7G",
+        "success_rate": 96.5,
+        "successful_backups_24h": 83,
+        "total_attempts_24h": 86
     },
     "system_status": {
         "cron_integration_active": true,

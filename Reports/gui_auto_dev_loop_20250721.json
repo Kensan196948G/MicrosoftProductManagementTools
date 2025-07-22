@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-07-21T11:27:51.269693",
+  "loop_count": 3,
+  "powershell_status": {
+    "all_clear": false,
+    "issues_count": 1,
+    "memory_usage_mb": 102,
+    "response_time_ms": 795
+  },
+  "pyqt6_status": {
+    "all_clear": false,
+    "issues_count": 2,
+    "memory_usage_mb": 13,
+    "response_time_ms": 0
+  }
+}

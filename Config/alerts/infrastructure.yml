@@ -1,0 +1,288 @@
+# Microsoft 365 Management Tools - Infrastructure Alerting Rules
+# Enterprise-grade alerting for infrastructure health and performance
+
+groups:
+  - name: infrastructure.kubernetes
+    rules:
+      # Kubernetes Cluster Health
+      - alert: KubernetesNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node is not ready"
+          description: "Node {{ $labels.node }} has been not ready for more than 5 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/node-not-ready"
+
+      - alert: KubernetesMemoryPressure
+        expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node under memory pressure"
+          description: "Node {{ $labels.node }} is under memory pressure"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/memory-pressure"
+
+      - alert: KubernetesDiskPressure
+        expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node under disk pressure"
+          description: "Node {{ $labels.node }} is under disk pressure"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/disk-pressure"
+
+      # Pod Health Alerts
+      - alert: KubernetesPodCrashLooping
+        expr: |
+          rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 0
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting {{ $value }} times per 15 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/pod-crash-looping"
+
+      - alert: KubernetesPodNotReady
+        expr: kube_pod_status_ready{condition="true"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Pod is not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 10 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/pod-not-ready"
+
+      # Deployment Health
+      - alert: KubernetesDeploymentReplicasMismatch
+        expr: |
+          kube_deployment_status_replicas_available != kube_deployment_spec_replicas
+        for: 15m
+        labels:
+          severity: warning
+          category: infrastructure
+          service: kubernetes
+        annotations:
+          summary: "Deployment replica mismatch"
+          description: "Deployment {{ $labels.deployment }} has {{ $labels.available_replicas }} available replicas but expects {{ $labels.spec_replicas }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/deployment-replicas"
+
+  - name: infrastructure.database
+    rules:
+      # PostgreSQL Health
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been down for more than 2 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/postgres-down"
+
+      - alert: PostgreSQLConnectionsHigh
+        expr: |
+          (pg_stat_database_numbackends / pg_settings_max_connections) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL connection count is high"
+          description: "PostgreSQL connection usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/postgres-connections"
+
+      - alert: PostgreSQLReplicationLag
+        expr: |
+          pg_replication_lag > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag is high"
+          description: "Replication lag is {{ $value }}s"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/postgres-replication-lag"
+
+      # Redis Health
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: cache
+          service: redis
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for more than 2 minutes"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/redis-down"
+
+      - alert: RedisMemoryUsageHigh
+        expr: |
+          (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: cache
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/redis-memory"
+
+      - alert: RedisConnectionsHigh
+        expr: |
+          redis_connected_clients > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+          service: redis
+        annotations:
+          summary: "Redis connection count is high"
+          description: "Redis has {{ $value }} connected clients"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/redis-connections"
+
+  - name: infrastructure.system
+    rules:
+      # System Resource Alerts
+      - alert: NodeHighCPUUsage
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 15m
+        labels:
+          severity: warning
+          category: system
+          service: node
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-cpu"
+
+      - alert: NodeHighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 15m
+        labels:
+          severity: warning
+          category: system
+          service: node
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-memory"
+
+      - alert: NodeDiskSpaceHigh
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 85
+        for: 15m
+        labels:
+          severity: warning
+          category: system
+          service: node
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-disk"
+
+      - alert: NodeDiskSpaceCritical
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+          service: node
+        annotations:
+          summary: "Critical disk usage detected"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/critical-disk"
+
+      - alert: NodeLoadHigh
+        expr: |
+          node_load15 / count by(instance) (node_cpu_seconds_total{mode="idle"}) > 1.5
+        for: 15m
+        labels:
+          severity: warning
+          category: system
+          service: node
+        annotations:
+          summary: "High system load detected"
+          description: "System load is {{ $value }} on {{ $labels.instance }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/high-load"
+
+  - name: infrastructure.networking
+    rules:
+      # Network Health
+      - alert: NetworkReceiveErrorsHigh
+        expr: |
+          rate(node_network_receive_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: networking
+          service: node
+        annotations:
+          summary: "High network receive errors"
+          description: "Network interface {{ $labels.device }} on {{ $labels.instance }} has {{ $value }} receive errors per second"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/network-errors"
+
+      - alert: NetworkTransmitErrorsHigh
+        expr: |
+          rate(node_network_transmit_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: networking
+          service: node
+        annotations:
+          summary: "High network transmit errors"
+          description: "Network interface {{ $labels.device }} on {{ $labels.instance }} has {{ $value }} transmit errors per second"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/network-errors"
+
+      # Load Balancer Health
+      - alert: TraefikServiceDown
+        expr: traefik_service_server_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: networking
+          service: traefik
+        annotations:
+          summary: "Traefik service backend is down"
+          description: "Service {{ $labels.service }} backend {{ $labels.url }} is down"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/traefik-backend-down"
+
+      - alert: TraefikHighErrorRate
+        expr: |
+          (
+            rate(traefik_service_requests_total{code=~"5.."}[5m]) /
+            rate(traefik_service_requests_total[5m])
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: networking
+          service: traefik
+        annotations:
+          summary: "Traefik high error rate"
+          description: "Service {{ $labels.service }} error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.microsoft365tools.company.com/runbooks/traefik-high-errors"

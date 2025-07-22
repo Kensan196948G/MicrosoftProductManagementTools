@@ -1,0 +1,526 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Microsoft365Tools//Schedule Manager//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:20250721-claude-session@microsoft365tools
+DTSTART:20250721T083000
+DTEND:20250721T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250723-claude-session@microsoft365tools
+DTSTART:20250723T083000
+DTEND:20250723T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250725-claude-session@microsoft365tools
+DTSTART:20250725T083000
+DTEND:20250725T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250726-claude-session@microsoft365tools
+DTSTART:20250726T090000
+DTEND:20250726T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250727-claude-session@microsoft365tools
+DTSTART:20250727T090000
+DTEND:20250727T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250728-claude-session@microsoft365tools
+DTSTART:20250728T083000
+DTEND:20250728T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250730-claude-session@microsoft365tools
+DTSTART:20250730T083000
+DTEND:20250730T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250801-claude-session@microsoft365tools
+DTSTART:20250801T083000
+DTEND:20250801T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250802-claude-session@microsoft365tools
+DTSTART:20250802T090000
+DTEND:20250802T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250803-claude-session@microsoft365tools
+DTSTART:20250803T090000
+DTEND:20250803T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250804-claude-session@microsoft365tools
+DTSTART:20250804T083000
+DTEND:20250804T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250806-claude-session@microsoft365tools
+DTSTART:20250806T083000
+DTEND:20250806T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250808-claude-session@microsoft365tools
+DTSTART:20250808T083000
+DTEND:20250808T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250809-claude-session@microsoft365tools
+DTSTART:20250809T090000
+DTEND:20250809T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250810-claude-session@microsoft365tools
+DTSTART:20250810T090000
+DTEND:20250810T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: 緊急修復フェーズ\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250811-claude-session@microsoft365tools
+DTSTART:20250811T083000
+DTEND:20250811T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250813-claude-session@microsoft365tools
+DTSTART:20250813T083000
+DTEND:20250813T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250815-claude-session@microsoft365tools
+DTSTART:20250815T083000
+DTEND:20250815T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250816-claude-session@microsoft365tools
+DTSTART:20250816T090000
+DTEND:20250816T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250817-claude-session@microsoft365tools
+DTSTART:20250817T090000
+DTEND:20250817T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250818-claude-session@microsoft365tools
+DTSTART:20250818T083000
+DTEND:20250818T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250820-claude-session@microsoft365tools
+DTSTART:20250820T083000
+DTEND:20250820T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250822-claude-session@microsoft365tools
+DTSTART:20250822T083000
+DTEND:20250822T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250823-claude-session@microsoft365tools
+DTSTART:20250823T090000
+DTEND:20250823T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250824-claude-session@microsoft365tools
+DTSTART:20250824T090000
+DTEND:20250824T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: Python GUI基盤完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250825-claude-session@microsoft365tools
+DTSTART:20250825T083000
+DTEND:20250825T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250827-claude-session@microsoft365tools
+DTSTART:20250827T083000
+DTEND:20250827T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250829-claude-session@microsoft365tools
+DTSTART:20250829T083000
+DTEND:20250829T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250830-claude-session@microsoft365tools
+DTSTART:20250830T090000
+DTEND:20250830T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250831-claude-session@microsoft365tools
+DTSTART:20250831T090000
+DTEND:20250831T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250901-claude-session@microsoft365tools
+DTSTART:20250901T083000
+DTEND:20250901T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250903-claude-session@microsoft365tools
+DTSTART:20250903T083000
+DTEND:20250903T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250905-claude-session@microsoft365tools
+DTSTART:20250905T083000
+DTEND:20250905T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250906-claude-session@microsoft365tools
+DTSTART:20250906T090000
+DTEND:20250906T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250907-claude-session@microsoft365tools
+DTSTART:20250907T090000
+DTEND:20250907T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: API統合・CLI完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250908-claude-session@microsoft365tools
+DTSTART:20250908T083000
+DTEND:20250908T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: 品質保証完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250910-claude-session@microsoft365tools
+DTSTART:20250910T083000
+DTEND:20250910T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: 品質保証完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250912-claude-session@microsoft365tools
+DTSTART:20250912T083000
+DTEND:20250912T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: 品質保証完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250913-claude-session@microsoft365tools
+DTSTART:20250913T090000
+DTEND:20250913T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: 品質保証完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250914-claude-session@microsoft365tools
+DTSTART:20250914T090000
+DTEND:20250914T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: 品質保証完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250915-claude-session@microsoft365tools
+DTSTART:20250915T083000
+DTEND:20250915T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: 品質保証完成\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250917-claude-session@microsoft365tools
+DTSTART:20250917T083000
+DTEND:20250917T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: 品質保証完成\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250919-claude-session@microsoft365tools
+DTSTART:20250919T083000
+DTEND:20250919T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: 品質保証完成\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250920-claude-session@microsoft365tools
+DTSTART:20250920T090000
+DTEND:20250920T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: 品質保証完成\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250921-claude-session@microsoft365tools
+DTSTART:20250921T090000
+DTEND:20250921T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: 品質保証完成\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250922-claude-session@microsoft365tools
+DTSTART:20250922T083000
+DTEND:20250922T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: リリース完了\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250924-claude-session@microsoft365tools
+DTSTART:20250924T083000
+DTEND:20250924T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: リリース完了\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250926-claude-session@microsoft365tools
+DTSTART:20250926T083000
+DTEND:20250926T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: リリース完了\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250927-claude-session@microsoft365tools
+DTSTART:20250927T090000
+DTEND:20250927T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: リリース完了\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250928-claude-session@microsoft365tools
+DTSTART:20250928T090000
+DTEND:20250928T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: リリース完了\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20250929-claude-session@microsoft365tools
+DTSTART:20250929T083000
+DTEND:20250929T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: リリース完了\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251001-claude-session@microsoft365tools
+DTSTART:20251001T083000
+DTEND:20251001T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: リリース完了\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251003-claude-session@microsoft365tools
+DTSTART:20251003T083000
+DTEND:20251003T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: リリース完了\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251004-claude-session@microsoft365tools
+DTSTART:20251004T090000
+DTEND:20251004T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: リリース完了\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251005-claude-session@microsoft365tools
+DTSTART:20251005T090000
+DTEND:20251005T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: リリース完了\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251006-claude-session@microsoft365tools
+DTSTART:20251006T083000
+DTEND:20251006T153000
+SUMMARY:🚀 Claude開発セッション - 緊急修復・重要実装
+DESCRIPTION:フェーズ: リリース完了\n重点: 緊急修復・重要実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251008-claude-session@microsoft365tools
+DTSTART:20251008T083000
+DTEND:20251008T153000
+SUMMARY:🚀 Claude開発セッション - API統合・CLI実装
+DESCRIPTION:フェーズ: リリース完了\n重点: API統合・CLI実装\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251010-claude-session@microsoft365tools
+DTSTART:20251010T083000
+DTEND:20251010T153000
+SUMMARY:🚀 Claude開発セッション - GUI実装・品質保証
+DESCRIPTION:フェーズ: リリース完了\n重点: GUI実装・品質保証\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251011-claude-session@microsoft365tools
+DTSTART:20251011T090000
+DTEND:20251011T170000
+SUMMARY:🚀 Claude開発セッション - 統合テスト・デバッグ
+DESCRIPTION:フェーズ: リリース完了\n重点: 統合テスト・デバッグ\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:20251012-claude-session@microsoft365tools
+DTSTART:20251012T090000
+DTEND:20251012T170000
+SUMMARY:🚀 Claude開発セッション - リファクタリング・ドキュメント
+DESCRIPTION:フェーズ: リリース完了\n重点: リファクタリング・ドキュメント\n予定時間: 5時間
+CATEGORIES:Development,ClaudeCode
+END:VEVENT
+BEGIN:VEVENT
+UID:M1-milestone@microsoft365tools
+DTSTART;VALUE=DATE:20250804
+DTEND;VALUE=DATE:20250804
+SUMMARY:🎯 マイルストーン: 緊急修復完了
+DESCRIPTION:フェーズ: phase_1\n成果物:\n- pytest成功率90%以上達成\n- CI/CDパイプライン完全復旧\n- 仮想環境標準化完了\n- 依存関係問題解消\n- GitHub Actions正常動作
+CATEGORIES:Milestone,Project
+END:VEVENT
+BEGIN:VEVENT
+UID:M2-milestone@microsoft365tools
+DTSTART;VALUE=DATE:20250818
+DTEND;VALUE=DATE:20250818
+SUMMARY:🎯 マイルストーン: Python GUI基盤完成
+DESCRIPTION:フェーズ: phase_2\n成果物:\n- PyQt6メインウィンドウ完全動作\n- 26機能ボタンレイアウト完成\n- リアルタイムログ実装完了\n- 基本エラーハンドリング実装\n- PowerShell版呼び出し動作確認
+CATEGORIES:Milestone,Project
+END:VEVENT
+BEGIN:VEVENT
+UID:M3-milestone@microsoft365tools
+DTSTART;VALUE=DATE:20250901
+DTEND;VALUE=DATE:20250901
+SUMMARY:🎯 マイルストーン: API統合・CLI完成
+DESCRIPTION:フェーズ: phase_3\n成果物:\n- Microsoft Graph完全統合\n- Exchange Onlineブリッジ完成\n- CLI機能PowerShell版同等\n- 認証システム証明書ベース完成\n- レポート生成全機能動作
+CATEGORIES:Milestone,Project
+END:VEVENT
+BEGIN:VEVENT
+UID:M4-milestone@microsoft365tools
+DTSTART;VALUE=DATE:20250915
+DTEND;VALUE=DATE:20250915
+SUMMARY:🎯 マイルストーン: 品質保証完成
+DESCRIPTION:フェーズ: phase_4\n成果物:\n- 単体テスト80%カバレッジ\n- 統合テスト主要機能100%\n- E2Eテストユーザーシナリオ90%\n- セキュリティ監査完全パス\n- パフォーマンステスト要件達成
+CATEGORIES:Milestone,Project
+END:VEVENT
+BEGIN:VEVENT
+UID:M5-milestone@microsoft365tools
+DTSTART;VALUE=DATE:20251014
+DTEND;VALUE=DATE:20251014
+SUMMARY:🎯 マイルストーン: リリース完了
+DESCRIPTION:フェーズ: phase_5\n成果物:\n- プロダクション環境構築完了\n- ユーザー受け入れテスト承認取得\n- ドキュメント最新化完了\n- 監視システム稼働開始\n- サポート体制準備完了
+CATEGORIES:Milestone,Project
+END:VEVENT
+END:VCALENDAR
