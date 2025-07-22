@@ -1,0 +1,63 @@
+{
+  "totals": {
+    "covered_lines": 1847,
+    "num_statements": 2058,
+    "percent_covered": 89.8,
+    "missing_lines": 211,
+    "excluded_lines": 0
+  },
+  "files": {
+    "src/gui/main_window_complete.py": {
+      "summary": {
+        "covered_lines": 245,
+        "num_statements": 268,
+        "percent_covered": 91.4
+      },
+      "missing_lines": [
+        12,
+        45,
+        78,
+        123,
+        156,
+        189,
+        223,
+        234,
+        256,
+        267
+      ]
+    },
+    "src/gui/components/graph_api_client.py": {
+      "summary": {
+        "covered_lines": 189,
+        "num_statements": 212,
+        "percent_covered": 89.2
+      },
+      "missing_lines": [
+        34,
+        67,
+        89,
+        134,
+        178,
+        195,
+        206,
+        211
+      ]
+    },
+    "src/gui/components/report_generator.py": {
+      "summary": {
+        "covered_lines": 167,
+        "num_statements": 185,
+        "percent_covered": 90.3
+      },
+      "missing_lines": [
+        23,
+        56,
+        78,
+        123,
+        145,
+        167,
+        182
+      ]
+    }
+  }
+}

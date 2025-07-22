@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-22T18:05:05.197517",
+  "timestamp": "2025-07-22T22:05:03.818824",
   "developer": "tester",
   "project_root": "/mnt/e/MicrosoftProductManagementTools",
   "quality_metrics": {
@@ -7,31 +7,31 @@
       "unit_tests": {
         "passed": false,
         "stdout": "",
-        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n",
+        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n",
         "returncode": 4
       },
       "integration_tests": {
         "passed": false,
         "stdout": "",
-        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n",
+        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n",
         "returncode": 4
       },
       "api_tests": {
         "passed": false,
         "stdout": "",
-        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n",
+        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n",
         "returncode": 4
       },
       "gui_tests": {
         "passed": false,
         "stdout": "",
-        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n",
+        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n",
         "returncode": 4
       },
       "compatibility": {
         "passed": false,
         "stdout": "",
-        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n",
+        "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n",
         "returncode": 4
       },
       "summary": {
@@ -49,7 +49,7 @@
       "status": "failed",
       "passed": false,
       "stdout": "",
-      "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\n_pytest.pathlib.ImportPathMismatchError: ('tests.conftest', '/mnt/e/MicrosoftProductManagementTools/src/tests/conftest.py', PosixPath('/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'))\n"
+      "stderr": "ImportError while loading conftest '/mnt/e/MicrosoftProductManagementTools/tests/conftest.py'.\nModuleNotFoundError: No module named 'tests.conftest'\n"
     },
     "compatibility_matrix": {
       "powershell_versions": {

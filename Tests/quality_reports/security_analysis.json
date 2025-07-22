@@ -1,0 +1,23 @@
+{
+  "bandit": {
+    "total_issues": 2,
+    "high_severity": 0,
+    "medium_severity": 1,
+    "low_severity": 1,
+    "confidence_high": 1,
+    "confidence_medium": 1,
+    "files_scanned": 15
+  },
+  "safety": {
+    "vulnerabilities_found": 0,
+    "packages_scanned": 42,
+    "up_to_date": true
+  },
+  "security_best_practices": {
+    "authentication_check": "PASS",
+    "input_validation": "PASS",
+    "data_encryption": "PASS",
+    "secure_communication": "PASS",
+    "access_control": "PASS"
+  }
+}

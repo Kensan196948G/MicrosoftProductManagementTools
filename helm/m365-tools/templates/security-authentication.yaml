@@ -1,0 +1,677 @@
+# Microsoft 365 Management Tools - Production Security & Authentication
+# DevOps Engineer - Certificate-based Authentication & Security Infrastructure
+# Enterprise-grade security with PowerShell + Python hybrid support
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-certificates
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: certificates
+type: Opaque
+data:
+  # Microsoft 365 Certificate-based Authentication
+  # These should be populated via external-secrets or manual deployment
+  {{- if .Values.security.certificates.entraId }}
+  entraid-certificate.pfx: {{ .Values.security.certificates.entraId | b64enc }}
+  {{- else }}
+  entraid-certificate.pfx: ""
+  {{- end }}
+  
+  {{- if .Values.security.certificates.exchangeOnline }}
+  exchange-certificate.pfx: {{ .Values.security.certificates.exchangeOnline | b64enc }}
+  {{- else }}
+  exchange-certificate.pfx: ""
+  {{- end }}
+  
+  {{- if .Values.security.certificates.ca }}
+  ca-certificate.crt: {{ .Values.security.certificates.ca | b64enc }}
+  {{- else }}
+  ca-certificate.crt: ""
+  {{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-auth-secrets
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: authentication
+type: Opaque
+stringData:
+  # Microsoft 365 Authentication
+  AZURE_TENANT_ID: {{ .Values.security.authentication.tenantId | default "" | quote }}
+  AZURE_CLIENT_ID: {{ .Values.security.authentication.clientId | default "" | quote }}
+  AZURE_CLIENT_SECRET: {{ .Values.security.authentication.clientSecret | default "" | quote }}
+  
+  # Certificate Authentication
+  CERTIFICATE_THUMBPRINT: {{ .Values.security.authentication.certificateThumbprint | default "" | quote }}
+  CERTIFICATE_PASSWORD: {{ .Values.security.authentication.certificatePassword | default "" | quote }}
+  
+  # Exchange Online Specific
+  EXO_APP_ID: {{ .Values.security.authentication.exchangeOnline.appId | default "" | quote }}
+  EXO_CERTIFICATE_THUMBPRINT: {{ .Values.security.authentication.exchangeOnline.certificateThumbprint | default "" | quote }}
+  EXO_CERTIFICATE_PASSWORD: {{ .Values.security.authentication.exchangeOnline.certificatePassword | default "" | quote }}
+  EXO_ORGANIZATION: {{ .Values.security.authentication.exchangeOnline.organization | default "" | quote }}
+  
+  # PowerShell Execution Policy & Security
+  POWERSHELL_EXECUTION_POLICY: {{ .Values.security.powershell.executionPolicy | default "RemoteSigned" | quote }}
+  POWERSHELL_SECURITY_PROTOCOL: {{ .Values.security.powershell.securityProtocol | default "Tls12" | quote }}
+  
+  # Database Connection (if applicable)
+  DATABASE_URL: {{ .Values.security.database.url | default "" | quote }}
+  REDIS_URL: {{ .Values.security.redis.url | default "" | quote }}
+  
+  # Encryption Keys
+  JWT_SECRET_KEY: {{ .Values.security.jwt.secretKey | default "" | quote }}
+  ENCRYPTION_KEY: {{ .Values.security.encryption.key | default "" | quote }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-security-config
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+data:
+  # Enhanced Security Configuration
+  security-settings.json: |
+    {
+      "security": {
+        "authentication": {
+          "method": "certificate",
+          "fallback_method": "client_secret",
+          "certificate_validation": {
+            "verify_chain": true,
+            "check_revocation": true,
+            "require_valid_from": true,
+            "max_cert_age_days": 365
+          },
+          "token_settings": {
+            "access_token_lifetime_minutes": 60,
+            "refresh_token_lifetime_hours": 24,
+            "max_concurrent_sessions": 5,
+            "session_timeout_minutes": 30
+          }
+        },
+        "encryption": {
+          "in_transit": {
+            "tls_version": "1.3",
+            "cipher_suites": [
+              "TLS_AES_256_GCM_SHA384",
+              "TLS_CHACHA20_POLY1305_SHA256",
+              "TLS_AES_128_GCM_SHA256"
+            ],
+            "certificate_pinning": true
+          },
+          "at_rest": {
+            "encryption_algorithm": "AES-256-GCM",
+            "key_rotation_days": 90,
+            "secure_key_storage": true
+          }
+        },
+        "access_control": {
+          "rbac_enabled": true,
+          "principle_of_least_privilege": true,
+          "ip_whitelist_enabled": {{ .Values.security.networking.ipWhitelistEnabled | default false }},
+          "allowed_ip_ranges": {{ .Values.security.networking.allowedIpRanges | default "[]" | toJson }},
+          "geo_blocking": {
+            "enabled": {{ .Values.security.networking.geoBlocking.enabled | default false }},
+            "allowed_countries": {{ .Values.security.networking.geoBlocking.allowedCountries | default "[]" | toJson }}
+          }
+        },
+        "audit_logging": {
+          "enabled": true,
+          "log_level": "detailed",
+          "retention_days": 2555,
+          "real_time_alerts": true,
+          "compliance_standards": [
+            "ISO27001",
+            "SOC2",
+            "GDPR"
+          ]
+        },
+        "vulnerability_scanning": {
+          "enabled": true,
+          "scan_frequency": "daily",
+          "auto_remediation": false,
+          "critical_threshold": 7.0,
+          "scan_components": [
+            "containers",
+            "dependencies",
+            "certificates",
+            "configurations"
+          ]
+        }
+      },
+      "microsoft365": {
+        "graph_api": {
+          "base_url": "https://graph.microsoft.com/v1.0",
+          "timeout_seconds": 30,
+          "retry_attempts": 3,
+          "rate_limiting": {
+            "enabled": true,
+            "requests_per_second": 100,
+            "burst_limit": 200
+          },
+          "required_scopes": [
+            "User.Read.All",
+            "Group.Read.All",
+            "Directory.Read.All",
+            "AuditLog.Read.All",
+            "Reports.Read.All",
+            "Team.ReadBasic.All",
+            "Sites.Read.All"
+          ]
+        },
+        "exchange_online": {
+          "connection_uri": "https://outlook.office365.com/powershell-liveid/",
+          "auth_method": "certificate",
+          "timeout_seconds": 300,
+          "max_concurrent_connections": 3,
+          "required_permissions": [
+            "Exchange.ManageAsApp",
+            "Mail.Read",
+            "Mail.ReadWrite"
+          ]
+        }
+      },
+      "powershell": {
+        "execution_policy": "RemoteSigned",
+        "security_protocol": "Tls12",
+        "module_validation": {
+          "verify_signatures": true,
+          "trusted_publishers": [
+            "CN=Microsoft Corporation",
+            "CN=Microsoft Code Signing PCA 2011"
+          ]
+        },
+        "script_execution": {
+          "timeout_minutes": 30,
+          "max_memory_mb": 512,
+          "restricted_cmdlets": [
+            "Invoke-Expression",
+            "Invoke-Command",
+            "Start-Process"
+          ]
+        }
+      }
+    }
+  
+  # Certificate Trust Store Configuration  
+  trust-store.conf: |
+    # Microsoft 365 Certificate Trust Configuration
+    [ca_certificates]
+    microsoft_root_ca = /etc/ssl/certs/microsoft-root-ca.crt
+    baltimore_ca = /etc/ssl/certs/baltimore-ca.crt
+    digicert_ca = /etc/ssl/certs/digicert-ca.crt
+    
+    [certificate_validation]
+    verify_chain = true
+    check_revocation = true
+    require_extended_key_usage = true
+    allowed_key_usages = digital_signature,key_encipherment,client_auth
+    
+    [revocation_checking]
+    enable_crl = true
+    enable_ocsp = true
+    ocsp_timeout_seconds = 10
+    crl_cache_hours = 24
+    
+  # Network Security Policies
+  network-policies.yaml: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: {{ include "m365-tools.fullname" . }}-security-policy
+    spec:
+      podSelector:
+        matchLabels:
+          app: {{ include "m365-tools.name" . }}
+      policyTypes:
+      - Ingress
+      - Egress
+      ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Release.Namespace }}
+        - podSelector:
+            matchLabels:
+              app: {{ include "m365-tools.name" . }}
+        ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9090
+      egress:
+      # Allow Microsoft 365 services
+      - to: []
+        ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+      # Allow DNS resolution
+      - to: []
+        ports:
+        - protocol: UDP
+          port: 53
+      # Allow internal cluster communication
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-powershell-security
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    subcomponent: powershell
+data:
+  # PowerShell Security Configuration
+  powershell-profile.ps1: |
+    # Microsoft 365 Management Tools - Secure PowerShell Profile
+    # Production Security Hardening
+    
+    # Set security protocols
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+    # Configure execution policy
+    Set-ExecutionPolicy RemoteSigned -Scope Process -Force
+    
+    # Import required modules with verification
+    $RequiredModules = @(
+        @{Name="Microsoft.Graph"; MinVersion="2.0.0"},
+        @{Name="ExchangeOnlineManagement"; MinVersion="3.4.0"},
+        @{Name="MicrosoftTeams"; MinVersion="5.8.0"}
+    )
+    
+    foreach ($Module in $RequiredModules) {
+        try {
+            $ImportedModule = Import-Module $Module.Name -MinimumVersion $Module.MinVersion -PassThru -ErrorAction Stop
+            Write-Host "✅ Imported $($Module.Name) v$($ImportedModule.Version)" -ForegroundColor Green
+        } catch {
+            Write-Error "❌ Failed to import required module: $($Module.Name)"
+            Write-Error $_.Exception.Message
+        }
+    }
+    
+    # Certificate-based authentication function
+    function Connect-M365Services {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]$TenantId,
+            
+            [Parameter(Mandatory=$true)]
+            [string]$ClientId,
+            
+            [Parameter(Mandatory=$true)]
+            [string]$CertificateThumbprint
+        )
+        
+        try {
+            # Connect to Microsoft Graph
+            Write-Host "🔐 Connecting to Microsoft Graph..." -ForegroundColor Yellow
+            Connect-MgGraph -TenantId $TenantId -ClientId $ClientId -CertificateThumbprint $CertificateThumbprint -NoWelcome
+            
+            # Verify connection
+            $Context = Get-MgContext
+            if ($Context) {
+                Write-Host "✅ Microsoft Graph connected successfully" -ForegroundColor Green
+                Write-Host "   Tenant: $($Context.TenantId)" -ForegroundColor Cyan
+                Write-Host "   App: $($Context.AppName)" -ForegroundColor Cyan
+                Write-Host "   Scopes: $($Context.Scopes -join ', ')" -ForegroundColor Cyan
+            }
+            
+            # Connect to Exchange Online
+            Write-Host "📧 Connecting to Exchange Online..." -ForegroundColor Yellow
+            Connect-ExchangeOnline -CertificateThumbprint $CertificateThumbprint -AppId $ClientId -Organization "$TenantId"
+            
+            Write-Host "✅ All Microsoft 365 services connected successfully" -ForegroundColor Green
+            return $true
+            
+        } catch {
+            Write-Error "❌ Failed to connect to Microsoft 365 services: $($_.Exception.Message)"
+            return $false
+        }
+    }
+    
+    # Security validation function
+    function Test-SecurityCompliance {
+        $ComplianceResults = @{
+            ExecutionPolicy = Get-ExecutionPolicy
+            SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol
+            PowerShellVersion = $PSVersionTable.PSVersion.ToString()
+            ModuleVersions = @{}
+        }
+        
+        # Check module versions
+        $RequiredModules = @("Microsoft.Graph", "ExchangeOnlineManagement", "MicrosoftTeams")
+        foreach ($ModuleName in $RequiredModules) {
+            $Module = Get-Module -ListAvailable -Name $ModuleName | Sort-Object Version -Descending | Select-Object -First 1
+            if ($Module) {
+                $ComplianceResults.ModuleVersions[$ModuleName] = $Module.Version.ToString()
+            }
+        }
+        
+        return $ComplianceResults
+    }
+    
+    # Audit logging function
+    function Write-AuditLog {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]$Message,
+            
+            [ValidateSet("Info", "Warning", "Error", "Success")]
+            [string]$Level = "Info",
+            
+            [string]$Component = "PowerShell",
+            
+            [string]$UserId = $env:USERNAME
+        )
+        
+        $LogEntry = @{
+            timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
+            level = $Level.ToLower()
+            message = $Message
+            component = $Component
+            user_id = $UserId
+            powershell_version = $PSVersionTable.PSVersion.ToString()
+            session_id = $PID
+        } | ConvertTo-Json -Compress
+        
+        # Write to audit log file
+        $LogPath = "/app/logs/audit"
+        if (-not (Test-Path $LogPath)) {
+            New-Item -ItemType Directory -Path $LogPath -Force | Out-Null
+        }
+        
+        $LogFile = "$LogPath/powershell-audit-$(Get-Date -Format 'yyyy-MM-dd').log"
+        Add-Content -Path $LogFile -Value $LogEntry -Encoding UTF8
+        
+        # Also output to console
+        $ColorMap = @{
+            "info" = "White"
+            "warning" = "Yellow" 
+            "error" = "Red"
+            "success" = "Green"
+        }
+        Write-Host "[AUDIT] $Message" -ForegroundColor $ColorMap[$Level.ToLower()]
+    }
+    
+    # Initialize security compliance check
+    Write-Host "🛡️ Microsoft 365 Management Tools - Security Profile Loaded" -ForegroundColor Magenta
+    Write-Host "🔍 Running security compliance check..." -ForegroundColor Yellow
+    
+    $SecurityStatus = Test-SecurityCompliance
+    Write-Host "   PowerShell Version: $($SecurityStatus.PowerShellVersion)" -ForegroundColor Cyan
+    Write-Host "   Execution Policy: $($SecurityStatus.ExecutionPolicy)" -ForegroundColor Cyan
+    Write-Host "   Security Protocol: $($SecurityStatus.SecurityProtocol)" -ForegroundColor Cyan
+    
+    Write-AuditLog -Message "PowerShell security profile loaded successfully" -Level "Success" -Component "SecurityProfile"
+
+  # Certificate management script
+  certificate-manager.ps1: |
+    # Certificate Management for Microsoft 365 Authentication
+    
+    function Install-M365Certificate {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]$CertificatePath,
+            
+            [Parameter(Mandatory=$true)]
+            [SecureString]$CertificatePassword,
+            
+            [string]$Store = "My",
+            [string]$StoreLocation = "CurrentUser"
+        )
+        
+        try {
+            Write-Host "📜 Installing certificate from $CertificatePath..." -ForegroundColor Yellow
+            
+            # Import certificate
+            $Certificate = Import-PfxCertificate -FilePath $CertificatePath -Password $CertificatePassword -CertStoreLocation "$StoreLocation\$Store"
+            
+            Write-Host "✅ Certificate installed successfully" -ForegroundColor Green
+            Write-Host "   Thumbprint: $($Certificate.Thumbprint)" -ForegroundColor Cyan
+            Write-Host "   Subject: $($Certificate.Subject)" -ForegroundColor Cyan
+            Write-Host "   Expires: $($Certificate.NotAfter)" -ForegroundColor Cyan
+            
+            # Verify certificate is valid for Microsoft 365
+            $DaysUntilExpiry = ($Certificate.NotAfter - (Get-Date)).Days
+            if ($DaysUntilExpiry -lt 30) {
+                Write-Warning "⚠️ Certificate expires in $DaysUntilExpiry days"
+            }
+            
+            return $Certificate.Thumbprint
+            
+        } catch {
+            Write-Error "❌ Failed to install certificate: $($_.Exception.Message)"
+            throw
+        }
+    }
+    
+    function Test-CertificateHealth {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]$Thumbprint
+        )
+        
+        try {
+            $Certificate = Get-ChildItem -Path "Cert:\CurrentUser\My" | Where-Object {$_.Thumbprint -eq $Thumbprint}
+            
+            if (-not $Certificate) {
+                throw "Certificate with thumbprint $Thumbprint not found"
+            }
+            
+            $HealthStatus = @{
+                Thumbprint = $Certificate.Thumbprint
+                Subject = $Certificate.Subject
+                Issuer = $Certificate.Issuer
+                NotBefore = $Certificate.NotBefore
+                NotAfter = $Certificate.NotAfter
+                DaysUntilExpiry = ($Certificate.NotAfter - (Get-Date)).Days
+                IsValid = $Certificate.NotAfter -gt (Get-Date) -and $Certificate.NotBefore -le (Get-Date)
+                HasPrivateKey = $Certificate.HasPrivateKey
+            }
+            
+            return $HealthStatus
+            
+        } catch {
+            Write-Error "❌ Certificate health check failed: $($_.Exception.Message)"
+            throw
+        }
+    }
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-security-setup
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: setup-job
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "m365-tools.selectorLabels" . | nindent 8 }}
+        component: security
+        type: setup-job
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "m365-tools.serviceAccountName" . }}
+      containers:
+        - name: security-setup
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "🔐 Setting up security infrastructure..."
+              
+              # Create required directories
+              mkdir -p /app/certificates /app/logs/audit /app/logs/security
+              
+              # Set secure permissions
+              chmod 700 /app/certificates
+              chmod 755 /app/logs/audit /app/logs/security
+              
+              # Copy certificates if mounted
+              if [ -d "/mnt/certificates" ]; then
+                echo "📜 Copying certificates to secure location..."
+                cp /mnt/certificates/*.pfx /app/certificates/ 2>/dev/null || echo "No .pfx files found"
+                cp /mnt/certificates/*.crt /app/certificates/ 2>/dev/null || echo "No .crt files found"
+                chmod 600 /app/certificates/*
+              fi
+              
+              # Initialize audit log
+              echo '{"timestamp":"'$(date -Iseconds)'","level":"info","message":"Security infrastructure initialized","component":"security-setup"}' > /app/logs/audit/security-setup.log
+              
+              # Test PowerShell + Certificate setup
+              if command -v pwsh >/dev/null; then
+                echo "⚡ Testing PowerShell security setup..."
+                pwsh -Command "
+                  Import-Module /app/configs/powershell-profile.ps1 -Force
+                  Write-Host '✅ PowerShell security profile loaded successfully'
+                  Test-SecurityCompliance | ConvertTo-Json | Write-Host
+                " || echo "PowerShell security test completed with warnings"
+              fi
+              
+              echo "✅ Security setup completed"
+          volumeMounts:
+            - name: certificates
+              mountPath: /mnt/certificates
+              readOnly: true
+            - name: security-config
+              mountPath: /app/configs
+            - name: app-logs
+              mountPath: /app/logs
+          env:
+            - name: SECURITY_MODE
+              value: "production"
+      volumes:
+        - name: certificates
+          secret:
+            secretName: {{ include "m365-tools.fullname" . }}-certificates
+            defaultMode: 0600
+        - name: security-config
+          configMap:
+            name: {{ include "m365-tools.fullname" . }}-powershell-security
+            defaultMode: 0755
+        - name: app-logs
+          persistentVolumeClaim:
+            claimName: {{ include "m365-tools.fullname" . }}-app-logs
+
+---
+# External Secrets Operator integration (if available)
+{{- if .Values.security.externalSecrets.enabled }}
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-secret-store
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: external-secrets
+spec:
+  provider:
+    {{- if eq .Values.security.externalSecrets.provider "azurekv" }}
+    azurekv:
+      tenantId: {{ .Values.security.externalSecrets.azureKeyVault.tenantId }}
+      vaultUrl: {{ .Values.security.externalSecrets.azureKeyVault.vaultUrl }}
+      authSecretRef:
+        clientId:
+          name: {{ include "m365-tools.fullname" . }}-external-secrets-auth
+          key: client-id
+        clientSecret:
+          name: {{ include "m365-tools.fullname" . }}-external-secrets-auth
+          key: client-secret
+    {{- end }}
+
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-external-auth-secrets
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: external-secrets
+spec:
+  refreshInterval: 15m
+  secretStoreRef:
+    name: {{ include "m365-tools.fullname" . }}-secret-store
+    kind: SecretStore
+  target:
+    name: {{ include "m365-tools.fullname" . }}-auth-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: AZURE_TENANT_ID
+      remoteRef:
+        key: {{ .Values.security.externalSecrets.keys.tenantId }}
+    - secretKey: AZURE_CLIENT_ID
+      remoteRef:
+        key: {{ .Values.security.externalSecrets.keys.clientId }}
+    - secretKey: AZURE_CLIENT_SECRET
+      remoteRef:
+        key: {{ .Values.security.externalSecrets.keys.clientSecret }}
+    - secretKey: CERTIFICATE_THUMBPRINT
+      remoteRef:
+        key: {{ .Values.security.externalSecrets.keys.certificateThumbprint }}
+    - secretKey: CERTIFICATE_PASSWORD
+      remoteRef:
+        key: {{ .Values.security.externalSecrets.keys.certificatePassword }}
+{{- end }}
+
+---
+# Pod Security Policy (if PodSecurityPolicy is enabled)
+{{- if .Values.security.podSecurityPolicy.enabled }}
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-security-policy
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: security
+    type: pod-security-policy
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: true
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}

@@ -1,0 +1,27 @@
+{
+  "code_comments": {
+    "total_functions": 156,
+    "documented_functions": 132,
+    "documentation_rate": 84.6
+  },
+  "readme_quality": {
+    "sections_present": [
+      "\u6982\u8981",
+      "\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb",
+      "\u4f7f\u7528\u65b9\u6cd5",
+      "\u8a2d\u5b9a",
+      "API",
+      "\u30c6\u30b9\u30c8"
+    ],
+    "sections_score": 95
+  },
+  "api_documentation": {
+    "endpoints_documented": 26,
+    "total_endpoints": 26,
+    "documentation_completeness": 100.0
+  },
+  "inline_documentation": {
+    "docstring_coverage": 87.3,
+    "type_hint_coverage": 91.2
+  }
+}

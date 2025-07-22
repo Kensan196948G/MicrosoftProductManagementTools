@@ -11,7 +11,7 @@ PowerShell版の設定ファイルをPython版互換形式に変換
 
 import json
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from pathlib import Path
 from dataclasses import dataclass
 import re

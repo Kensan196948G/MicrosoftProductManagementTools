@@ -1,0 +1,14 @@
+{
+  "authentication": {
+    "tenant_id": "${AZURE_TENANT_ID}",
+    "client_id": "${AZURE_CLIENT_ID}",
+    "client_secret": "${AZURE_CLIENT_SECRET}",
+    "certificate_path": "${AZURE_CERTIFICATE_PATH}",
+    "use_certificate": true
+  },
+  "security": {
+    "encryption_key": "${ENCRYPTION_KEY}",
+    "secure_storage": true,
+    "token_expiration": 3600
+  }
+}

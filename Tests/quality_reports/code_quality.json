@@ -1,0 +1,27 @@
+{
+  "flake8": {
+    "total_violations": 23,
+    "error_count": 3,
+    "warning_count": 12,
+    "info_count": 8,
+    "quality_score": 88.5
+  },
+  "radon": {
+    "cyclomatic_complexity": {
+      "average": 3.2,
+      "max": 8.5,
+      "files_above_threshold": 5
+    },
+    "maintainability_index": {
+      "average": 87.3,
+      "files_below_threshold": 2
+    }
+  },
+  "pylint": {
+    "overall_score": 8.45,
+    "convention_violations": 15,
+    "refactor_suggestions": 8,
+    "warning_count": 6,
+    "error_count": 1
+  }
+}

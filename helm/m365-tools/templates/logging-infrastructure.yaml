@@ -1,0 +1,765 @@
+# Kubernetes Logging Infrastructure for Microsoft 365 Management Tools
+# DevOps Engineer - PowerShell/Python Hybrid Logging Solution
+# Comprehensive audit trail and compliance logging
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-logging-config
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+data:
+  # Enhanced Loki configuration for PowerShell + Python
+  loki-config.yml: |
+    auth_enabled: false
+    
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+      log_level: {{ .Values.logging.loki.logLevel | default "info" }}
+      log_format: json
+      
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 0.0.0.0
+        kvstore:
+          store: inmemory
+    
+    # PowerShell + Microsoft 365 optimized limits
+    limits_config:
+      reject_old_samples: true
+      reject_old_samples_max_age: 720h  # 30 days
+      ingestion_rate_mb: {{ .Values.logging.loki.ingestionRateMb | default 32 }}
+      ingestion_burst_size_mb: {{ .Values.logging.loki.ingestionBurstMb | default 64 }}
+      max_label_name_length: 2048
+      max_label_value_length: 8192
+      max_label_names_per_series: 50
+      max_entries_limit_per_query: 10000
+      max_line_size: 512000
+      retention_period: {{ .Values.logging.retentionPeriod | default "2160h" }}  # 90 days
+      per_stream_rate_limit: 16MB
+      per_stream_rate_limit_burst: 32MB
+      
+    # Enhanced schema for Microsoft 365 data
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: m365_index_
+            period: 24h
+            
+    # Optimized storage for PowerShell/Python hybrid logs
+    storage_config:
+      tsdb_shipper:
+        active_index_directory: /loki/tsdb-shipper-active
+        cache_location: /loki/tsdb-shipper-cache
+        cache_ttl: 48h
+        shared_store: filesystem
+      filesystem:
+        directory: /loki/chunks
+        
+    # Compactor for long-term storage
+    compactor:
+      working_directory: /loki/tsdb-shipper-compactor
+      shared_store: filesystem
+      compaction_interval: 10m
+      retention_enabled: true
+      retention_delete_delay: 2h
+      retention_delete_worker_count: 150
+      
+    # Alerting rules for Microsoft 365 operations
+    ruler:
+      storage:
+        type: local
+        local:
+          directory: /loki/rules
+      rule_path: /loki/rules
+      alertmanager_url: http://{{ include "m365-tools.fullname" . }}-alertmanager:9093
+      ring:
+        kvstore:
+          store: inmemory
+      enable_api: true
+      enable_alertmanager_v2: true
+      
+    # Query optimization
+    query_range:
+      results_cache:
+        cache:
+          embedded_cache:
+            enabled: true
+            max_size_mb: 500
+      parallelise_shardable_queries: true
+      cache_results: true
+      max_retries: 5
+      
+    frontend:
+      max_outstanding_per_tenant: 2048
+      compress_responses: true
+      log_queries_longer_than: 10s
+      
+    query_scheduler:
+      max_outstanding_requests_per_tenant: 2048
+
+  # Enhanced Promtail for PowerShell + Python log collection
+  promtail-config.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+      log_level: {{ .Values.logging.promtail.logLevel | default "info" }}
+      log_format: json
+      
+    positions:
+      filename: /tmp/positions.yaml
+      sync_period: 10s
+      ignore_invalid_yaml: true
+      
+    clients:
+      - url: http://{{ include "m365-tools.fullname" . }}-loki:3100/loki/api/v1/push
+        timeout: 30s
+        backoff_config:
+          min_period: 1s
+          max_period: 30s
+          max_retries: 20
+        external_labels:
+          cluster: {{ .Values.cluster.name | default "m365-tools-production" }}
+          environment: {{ .Values.environment | default "production" }}
+          service: microsoft365-tools
+          
+    scrape_configs:
+      # PowerShell script execution logs
+      - job_name: powershell-execution
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: powershell-exec
+              service: powershell-scripts
+              component: powershell
+              __path__: /app/logs/powershell/*.log
+        pipeline_stages:
+          - json:
+              expressions:
+                timestamp: timestamp
+                level: level
+                message: message
+                script_name: script_name
+                execution_time_ms: execution_time_ms
+                user_context: user_context
+                tenant_id: tenant_id
+                powershell_version: powershell_version
+                module_name: module_name
+                command: command
+                error_code: error_code
+          - labels:
+              level: level
+              script_name: script_name
+              module_name: module_name
+              tenant_id: tenant_id
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+          - template:
+              source: formatted_output
+              template: '[{{ .script_name }}] {{ .message }}{{ if .execution_time_ms }} ({{ .execution_time_ms }}ms){{ end }}{{ if .error_code }} [Error: {{ .error_code }}]{{ end }}'
+          - output:
+              source: formatted_output
+              
+      # Microsoft 365 API interaction logs
+      - job_name: microsoft365-api
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: m365-api
+              service: microsoft365-api
+              component: graph-api
+              __path__: /app/logs/m365-api/*.log
+        pipeline_stages:
+          - json:
+              expressions:
+                timestamp: timestamp
+                level: level
+                message: message
+                api_endpoint: api_endpoint
+                http_method: http_method
+                response_code: response_code
+                duration_ms: duration_ms
+                tenant_id: tenant_id
+                user_id: user_id
+                correlation_id: correlation_id
+                throttle_info: throttle_info
+                rate_limit_remaining: rate_limit_remaining
+          - labels:
+              level: level
+              api_endpoint: api_endpoint
+              http_method: http_method
+              response_code: response_code
+              tenant_id: tenant_id
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+          - template:
+              source: api_log
+              template: '{{ .http_method }} {{ .api_endpoint }} -> {{ .response_code }} ({{ .duration_ms }}ms){{ if .throttle_info }} [Throttled: {{ .throttle_info }}]{{ end }}'
+          - output:
+              source: api_log
+              
+      # Python application logs
+      - job_name: python-application
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: python-app
+              service: python-backend
+              component: fastapi
+              __path__: /app/logs/python/*.log
+        pipeline_stages:
+          - json:
+              expressions:
+                timestamp: timestamp
+                level: level
+                message: message
+                module: module
+                function: function
+                line_number: line_number
+                request_id: request_id
+                user_id: user_id
+                endpoint: endpoint
+                method: method
+                status_code: status_code
+                duration: duration
+          - labels:
+              level: level
+              module: module
+              endpoint: endpoint
+              method: method
+              status_code: status_code
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+          - output:
+              source: message
+              
+      # Container logs with enhanced parsing
+      - job_name: kubernetes-containers
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - {{ .Release.Namespace }}
+                - monitoring
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape_logs]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_label_version]
+            target_label: version
+          - replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+            target_label: __path__
+        pipeline_stages:
+          - cri: {}
+          - json:
+              expressions:
+                timestamp: time
+                output: log
+                stream: stream
+          - labels:
+              stream: stream
+          - timestamp:
+              source: timestamp
+              format: RFC3339Nano
+          - output:
+              source: output
+              
+      # Audit trail logs (compliance)
+      - job_name: audit-trail
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: audit-trail
+              service: audit
+              component: compliance
+              log_type: audit
+              __path__: /app/logs/audit/*.log
+        pipeline_stages:
+          - json:
+              expressions:
+                timestamp: timestamp
+                event_type: event_type
+                user_id: user_id
+                tenant_id: tenant_id
+                resource_type: resource_type
+                resource_id: resource_id
+                action: action
+                result: result
+                client_ip: client_ip
+                user_agent: user_agent
+                session_id: session_id
+                risk_score: risk_score
+                geo_location: geo_location
+                device_info: device_info
+                compliance_flags: compliance_flags
+          - labels:
+              event_type: event_type
+              action: action
+              result: result
+              tenant_id: tenant_id
+              resource_type: resource_type
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+          - template:
+              source: audit_entry
+              template: |
+                [AUDIT] {{ .event_type }}: User {{ .user_id }} {{ .action }} {{ .resource_type }}:{{ .resource_id }}
+                Result: {{ .result }} | IP: {{ .client_ip }} | Risk: {{ .risk_score }}
+                {{ if .compliance_flags }}Compliance: {{ .compliance_flags }}{{ end }}
+          - output:
+              source: audit_entry
+              
+      # PowerShell error logs with stack traces
+      - job_name: powershell-errors
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: powershell-errors
+              service: error-handling
+              component: powershell
+              level: error
+              __path__: /app/logs/powershell/errors/*.log
+        pipeline_stages:
+          - json:
+              expressions:
+                timestamp: timestamp
+                level: level
+                message: message
+                script_name: script_name
+                line_number: line_number
+                error_category: error_category
+                error_details: error_details
+                stack_trace: stack_trace
+                tenant_context: tenant_context
+                remediation_hint: remediation_hint
+          - labels:
+              level: level
+              script_name: script_name
+              error_category: error_category
+          - timestamp:
+              source: timestamp
+              format: RFC3339
+          - template:
+              source: error_output
+              template: |
+                [ERROR] {{ .script_name }}:{{ .line_number }} - {{ .message }}
+                Category: {{ .error_category }}
+                {{ if .error_details }}Details: {{ .error_details }}{{ end }}
+                {{ if .stack_trace }}
+                Stack Trace:
+                {{ .stack_trace }}{{ end }}
+                {{ if .remediation_hint }}
+                Remediation: {{ .remediation_hint }}{{ end }}
+          - output:
+              source: error_output
+
+  # Log parsing and alerting rules
+  loki-rules.yml: |
+    groups:
+      - name: microsoft365-operations
+        rules:
+          # PowerShell script failures
+          - alert: PowerShellScriptFailure
+            expr: |
+              rate({job="powershell-exec",level="error"}[5m]) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+              component: powershell
+            annotations:
+              summary: "High rate of PowerShell script failures"
+              description: "PowerShell scripts are failing at a rate of {{ $value }} per second"
+              
+          # Microsoft 365 API throttling
+          - alert: Microsoft365APIThrottling
+            expr: |
+              rate({job="m365-api"} |~ "Throttled")[5m] > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              component: api
+            annotations:
+              summary: "Microsoft 365 API throttling detected"
+              description: "API requests are being throttled at {{ $value }} per second"
+              
+          # Authentication failures
+          - alert: AuthenticationFailures
+            expr: |
+              rate({job="audit-trail",action="authenticate",result="failure"}[10m]) > 0.02
+            for: 3m
+            labels:
+              severity: critical
+              component: security
+            annotations:
+              summary: "High authentication failure rate"
+              description: "Authentication failures at {{ $value }} per second"
+              
+          # Compliance violations
+          - alert: ComplianceViolation
+            expr: |
+              rate({job="audit-trail"} |~ "compliance_flags")[1m] > 0
+            for: 1m
+            labels:
+              severity: critical
+              component: compliance
+            annotations:
+              summary: "Compliance violation detected"
+              description: "Compliance flags triggered in audit logs"
+              
+          # Container restart loop
+          - alert: ContainerRestartLoop
+            expr: |
+              rate({job="kubernetes-containers"} |~ "Error|Failed|Restart")[5m] > 0.1
+            for: 5m
+            labels:
+              severity: warning
+              component: infrastructure
+            annotations:
+              summary: "Container experiencing restart loop"
+              description: "Container errors at {{ $value }} per second"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-loki
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+    subcomponent: loki
+spec:
+  replicas: {{ .Values.logging.loki.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "m365-tools.selectorLabels" . | nindent 6 }}
+      component: logging
+      subcomponent: loki
+  template:
+    metadata:
+      labels:
+        {{- include "m365-tools.selectorLabels" . | nindent 8 }}
+        component: logging
+        subcomponent: loki
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/logging-infrastructure.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "m365-tools.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: loki
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: grafana/loki:{{ .Values.logging.loki.tag | default "3.0.0" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -config.file=/etc/loki/local-config.yaml
+            - -config.expand-env=true
+          ports:
+            - name: http
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9096
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.logging.loki.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: storage
+              mountPath: /loki
+          env:
+            - name: LOKI_STORAGE_PATH
+              value: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "m365-tools.fullname" . }}-logging-config
+            items:
+              - key: loki-config.yml
+                path: local-config.yaml
+        - name: storage
+          {{- if .Values.logging.loki.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "m365-tools.fullname" . }}-loki-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-promtail
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+    subcomponent: promtail
+spec:
+  selector:
+    matchLabels:
+      {{- include "m365-tools.selectorLabels" . | nindent 6 }}
+      component: logging
+      subcomponent: promtail
+  template:
+    metadata:
+      labels:
+        {{- include "m365-tools.selectorLabels" . | nindent 8 }}
+        component: logging
+        subcomponent: promtail
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/logging-infrastructure.yaml") . | sha256sum }}
+        prometheus.io/scrape-logs: "true"
+    spec:
+      serviceAccountName: {{ include "m365-tools.serviceAccountName" . }}
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+        - name: promtail
+          image: grafana/promtail:{{ .Values.logging.promtail.tag | default "3.0.0" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -config.file=/etc/promtail/config.yml
+            - -config.expand-env=true
+          ports:
+            - name: http
+              containerPort: 9080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.logging.promtail.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: app-logs
+              mountPath: /app/logs
+              readOnly: true
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "m365-tools.fullname" . }}-logging-config
+            items:
+              - key: promtail-config.yml
+                path: config.yml
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: app-logs
+          persistentVolumeClaim:
+            claimName: {{ include "m365-tools.fullname" . }}-app-logs
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-loki
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+    subcomponent: loki
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3100
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9096
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "m365-tools.selectorLabels" . | nindent 4 }}
+    component: logging
+    subcomponent: loki
+
+---
+{{- if .Values.logging.loki.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-loki-storage
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+spec:
+  accessModes:
+    - {{ .Values.logging.loki.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.logging.loki.persistence.size | default "50Gi" }}
+  {{- if .Values.logging.loki.persistence.storageClass }}
+  storageClassName: {{ .Values.logging.loki.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-app-logs
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.logging.appLogs.size | default "20Gi" }}
+  {{- if .Values.logging.appLogs.storageClass }}
+  storageClassName: {{ .Values.logging.appLogs.storageClass }}
+  {{- end }}
+
+---
+# ServiceAccount with appropriate RBAC for log collection
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-logging
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "extensions"
+      - "apps"
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "m365-tools.fullname" . }}-logging
+  labels:
+    {{- include "m365-tools.labels" . | nindent 4 }}
+    component: logging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "m365-tools.fullname" . }}-logging
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "m365-tools.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
